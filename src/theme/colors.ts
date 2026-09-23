@@ -5,8 +5,11 @@
  * Values measured from the source mockups — see docs/01-design-audit.md §2.
  * Contrast ledger — docs/02-design-system.md §1.4.
  *
- * ⚠️ Every key Ignite originally shipped is still here. Ignite's own components
+ * ⚠️ Every semantic key Ignite originally shipped is still here. Ignite's own components
  *    (Screen, Text, Card, TextField, Button…) read them by name. Add keys; never remove one.
+ *    Two palette keys the stock Toggle components (Checkbox/Radio/Switch) read directly —
+ *    `secondary500`, `accent100` — are re-pointed at TimeSpot's brand hue below rather than
+ *    kept at Ignite's indigo/cream values, which don't exist in this palette.
  */
 
 const palette = {
@@ -34,6 +37,11 @@ const palette = {
 
   overlay20: "rgba(0, 0, 0, 0.20)",
   overlay50: "rgba(0, 0, 0, 0.44)",
+
+  // Ignite's stock Toggle components read these two directly. TimeSpot has no
+  // separate secondary/accent hue, so both point at the brand orange family.
+  secondary500: "#D44F24", // = brand500 — Checkbox/Radio/Switch checked-state fill
+  accent100: "#FFFFFF", // = neutral100 — checkmark icon tint against secondary500
 } as const
 
 export const colors = {

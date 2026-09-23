@@ -159,7 +159,10 @@ function useAutoPreset(props: AutoScreenProps): {
     updateScrollState()
   }
 
-  // update scroll state on every render
+  // update scroll state on every render — an intentional "adjust state during
+  // render" pattern (https://react.dev/reference/react/useState#storing-information-from-previous-renders);
+  // react-hooks/refs can't distinguish this from an unsafe ref read.
+  // eslint-disable-next-line react-hooks/refs
   if (preset === "auto") updateScrollState()
 
   return {

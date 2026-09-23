@@ -137,6 +137,9 @@ function SwitchInput(props: SwitchInputProps) {
         : [offsetLeft, +(knobWidth || 0) + offsetRight]
       : [rtlAdjustment * offsetLeft, rtlAdjustment * (+(knobWidth || 0) + offsetRight)]
 
+  // Animated.Value is a mutable animation container meant to be read like this during
+  // render — not a plain React ref. react-hooks/refs can't tell the two apart.
+  // eslint-disable-next-line react-hooks/refs
   const $animatedSwitchKnob = animate.current.interpolate({
     inputRange: [0, 1],
     outputRange,
@@ -149,6 +152,7 @@ function SwitchInput(props: SwitchInputProps) {
           $themedSwitchInner,
           { backgroundColor: onBackgroundColor },
           $innerStyleOverride,
+          // eslint-disable-next-line react-hooks/refs -- same Animated.Value case as above
           { opacity: opacity.current },
         ]}
       />

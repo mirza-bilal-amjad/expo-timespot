@@ -37,6 +37,10 @@ const palette = {
 
   overlay20: "rgba(0, 0, 0, 0.35)",
   overlay50: "rgba(0, 0, 0, 0.64)",
+
+  // Ignite's stock Toggle components read these two directly — see colors.ts.
+  secondary500: "#BF4620", // = brand500 (dark) — checked-state fill
+  accent100: "#FFFFFF", // = neutral900 (white in THIS palette's inverted numbering)
 } as const
 
 export const colors = {

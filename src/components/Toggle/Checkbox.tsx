@@ -98,6 +98,7 @@ function CheckboxInput(props: CheckboxInputProps) {
           $styles.toggleInner,
           { backgroundColor: onBackgroundColor },
           $innerStyleOverride,
+          // eslint-disable-next-line react-hooks/refs -- Animated.Value, not a plain ref; see Switch.tsx
           { opacity: opacity.current },
         ]}
       >

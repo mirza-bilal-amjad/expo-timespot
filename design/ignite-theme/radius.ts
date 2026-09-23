@@ -11,11 +11,11 @@
  * and a 2pt delta at this radius is imperceptible. See docs/01-design-audit.md §4.
  */
 export const radius = {
-  xs: 6,    // ruler tick chip
-  sm: 10,   // city avatar squircle
-  md: 16,   // ⭐ list rows, city cards, floating map card
-  lg: 24,   // bottom sheets, modals
-  xl: 32,   // web app panel
+  xs: 6, // ruler tick chip
+  sm: 10, // city avatar squircle
+  md: 16, // ⭐ list rows, city cards, floating map card
+  lg: 24, // bottom sheets, modals
+  xl: 32, // web app panel
   pill: 999,
 } as const
 

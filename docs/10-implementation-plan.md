@@ -26,7 +26,7 @@ Estimates assume agent-assisted implementation with you reviewing. Halve them if
 | 0.8 | Build `<Numeral>` — measured width + `tabular-nums`, no roll yet | `08:40 → 08:41` causes zero layout shift, **measured** |
 | 0.9 | Add `@expo/ui`; build the `Sheet` adapter | sheet opens on iOS, Android and web |
 | 0.10 | Zustand stores over Ignite's MMKV storage | survives relaunch on all three platforms |
-| 0.11 | CI: typecheck, lint, test, `/token-check`, contrast | green |
+| 0.11 | CI (`.github/workflows/ci.yml`): typecheck, lint, test | green on every push/PR. `/token-check` and a contrast checker are agent-driven and manual for now, not wired into this workflow |
 
 **Gate G0:** a sample screen in TimeSpot's theme, both schemes, on all three platforms, with a stable clock rendering through `<Numeral>`. **Do not proceed until `/token-check` is green** — every later task assumes it.
 
