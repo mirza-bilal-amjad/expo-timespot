@@ -11,7 +11,23 @@ import { typography } from "@/theme/typography"
 
 type Sizes = keyof typeof $sizeStyles
 type Weights = keyof typeof typography.primary
-type Presets = "default" | "bold" | "heading" | "subheading" | "formLabel" | "formHelper"
+type Presets =
+  | "default"
+  | "bold"
+  | "heading"
+  | "subheading"
+  | "formLabel"
+  | "formHelper"
+  | "screenTitle"
+  | "cityName"
+  | "cityTitle"
+  | "offset"
+  | "caption"
+
+/** Presets built on TimeSpot's display scale — font scaling is capped so a
+ * hero numeral can't grow past the point it blows the layout (docs/02-design-system.md). */
+const $bigPresets = new Set<Presets>(["cityName"])
+const $bigSizes = new Set<Sizes>(["display", "displayXl", "hero"])
 
 export interface TextProps extends RNTextProps {
   /**
@@ -72,14 +88,17 @@ export const Text = forwardRef(function Text(props: TextProps, ref: ForwardedRef
     $styleOverride,
   ]
 
+  const isBig = $bigPresets.has(preset) || (!!size && $bigSizes.has(size))
+
   return (
-    <RNText {...rest} style={$styles} ref={ref}>
+    <RNText maxFontSizeMultiplier={isBig ? 1.3 : undefined} {...rest} style={$styles} ref={ref}>
       {content}
     </RNText>
   )
 })
 
 const $sizeStyles = {
+  // Ignite's original scale
   xxl: { fontSize: 36, lineHeight: 44 } satisfies TextStyle,
   xl: { fontSize: 24, lineHeight: 34 } satisfies TextStyle,
   lg: { fontSize: 20, lineHeight: 32 } satisfies TextStyle,
@@ -87,6 +106,12 @@ const $sizeStyles = {
   sm: { fontSize: 16, lineHeight: 24 } satisfies TextStyle,
   xs: { fontSize: 14, lineHeight: 21 } satisfies TextStyle,
   xxs: { fontSize: 12, lineHeight: 18 } satisfies TextStyle,
+  // TimeSpot's display scale (docs/02-design-system.md §2.2)
+  display: { fontSize: 56, lineHeight: 57, letterSpacing: -1.4 } satisfies TextStyle,
+  displayXl: { fontSize: 72, lineHeight: 66, letterSpacing: -2.2 } satisfies TextStyle,
+  hero: { fontSize: 144, lineHeight: 124, letterSpacing: -5 } satisfies TextStyle,
+  numeralMd: { fontSize: 32, lineHeight: 32, letterSpacing: -0.5 } satisfies TextStyle,
+  numeralLg: { fontSize: 48, lineHeight: 48, letterSpacing: -1 } satisfies TextStyle,
 }
 
 const $fontWeightStyles = Object.entries(typography.primary).reduce((acc, [weight, fontFamily]) => {
@@ -97,6 +122,8 @@ const $baseStyle: ThemedStyle<TextStyle> = (theme) => ({
   ...$sizeStyles.sm,
   ...$fontWeightStyles.normal,
   color: theme.colors.text,
+  // Android sits every display-size block ~8% low without this.
+  includeFontPadding: false,
 })
 
 const $presets: Record<Presets, ThemedStyleArray<TextStyle>> = {
@@ -112,5 +139,14 @@ const $presets: Record<Presets, ThemedStyleArray<TextStyle>> = {
   subheading: [$baseStyle, { ...$sizeStyles.lg, ...$fontWeightStyles.medium }],
   formLabel: [$baseStyle, { ...$fontWeightStyles.medium }],
   formHelper: [$baseStyle, { ...$sizeStyles.sm, ...$fontWeightStyles.normal }],
+  // TimeSpot's presets
+  screenTitle: [
+    $baseStyle,
+    { ...$sizeStyles.xxl, ...$fontWeightStyles.medium, letterSpacing: -0.7 },
+  ],
+  cityName: [$baseStyle, { ...$sizeStyles.display, ...$fontWeightStyles.medium }],
+  cityTitle: [$baseStyle, { ...$sizeStyles.lg, ...$fontWeightStyles.medium }],
+  offset: [$baseStyle, (theme) => ({ ...$sizeStyles.xs, color: theme.colors.textDim })],
+  caption: [$baseStyle, (theme) => ({ ...$sizeStyles.xxs, color: theme.colors.textDim })],
 }
 const $rtlStyle: TextStyle = isRTL ? { writingDirection: "rtl" } : {}
