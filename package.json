@@ -75,8 +75,13 @@
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",
     "@testing-library/react-native": "^13.2.0",
+    "@types/geojson": "^7946.0.16",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.10",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-server": "^3.0.4",
+    "@types/topojson-simplify": "^3.0.3",
+    "@types/topojson-specification": "^1.0.5",
     "babel-jest": "^29.2.1",
     "dependency-cruiser": "^17.0.2",
     "eslint": "^8.57.0",
@@ -93,9 +98,13 @@
     "reactotron-react-js": "^3.3.11",
     "reactotron-react-native": "^5.0.5",
     "reactotron-react-native-mmkv": "^0.2.6",
+    "topojson-client": "^3.1.0",
+    "topojson-server": "^3.0.1",
+    "topojson-simplify": "^3.0.3",
     "ts-jest": "^29.1.1",
     "tsx": "^4.20.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "world-atlas": "^2.0.2"
   },
   "engines": {
     "node": ">=20.0.0"
