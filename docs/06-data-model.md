@@ -172,12 +172,14 @@ getTerminatorPath(now: number, width: number, height: number): string   // SVG '
 // src/domain/cities/search.ts
 searchCities(query: string, limit?: number): City[]
 getCityByZone(zone: string): City | undefined
-getRepresentativeCity(offsetMinutes: number): City
+getRepresentativeCity(offsetMinutes: number, now: number): City | undefined
 ```
 
 Every one of these is a pure function of its arguments. Every one has a unit test. None of them import React.
 
-`getOverlap`'s signature above adds `now` — **corrected 2026-09-24**. The original draft omitted it, which isn't possible to honor alongside "the one rule": an offset-dependent overlap window can't be pure without the instant it's computed for.
+`getOverlap` and `getRepresentativeCity`'s signatures above add `now` — **corrected 2026-09-24**. The original drafts omitted it, which isn't possible to honor alongside "the one rule": an offset-dependent calculation can't be pure without the instant it's computed for. `getRepresentativeCity` also returns `City | undefined`, not a bare `City` — nothing guarantees a city sits at an arbitrary offset right now.
+
+Also: `cities.index.json` (mentioned in §3's Output row above) was never built as a separate file — task 1.9's `search.ts` normalizes and indexes all 5,000 cities in memory at module load instead, which costs well under a millisecond and avoids a second build artifact to keep in sync with `cities.min.json`.
 
 `getNextTransition` powers the public web page ("clocks go forward on 29 March") and is also what makes DST testable: assert the transition date for 40 zones against the tz database.
 

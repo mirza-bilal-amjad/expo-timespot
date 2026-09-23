@@ -46,7 +46,7 @@ This is the highest-value phase and it needs no simulator. Everything here is un
 | 1.6 | `domain/sun/sun.ts` via `suncalc` | Tromsø polar night and midnight sun both return the right `kind`; day length matches a reference to ±1 min |
 | 1.7 | `domain/sun/terminator.ts` → SVG path | snapshot at equinox and both solstices |
 | 1.8 | `scripts/build-cities.ts` → `cities.min.json` + index | 5 000 cities, all slugs unique — **corrected 2026-09-24**: 373/418 canonical zones covered, not all 418. The 45 gaps are real and expected, not a bug: Antarctic research stations with no civilian population, deprecated tzdata aliases GeoNames no longer uses (`Asia/Calcutta`, `Europe/Kiev`, …), and a handful of islands/towns genuinely under ~1,000 people even in GeoNames' broadest population tier (`Australia/Eucla`, `Pacific/Midway`). See the coverage report `scripts/build-cities.ts` prints and `src/domain/cities/dataset.test.ts`. |
-| 1.9 | `domain/cities/search.ts` | "tok"→Tokyo, "köln"→Cologne, "nwyork"→New York; **< 30 ms**, asserted |
+| 1.9 | `domain/cities/search.ts` | "tok"→Tokyo, "köln"→Koeln (fuzzy tier — GeoNames' own asciiName is "Koeln", not "Koln"), "berln"→Berlin; **< 30 ms**, asserted. ~~"nwyork"→New York~~ — **corrected 2026-09-24**: doesn't hold against the real GeoNames name "New York City" (three words) since a single unsplit query term can't fuzzy-match across uFuzzy's word-boundary splitting |
 | 1.10 | `scripts/build-map.ts` — Natural Earth → simplified TopoJSON | ≤ 30 KB, renders recognisably at 393 pt wide |
 
 **Gate:** `pnpm test src/domain` green, 100 % of the fixture matrix, sub-second run. If this phase is solid, the rest of the app cannot be wrong about time.
