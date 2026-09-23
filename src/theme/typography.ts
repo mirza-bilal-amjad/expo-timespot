@@ -1,71 +1,78 @@
-// TODO: write documentation about fonts and typography along with guides on how to add custom fonts in own
-// markdown file and add links from here
+/**
+ * TimeSpot — typography.
+ * Drop-in replacement for Ignite's `src/theme/typography.ts`.
+ *
+ * Swaps Ignite's Space Grotesk for Geist — the closest free match to the
+ * mockups' neo-grotesk (see docs/01-design-audit.md §6).
+ *
+ *   npx expo install @expo-google-fonts/geist
+ *   npm uninstall @expo-google-fonts/space-grotesk
+ *
+ * Only three weights ship. Every extra weight is a font file on the critical
+ * path, and the design uses exactly three.
+ */
 
 import { Platform } from "react-native"
 import {
-  SpaceGrotesk_300Light as spaceGroteskLight,
-  SpaceGrotesk_400Regular as spaceGroteskRegular,
-  SpaceGrotesk_500Medium as spaceGroteskMedium,
-  SpaceGrotesk_600SemiBold as spaceGroteskSemiBold,
-  SpaceGrotesk_700Bold as spaceGroteskBold,
-} from "@expo-google-fonts/space-grotesk"
+  Geist_400Regular as geistRegular,
+  Geist_500Medium as geistMedium,
+  Geist_600SemiBold as geistSemiBold,
+} from "@expo-google-fonts/geist"
 
 export const customFontsToLoad = {
-  spaceGroteskLight,
-  spaceGroteskRegular,
-  spaceGroteskMedium,
-  spaceGroteskSemiBold,
-  spaceGroteskBold,
+  geistRegular,
+  geistMedium,
+  geistSemiBold,
 }
 
 const fonts = {
-  spaceGrotesk: {
-    // Cross-platform Google font.
-    light: "spaceGroteskLight",
-    normal: "spaceGroteskRegular",
-    medium: "spaceGroteskMedium",
-    semiBold: "spaceGroteskSemiBold",
-    bold: "spaceGroteskBold",
+  geist: {
+    // ⚠️ `light` and `bold` are ALIASES, not separate files.
+    //    Ignite's own presets reference typography.primary.bold and
+    //    typography.primary.light — a missing key falls back to the system
+    //    font silently, which is a very confusing bug to chase.
+    light: "geistRegular",
+    normal: "geistRegular",
+    medium: "geistMedium",
+    semiBold: "geistSemiBold",
+    bold: "geistSemiBold",
   },
   helveticaNeue: {
-    // iOS only font.
     thin: "HelveticaNeue-Thin",
     light: "HelveticaNeue-Light",
     normal: "Helvetica Neue",
     medium: "HelveticaNeue-Medium",
   },
-  courier: {
-    // iOS only font.
-    normal: "Courier",
-  },
+  courier: { normal: "Courier" },
   sansSerif: {
-    // Android only font.
     thin: "sans-serif-thin",
     light: "sans-serif-light",
     normal: "sans-serif",
     medium: "sans-serif-medium",
   },
-  monospace: {
-    // Android only font.
-    normal: "monospace",
-  },
+  monospace: { normal: "monospace" },
 }
 
 export const typography = {
-  /**
-   * The fonts are available to use, but prefer using the semantic name.
-   */
   fonts,
-  /**
-   * The primary font. Used in most places.
-   */
-  primary: fonts.spaceGrotesk,
-  /**
-   * An alternate font used for perhaps titles and stuff.
-   */
-  secondary: Platform.select({ ios: fonts.helveticaNeue, android: fonts.sansSerif }),
-  /**
-   * Lets get fancy with a monospace font!
-   */
+  /** Used everywhere. */
+  primary: fonts.geist,
+  /** TimeSpot is a single-family design — secondary points at the same face. */
+  secondary: fonts.geist,
   code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
 }
+
+/**
+ * TABULAR FIGURES
+ *
+ * Every clock, offset and countdown must use these, or the numerals change
+ * width as they tick and the whole layout twitches once a second.
+ *
+ *   style={{ fontVariant: ["tabular-nums"] }}      // native
+ *   font-variant-numeric: tabular-nums;            // web
+ *
+ * <Numeral> applies this — AND independently pins a measured per-character
+ * width, so the clock stays stable even if a font or platform ignores the
+ * OpenType feature. Do not rely on the feature alone.
+ */
+export const tabularNums = { fontVariant: ["tabular-nums" as const] }

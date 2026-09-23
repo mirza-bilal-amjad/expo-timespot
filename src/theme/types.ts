@@ -2,6 +2,7 @@ import type { StyleProp } from "react-native"
 
 import { colors as colorsLight } from "./colors"
 import { colors as colorsDark } from "./colorsDark"
+import type { Radius } from "./radius"
 import { spacing as spacingLight } from "./spacing"
 import { spacing as spacingDark } from "./spacingDark"
 import { timing } from "./timing"
@@ -17,7 +18,7 @@ export type Colors = typeof colorsLight | typeof colorsDark
 // The spacing type needs to take into account the different spacing values for light and dark themes.
 export type Spacing = typeof spacingLight | typeof spacingDark
 
-// These two are consistent across themes.
+// These are consistent across themes.
 export type Timing = typeof timing
 export type Typography = typeof typography
 
@@ -27,6 +28,7 @@ export interface Theme {
   spacing: Spacing
   typography: Typography
   timing: Timing
+  radius: Radius
   isDark: boolean
 }
 
