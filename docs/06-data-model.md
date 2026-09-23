@@ -129,7 +129,7 @@ Every store declares `migrate(persisted, fromVersion)`. Never mutate a persisted
 | Cap | **5 000** cities, ranked by population, with a guarantee that **every one of the ~420 canonical IANA zones has at least one representative city** |
 | Slug | `slugify(name)`, deduped with a country suffix: `cordoba` / `cordoba-ar` |
 | Validate | every `zone` must be a canonical IANA id — links like `Asia/Calcutta` are normalised to `Asia/Kolkata` |
-| Output | `src/assets/data/cities.min.json` (~380 KB, ~110 KB gz) + `cities.index.json` (inverted index) |
+| Output | `src/assets/data/cities.min.json` (**actual: ~1.27 MB, ~334 KB gz** — corrected 2026-09-24, the ~380/110 KB estimate was well off once real GeoNames data replaced the placeholder assumption; `country`/`admin1` are stored as full names per the `City` type rather than interned codes, which is the main cost — see `scripts/build-cities.ts`) + `cities.index.json` (inverted index, task 1.9) |
 
 Native bundles the JSON. Web **fetches** it after first paint so the initial route stays under budget; the search sheet shows a skeleton for the ~80 ms it takes on a warm cache.
 

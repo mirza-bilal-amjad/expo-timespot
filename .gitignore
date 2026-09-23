@@ -90,3 +90,6 @@ web-build/
 # Dependency Graph Visualizations
 app-dependency-graph.svg
 app-dependency-graph.png
+
+# scripts/build-cities.ts, scripts/build-map.ts — raw source data, fetched on demand
+scripts/.data/

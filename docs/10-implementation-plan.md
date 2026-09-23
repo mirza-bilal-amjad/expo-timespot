@@ -45,7 +45,7 @@ This is the highest-value phase and it needs no simulator. Everything here is un
 | 1.5 | `domain/time/diff.ts` — difference + working-hours overlap | `getDifference('Asia/Kolkata','Europe/London')` = `+5:30` in winter (GMT), `+4:30` in summer (BST) — **corrected 2026-09-24**, the draft numbers here had it backwards; verified against `Intl` directly, not memorized |
 | 1.6 | `domain/sun/sun.ts` via `suncalc` | Tromsø polar night and midnight sun both return the right `kind`; day length matches a reference to ±1 min |
 | 1.7 | `domain/sun/terminator.ts` → SVG path | snapshot at equinox and both solstices |
-| 1.8 | `scripts/build-cities.ts` → `cities.min.json` + index | 5 000 cities, every canonical IANA zone represented, all slugs unique |
+| 1.8 | `scripts/build-cities.ts` → `cities.min.json` + index | 5 000 cities, all slugs unique — **corrected 2026-09-24**: 373/418 canonical zones covered, not all 418. The 45 gaps are real and expected, not a bug: Antarctic research stations with no civilian population, deprecated tzdata aliases GeoNames no longer uses (`Asia/Calcutta`, `Europe/Kiev`, …), and a handful of islands/towns genuinely under ~1,000 people even in GeoNames' broadest population tier (`Australia/Eucla`, `Pacific/Midway`). See the coverage report `scripts/build-cities.ts` prints and `src/domain/cities/dataset.test.ts`. |
 | 1.9 | `domain/cities/search.ts` | "tok"→Tokyo, "köln"→Cologne, "nwyork"→New York; **< 30 ms**, asserted |
 | 1.10 | `scripts/build-map.ts` — Natural Earth → simplified TopoJSON | ≤ 30 KB, renders recognisably at 393 pt wide |
 
