@@ -29,14 +29,20 @@ export function getOffsetMinutes(now: number, zone: string): number {
   return sign * (Number(match[2]) * 60 + Number(match[3]))
 }
 
+/** '+9', '+5:45', '+0', '−3:30' — never a hyphen for the minus sign. Shared by
+ * formatOffset (prefixed 'UTC') and diff.ts's getDifference label (unprefixed). */
+export function formatSignedDuration(minutes: number): string {
+  const sign = minutes < 0 ? MINUS : "+"
+  const abs = Math.abs(minutes)
+  const hours = Math.floor(abs / 60)
+  const mins = abs % 60
+  const suffix = mins === 0 ? `${hours}` : `${hours}:${String(mins).padStart(2, "0")}`
+  return `${sign}${suffix}`
+}
+
 /** 'UTC+9', 'UTC+5:45', 'UTC+0', 'UTC−3:30' — never a hyphen for the minus sign. */
 export function formatOffset(offsetMinutes: number): string {
-  const sign = offsetMinutes < 0 ? MINUS : "+"
-  const abs = Math.abs(offsetMinutes)
-  const hours = Math.floor(abs / 60)
-  const minutes = abs % 60
-  const suffix = minutes === 0 ? `${hours}` : `${hours}:${String(minutes).padStart(2, "0")}`
-  return `UTC${sign}${suffix}`
+  return `UTC${formatSignedDuration(offsetMinutes)}`
 }
 
 export function getDeviceZone(): string {

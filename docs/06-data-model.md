@@ -160,7 +160,7 @@ getNextTransition(zone: string, from: number): { at: number; deltaMinutes: numbe
 
 // src/domain/time/diff.ts
 getDifference(a: string, b: string, now: number): { minutes: number; label: string }
-getOverlap(a: string, b: string, workday: [number, number]): { start: number; end: number } | null
+getOverlap(a: string, b: string, workday: [number, number], now: number): { start: number; end: number } | null
 
 // src/domain/sun/sun.ts
 getSunTimes(lat: number, lon: number, date: Date, zone: string): SunTimes
@@ -176,6 +176,8 @@ getRepresentativeCity(offsetMinutes: number): City
 ```
 
 Every one of these is a pure function of its arguments. Every one has a unit test. None of them import React.
+
+`getOverlap`'s signature above adds `now` — **corrected 2026-09-24**. The original draft omitted it, which isn't possible to honor alongside "the one rule": an offset-dependent overlap window can't be pure without the instant it's computed for.
 
 `getNextTransition` powers the public web page ("clocks go forward on 29 March") and is also what makes DST testable: assert the transition date for 40 zones against the tz database.
 

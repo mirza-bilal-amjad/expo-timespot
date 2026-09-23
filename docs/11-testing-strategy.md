@@ -48,7 +48,7 @@ That is roughly 480 assertions and it runs in milliseconds. It is the test that 
 |---|---|
 | `formatOffset` | `UTC+5:45`, `UTC+0`, `UTC−3:30`, `UTC+14`; U+2212 minus, never a hyphen |
 | `getZonedTime` | day rollover — Kiritimati is a day ahead of Midway; `dayOffset` is ±1 |
-| `getDifference` | `+4:30` India↔London in winter, `+3:30` in BST; sign and label |
+| `getDifference` | `+5:30` India↔London in winter (GMT), `+4:30` in BST — **corrected 2026-09-24**, was backwards; sign and label |
 | `getOverlap` | zero-overlap pairs (LA↔Tokyo) return `null`, not a negative range |
 | `getSunTimes` | Tromsø polar night/midnight sun; equator ≈ 12 h year-round; ±1 min vs reference |
 | `searchCities` | diacritics, alt-names, typos, ranking; **< 30 ms** hard bound |
