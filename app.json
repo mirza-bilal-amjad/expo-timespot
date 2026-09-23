@@ -31,11 +31,13 @@
   },
   "web": {
     "favicon": "./assets/images/app-icon-web-favicon.png",
-    "bundler": "metro"
+    "bundler": "metro",
+    "output": "static"
   },
   "plugins": [
     "expo-localization",
     "expo-font",
+    "expo-image",
     [
       "expo-splash-screen",
       {
