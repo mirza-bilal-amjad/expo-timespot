@@ -35,7 +35,7 @@ The familiarity argument is not sentimental. A solo developer's throughput is do
 
 1. **Expo Router is not built in.** Ignite defaults to React Navigation v7. The conversion is a documented Cookbook recipe with a working reference repo, and it mostly amounts to `app/ → src/`, a new `src/app/` route tree and an entry-point change. One session.
 2. **Ignite targets SDK 55; TimeSpot needs 57.** `@expo/ui`'s universal (web-capable) components are production-ready from SDK 56. A two-SDK upgrade is the riskiest step in the plan. Mitigated by doing it on the untouched baseline before any product code exists, using the official `expo-upgrade` agent skill, and pinning `expo@>=57.0.17`. **Fallback:** stay on 55, ship native-only with the SwiftUI/Compose APIs, add web in a second pass — the design system and domain layer are unaffected.
-3. **Ignite has no web configuration.** `react-native-mmkv` in particular has no web implementation and Ignite's `ThemeProvider` calls it directly, so a `storage.web.ts` adapter is required before the first web boot.
+3. **Ignite has no web configuration** — `web.output` needed setting explicitly (`docs/14-ignite-integration.md` §7). The `react-native-mmkv` risk originally listed here did not materialize: v3.3.3 ships its own web implementation, and Ignite's `ThemeProvider` (which calls it directly) works on web unmodified — **corrected 2026-09-24**, verified by testing persistence across a reload.
 4. **Ignite's brand is not TimeSpot's.** Five theme files are replaced wholesale. Drop-in versions ship in `design/ignite-theme/`.
 5. **Ignite's `Card` is a filled, elevated panel**; TimeSpot's is a hairline. Same name, different component — rebuilt rather than restyled.
 

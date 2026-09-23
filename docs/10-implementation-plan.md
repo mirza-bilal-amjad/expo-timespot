@@ -19,7 +19,7 @@ Estimates assume agent-assisted implementation with you reviewing. Halve them if
 | 0.1 | `npx ignite-cli@latest new timespot --yes`; commit the untouched baseline | boots on iOS + Android |
 | 0.2 | Expo Router conversion (`app/ → src/`, `src/app/` routes, `expo-router/entry`) | route tree renders; deep link resolves |
 | 0.3 | **SDK 55 → 57 upgrade**, pin `expo@>=57.0.17` ⚠️ riskiest step | `expo-doctor` clean; boots on iOS, Android **and web** |
-| 0.4 | `storage.web.ts` — MMKV has no web build and `ThemeProvider` calls it directly | theme choice survives a web reload |
+| 0.4 | ~~`storage.web.ts`~~ — not needed, MMKV 3.3.3 has its own web build | theme choice survives a web reload |
 | 0.5 | Copy `design/ignite-theme/*` into `src/theme/`; wire `radius` into `theme.ts` + `types.ts` | sample screen in TimeSpot colours, both schemes |
 | 0.6 | Geist swap in `typography.ts` (keep the `light`/`bold` aliases) | fonts load on all three platforms |
 | 0.7 | Extend Ignite `Text` with display sizes + TimeSpot presets; `includeFontPadding: false` | `preset="hero"` is vertically centred on Android |
@@ -74,7 +74,7 @@ This is the highest-value phase and it needs no simulator. Everything here is un
 
 | # | Task | Acceptance |
 |---|---|---|
-| 3.1 | Zustand stores + `StorageAdapter` (MMKV / localStorage / memory) | kill and relaunch — cities, order, focus and prefs all survive |
+| 3.1 | Zustand stores + `StorageAdapter` (one MMKV instance for native + web, in-memory for tests) — done in Phase 0, task 0.10 | kill and relaunch — cities, order, focus and prefs all survive |
 | 3.2 | `useClock()` — boundary-aligned, AppState/visibility resync, minute coalescing | one interval in the app (asserted in a test); background for 10 min → correct on resume |
 | 3.3 | `CityRow` — memo'd, time as a prop | React DevTools profiler: **1 render per tick**, not N |
 | 3.4 | **S1 List** — strip, title, FlashList, tab bar | matches `04-screen-specs.md` geometry within 2 pt |

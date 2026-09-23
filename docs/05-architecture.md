@@ -71,7 +71,7 @@ timespot/
 │   ├─ hooks/                   useClock useZonedTime useBreakpoint
 │   ├─ theme/                   colors colorsDark spacing radius typography timing context
 │   ├─ i18n/                    Ignite's — every string lives here
-│   ├─ utils/                   Ignite's + storage.web.ts
+│   ├─ utils/                   Ignite's — storage/ (MMKV, works on every platform)
 │   ├─ assets/                  fonts/  map/world.topo.json  data/cities.min.json
 │   └─ stories/                 one file per component, all states × both themes
 ├─ design/                      tokens.json + ignite-theme/ (drop-in theme files)
@@ -102,7 +102,7 @@ timespot/
    └────────┘
        │ persist
        ▼
-   StorageAdapter  →  MMKV (native) | localStorage (web)
+   StorageAdapter  →  one MMKV instance (native + web — v3.3.3 has its own web build)
 ```
 
 Rules:

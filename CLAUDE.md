@@ -184,7 +184,7 @@ Project skills in `.claude/skills/` load automatically when relevant.
 ## Things that will bite
 
 **Ignite-specific**
-- **`react-native-mmkv` has no web build**, and Ignite's `ThemeProvider` calls `useMMKVString` directly. `storage.web.ts` must exist before the first web boot.
+- ~~`react-native-mmkv` has no web build~~ — **corrected 2026-09-24**: v3.3.3 ships a real web implementation (`createMMKV.web.ts`, backed by `localStorage`) that Metro resolves automatically. No separate `storage.web.ts` adapter is needed; `src/store/storage.ts` wraps the one MMKV instance for every platform. Verified: `ThemeProvider`'s `useMMKVString` and the Zustand stores both persist correctly on web, including across a reload.
 - **Never delete an Ignite semantic colour key** (`text`, `textDim`, `background`, `border`, `tint`, `tintInactive`, `separator`, `error`, `errorBackground`). Its own components read them. Add; don't remove.
 - **Never change Ignite's nine spacing values.** Add semantic layout tokens alongside.
 - **`typography.primary` needs `light` and `bold` keys** even as aliases — Ignite's presets reference them, and a missing key silently falls back to the system font.

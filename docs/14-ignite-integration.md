@@ -440,7 +440,7 @@ export default {
 
 Then per `docs/adr/0006-static-web-seo.md` and `14` §2.2's route tree. Things to check specifically because Ignite was not built with web in mind:
 
-- `react-native-mmkv` has no web implementation → `src/utils/storage/` needs a `.web.ts` sibling backed by `localStorage`. Ignite's `ThemeProvider` calls `useMMKVString` directly, so this must be fixed **before** the first web boot.
+- ~~`react-native-mmkv` has no web implementation~~ — **corrected 2026-09-24**: v3.3.3 ships `createMMKV.web.ts`, a real `localStorage`-backed implementation that Metro resolves automatically for the web platform. `useMMKVString` and MMKV-backed persistence (Ignite's `ThemeProvider`, `src/store/storage.ts`) work on web with no adapter needed — verified by testing both across a reload.
 - Reactotron imports are dev-only; confirm they are tree-shaken out of the web production bundle.
 - `react-native-keyboard-controller` is native-only; guard its provider with `Platform.OS !== 'web'`.
 - Ignite's `Screen` uses `useSafeAreaInsetsStyle`; on web that returns zeros, so use CSS `env(safe-area-inset-*)` for installed-PWA insets.
@@ -465,7 +465,7 @@ timespot/
 │   ├─ store/                      Zustand slices over Ignite's MMKV storage
 │   ├─ theme/                      colors, colorsDark, spacing, radius, typography, timing, context
 │   ├─ i18n/                       Ignite's — all strings live here
-│   ├─ utils/                      Ignite's + storage.web.ts
+│   ├─ utils/                      Ignite's — includes storage/ (MMKV, works on every platform)
 │   └─ services/                   Ignite's api (unused in v1 — no network)
 ├─ design/  docs/  .claude/  CLAUDE.md
 └─ app.config.ts  eas.json  tsconfig.json
@@ -534,7 +534,7 @@ Replaces Phase 0 in `10-implementation-plan.md`. ~1.5 days.
 | 0.1 | `npx ignite-cli@latest new timespot --yes`; commit the baseline | boots on iOS + Android |
 | 0.2 | Expo Router conversion (§2.2) | `src/app/(tabs)/index.tsx` renders; deep link works |
 | 0.3 | **SDK 55 → 57 upgrade** (§2.3); pin `expo@>=57.0.17` | `expo-doctor` clean; boots on iOS, Android **and web** |
-| 0.4 | `storage.web.ts` localStorage adapter | `ThemeProvider` works on web without MMKV |
+| 0.4 | ~~`storage.web.ts` localStorage adapter~~ — not needed, MMKV 3.3.3 has a real web build (§7) | `ThemeProvider` and MMKV-backed persistence both work on web, verified across a reload |
 | 0.5 | Replace the 5 theme files + add `radius.ts`, wire into `Theme` | a sample screen renders in TimeSpot colours, both themes |
 | 0.6 | Geist swap in `typography.ts` | fonts load on all three platforms |
 | 0.7 | Extend `Text` sizes + presets; add `includeFontPadding: false` | `preset="hero"` renders at 144 and is vertically centred on Android |

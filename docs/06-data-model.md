@@ -102,7 +102,7 @@ export interface StorageAdapter {
 }
 ```
 
-Native → `react-native-mmkv` (synchronous, ~30× faster than AsyncStorage, which matters because the city list is read during the first render). Web → `localStorage` wrapped in try/catch for Safari private mode. Tests → an in-memory map.
+`react-native-mmkv` (synchronous, ~30× faster than AsyncStorage, which matters because the city list is read during the first render) on every platform — v3.3.3 ships its own `localStorage`-backed web implementation, Metro-resolved automatically, so native and web share one adapter (`src/store/storage.ts`). Wrapped in try/catch for Safari private mode. Tests → an in-memory map.
 
 ### Migration
 
