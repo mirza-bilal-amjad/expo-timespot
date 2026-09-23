@@ -1,5 +1,6 @@
 import { ComponentType } from "react"
 import {
+  ActivityIndicator,
   Pressable,
   PressableProps,
   PressableStateCallbackType,
@@ -14,7 +15,12 @@ import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
 
 import { Text, TextProps } from "./Text"
 
-type Presets = "default" | "filled" | "reversed"
+type Presets = "default" | "filled" | "reversed" | "pill"
+
+/** docs/03-component-library.md — Button sizes. Only the `pill` preset uses
+ * this; Ignite's original presets keep their own fixed height, untouched. */
+export type ButtonSize = "sm" | "md" | "lg"
+const $pillHeights: Record<ButtonSize, number> = { sm: 36, md: 44, lg: 52 }
 
 export interface ButtonAccessoryProps {
   style: StyleProp<any>
@@ -83,6 +89,16 @@ export interface ButtonProps extends PressableProps {
    * An optional style override for the disabled state
    */
   disabledStyle?: StyleProp<ViewStyle>
+  /**
+   * Height for the `pill` preset only — sm 36 / md 44 / lg 52. Ignored by
+   * every other preset, which keeps Ignite's original fixed height.
+   */
+  size?: ButtonSize
+  /**
+   * Replaces the label with an inline spinner, same width, so the button
+   * doesn't jump between idle and loading.
+   */
+  loading?: boolean
 }
 
 /**
@@ -114,10 +130,12 @@ export function Button(props: ButtonProps) {
     LeftAccessory,
     disabled,
     disabledStyle: $disabledViewStyleOverride,
+    size = "md",
+    loading = false,
     ...rest
   } = props
 
-  const { themed } = useAppTheme()
+  const { theme, themed } = useAppTheme()
 
   const preset: Presets = props.preset ?? "default"
   /**
@@ -128,6 +146,10 @@ export function Button(props: ButtonProps) {
   function $viewStyle({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> {
     return [
       themed($viewPresets[preset]),
+      preset === "pill" && {
+        height: $pillHeights[size],
+        borderRadius: theme.radius.pill,
+      },
       $viewStyleOverride,
       !!pressed && themed([$pressedViewPresets[preset], $pressedViewStyleOverride]),
       !!disabled && $disabledViewStyleOverride,
@@ -151,9 +173,9 @@ export function Button(props: ButtonProps) {
     <Pressable
       style={$viewStyle}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={{ disabled: !!disabled, busy: loading }}
       {...rest}
-      disabled={disabled}
+      disabled={disabled || loading}
     >
       {(state) => (
         <>
@@ -161,7 +183,19 @@ export function Button(props: ButtonProps) {
             <LeftAccessory style={$leftAccessoryStyle} pressableState={state} disabled={disabled} />
           )}
 
-          <Text tx={tx} text={text} txOptions={txOptions} style={$textStyle(state)}>
+          {loading && (
+            <ActivityIndicator
+              style={$loadingIndicator}
+              color={(themed($textPresets[preset]).color as string) ?? theme.colors.text}
+            />
+          )}
+
+          <Text
+            tx={tx}
+            text={text}
+            txOptions={txOptions}
+            style={[$textStyle(state), loading && $loadingHiddenText]}
+          >
             {children}
           </Text>
 
@@ -227,22 +261,41 @@ const $viewPresets: Record<Presets, ThemedStyleArray<ViewStyle>> = {
     $baseViewStyle,
     ({ colors }) => ({ backgroundColor: colors.palette.neutral800 }),
   ],
+  // docs/03-component-library.md's "primary" variant — bg.inverse, always
+  // radius.pill. Height comes from the `size` prop at render time, not here.
+  pill: [
+    $styles.row,
+    ({ spacing, colors, radius }) => ({
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: spacing.lg,
+      borderRadius: radius.pill,
+      backgroundColor: colors.inverseBackground,
+      overflow: "hidden",
+    }),
+  ],
 }
 
 const $textPresets: Record<Presets, ThemedStyleArray<TextStyle>> = {
   default: [$baseTextStyle],
   filled: [$baseTextStyle],
   reversed: [$baseTextStyle, ({ colors }) => ({ color: colors.palette.neutral100 })],
+  pill: [$baseTextStyle, ({ colors }) => ({ color: colors.textOnInverse })],
 }
 
 const $pressedViewPresets: Record<Presets, ThemedStyle<ViewStyle>> = {
   default: ({ colors }) => ({ backgroundColor: colors.palette.neutral200 }),
   filled: ({ colors }) => ({ backgroundColor: colors.palette.neutral400 }),
   reversed: ({ colors }) => ({ backgroundColor: colors.palette.neutral700 }),
+  pill: () => ({ transform: [{ scale: 0.97 }] }),
 }
 
 const $pressedTextPresets: Record<Presets, ThemedStyle<TextStyle>> = {
   default: () => ({ opacity: 0.9 }),
   filled: () => ({ opacity: 0.9 }),
   reversed: () => ({ opacity: 0.9 }),
+  pill: () => ({ opacity: 0.9 }),
 }
+
+const $loadingHiddenText: TextStyle = { opacity: 0 }
+const $loadingIndicator: ViewStyle = { position: "absolute" }
