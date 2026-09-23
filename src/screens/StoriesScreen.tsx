@@ -5,12 +5,15 @@ import { Avatar } from "@/components/Avatar"
 import { AvatarStrip } from "@/components/AvatarStrip"
 import { Button } from "@/components/Button"
 import { Card } from "@/components/Card"
+import { CityRow } from "@/components/CityRow"
 import { Icon, ICON_NAMES } from "@/components/Icon"
 import { Numeral } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
 import { Sheet } from "@/components/Sheet"
 import { Text } from "@/components/Text"
+import { getZonedTime } from "@/domain/time/zone"
+import { useClock } from "@/hooks/useClock"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -51,6 +54,15 @@ export function StoriesScreen() {
   const [focusedCity, setFocusedCity] = useState("1")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [selectedRow, setSelectedRow] = useState<string | null>("tokyo")
+
+  const now = useClock()
+  const prefs = {
+    timeFormat: "24h" as const,
+    theme: "system" as const,
+    showSecondsOnList: false,
+    dayNightStyle: "icon" as const,
+  }
 
   return (
     <Screen preset="scroll" contentContainerStyle={{ backgroundColor: theme.colors.background }}>
@@ -156,6 +168,29 @@ export function StoriesScreen() {
         <AvatarStrip items={CITIES} focusedId={focusedCity} onSelect={setFocusedCity} max={5} />
       </Section>
 
+      <Section title="CityRow">
+        <View style={themed($cityRowStack)}>
+          <CityRow
+            city={{ cityId: "gn-1850147", addedAt: 0, order: 0 }}
+            time={getZonedTime(now, "Asia/Tokyo", prefs)}
+            selected={selectedRow === "tokyo"}
+            onPress={() => setSelectedRow("tokyo")}
+          />
+          <CityRow
+            city={{ cityId: "gn-2643743", addedAt: 0, order: 1 }}
+            time={getZonedTime(now, "Europe/London", prefs)}
+            selected={selectedRow === "london"}
+            onPress={() => setSelectedRow("london")}
+          />
+          <CityRow
+            city={{ cityId: "gn-5128581", addedAt: 0, order: 2, label: "Home" }}
+            time={getZonedTime(now, "America/New_York", prefs)}
+            selected={selectedRow === "nyc"}
+            onPress={() => setSelectedRow("nyc")}
+          />
+        </View>
+      </Section>
+
       <Section title="Sheet">
         <Button preset="pill" text="Open sheet" onPress={() => setSheetOpen(true)} />
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen} title="A sheet story">
@@ -207,3 +242,5 @@ const $iconCell: ThemedStyle<ViewStyle> = (theme) => ({
 })
 
 const $sheetContent: ThemedStyle<TextStyle> = (theme) => ({ padding: theme.spacing.lg })
+
+const $cityRowStack: ThemedStyle<ViewStyle> = (theme) => ({ gap: theme.spacing.rowGap })

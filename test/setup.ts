@@ -25,6 +25,29 @@ jest.doMock("react-native", () => {
   )
 })
 
+// react-native-reanimated v4's own mock.js pulls in react-native-worklets'
+// real native initializer (it needs the new-architecture turbo module, which
+// doesn't exist under jest/jsdom) and throws before a single test runs. None
+// of TimeSpot's components run a worklet in a test — <Pressable>'s spring
+// press feedback is purely visual — so a minimal stand-in of the handful of
+// APIs actually used (Animated.createAnimatedComponent, useSharedValue,
+// useAnimatedStyle, withSpring) is enough, and sidesteps the native module
+// entirely rather than trying to shim it.
+jest.mock("react-native-reanimated", () => {
+  const React = require("react")
+  return {
+    __esModule: true,
+    default: {
+      createAnimatedComponent: (Component: unknown) => Component,
+      View: require("react-native").View,
+    },
+    useSharedValue: (initial: unknown) => React.useRef({ value: initial }).current,
+    useAnimatedStyle: (factory: () => unknown) => factory(),
+    withSpring: (toValue: unknown) => toValue,
+    withTiming: (toValue: unknown) => toValue,
+  }
+})
+
 jest.mock("i18next", () => ({
   currentLocale: "en",
   t: (key: string, params: Record<string, string>) => {

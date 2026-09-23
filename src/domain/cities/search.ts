@@ -84,6 +84,10 @@ export function getCityByZone(zone: string): City | undefined {
   return typed.find((c) => c.zone === zone)
 }
 
+export function getCityById(id: string): City | undefined {
+  return cityById.get(id)
+}
+
 /**
  * The best-known city currently at a given UTC offset. Takes `now` (not in the
  * doc's original signature — offset-to-zone matching is DST-dependent, so it
