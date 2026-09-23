@@ -1,0 +1,137 @@
+import { forwardRef, useCallback, useState } from "react"
+import {
+  GestureResponderEvent,
+  LayoutChangeEvent,
+  NativeSyntheticEvent,
+  Platform,
+  TargetedEvent,
+  View,
+  ViewStyle,
+  // eslint-disable-next-line no-restricted-imports
+  Pressable as RNPressable,
+  // eslint-disable-next-line no-restricted-imports
+  PressableProps as RNPressableProps,
+} from "react-native"
+import * as Haptics from "expo-haptics"
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated"
+
+import { useAppTheme } from "@/theme/context"
+
+/**
+ * docs/03-component-library.md — Tier 1. The only place besides Text/Numeral
+ * that touches raw RN. Every other pressable surface (Button, SegmentedPill,
+ * Icon's pressable variant, CityRow…) composes this instead of RN's Pressable
+ * directly, so press feedback, hit area and the web focus ring are consistent
+ * everywhere for free.
+ */
+
+const MIN_TARGET = Platform.select({ ios: 44, android: 48, default: 24 })!
+
+export interface PressableProps extends Omit<RNPressableProps, "style"> {
+  style?: RNPressableProps["style"]
+  disabled?: boolean
+}
+
+const AnimatedPressable = Animated.createAnimatedComponent(RNPressable)
+
+export const Pressable = forwardRef<View, PressableProps>(function Pressable(props, ref) {
+  const { style, hitSlop, disabled, onPressIn, onPressOut, onLayout, onFocus, onBlur, ...rest } =
+    props
+  const { theme } = useAppTheme()
+  const scale = useSharedValue(1)
+  const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null)
+  const [focused, setFocused] = useState(false)
+
+  const handleLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout
+      setMeasured({ width, height })
+      onLayout?.(e)
+    },
+    [onLayout],
+  )
+
+  const handlePressIn = useCallback(
+    (e: GestureResponderEvent) => {
+      scale.value = withSpring(0.97, theme.timing.spring.press)
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+      }
+      onPressIn?.(e)
+    },
+    [onPressIn, scale, theme.timing.spring.press],
+  )
+
+  const handlePressOut = useCallback(
+    (e: GestureResponderEvent) => {
+      scale.value = withSpring(1, theme.timing.spring.press)
+      onPressOut?.(e)
+    },
+    [onPressOut, scale, theme.timing.spring.press],
+  )
+
+  const handleFocus = useCallback(
+    (e: NativeSyntheticEvent<TargetedEvent>) => {
+      setFocused(true)
+      onFocus?.(e)
+    },
+    [onFocus],
+  )
+
+  const handleBlur = useCallback(
+    (e: NativeSyntheticEvent<TargetedEvent>) => {
+      setFocused(false)
+      onBlur?.(e)
+    },
+    [onBlur],
+  )
+
+  const $animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
+
+  // Auto-hitSlop only pads up to the platform minimum touch target — it never
+  // shrinks a slop the caller passed explicitly, and never inflates the visual.
+  const autoHitSlop =
+    !hitSlop && measured && Platform.OS !== "web"
+      ? {
+          top: Math.max(0, (MIN_TARGET - measured.height) / 2),
+          bottom: Math.max(0, (MIN_TARGET - measured.height) / 2),
+          left: Math.max(0, (MIN_TARGET - measured.width) / 2),
+          right: Math.max(0, (MIN_TARGET - measured.width) / 2),
+        }
+      : undefined
+
+  return (
+    <AnimatedPressable
+      ref={ref}
+      hitSlop={hitSlop ?? autoHitSlop}
+      disabled={disabled}
+      accessibilityState={{ disabled }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onLayout={handleLayout}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      style={[
+        $animatedStyle,
+        disabled && $disabledStyle,
+        // A simplified :focus-visible — RN's style prop can't express the
+        // keyboard-vs-pointer distinction CSS :focus-visible does, so this
+        // shows on any web focus. Reasonable in practice; revisit if it reads
+        // as noisy on mouse click.
+        Platform.OS === "web" && focused && ($focusRingStyle(theme.colors.focusRing) as ViewStyle),
+        style,
+      ]}
+      {...rest}
+    />
+  )
+})
+
+const $disabledStyle: ViewStyle = { opacity: 0.4 }
+
+const $focusRingStyle = (color: string) =>
+  ({
+    outlineWidth: 2,
+    outlineColor: color,
+    outlineStyle: "solid",
+    outlineOffset: 2,
+  }) as ViewStyle
