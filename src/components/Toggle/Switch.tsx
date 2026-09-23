@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useCallback } from "react"
-import { Animated, Image, ImageStyle, Platform, StyleProp, View, ViewStyle } from "react-native"
+import { Animated, Platform, StyleProp, View, ViewStyle } from "react-native"
 
-import { iconRegistry } from "@/components/Icon"
+import { Icon } from "@/components/Icon"
 import { isRTL } from "@/i18n"
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
@@ -40,6 +40,8 @@ export function Switch(props: SwitchToggleProps) {
   )
   return <Toggle accessibilityRole="switch" {...rest} ToggleInput={switchInput} />
 }
+
+const SWITCH_ACCESSIBILITY_ICON_SIZE = 14
 
 function SwitchInput(props: SwitchInputProps) {
   const {
@@ -215,9 +217,10 @@ function SwitchAccessibilityLabel(props: SwitchInputProps & { role: "on" | "off"
       )}
 
       {accessibilityMode === "icon" && shouldLabelBeVisible && (
-        <Image
-          style={[$switchAccessibilityIcon, { tintColor: color }]}
-          source={role === "off" ? iconRegistry.hidden : iconRegistry.view}
+        <Icon
+          icon={role === "off" ? "close" : "check"}
+          size={SWITCH_ACCESSIBILITY_ICON_SIZE}
+          color={color as string}
         />
       )}
     </View>
@@ -247,12 +250,6 @@ const $switchAccessibility: ViewStyle = {
   width: "40%",
   justifyContent: "center",
   alignItems: "center",
-}
-
-const $switchAccessibilityIcon: ImageStyle = {
-  width: 14,
-  height: 14,
-  resizeMode: "contain",
 }
 
 const $switchAccessibilityLine: ViewStyle = {
