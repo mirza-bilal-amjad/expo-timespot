@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingViewProps,
   LayoutChangeEvent,
   Platform,
+  ScrollView,
   ScrollViewProps,
   StyleProp,
   View,
@@ -202,28 +203,54 @@ function ScreenWithScrolling(props: ScreenProps) {
   } = props as ScrollScreenProps
 
   const ref = useRef<KeyboardAwareScrollViewRef>(null)
+  const webRef = useRef<ScrollView>(null)
 
   const { scrollEnabled, onContentSizeChange, onLayout } = useAutoPreset(props as AutoScreenProps)
+
+  const handleLayout = (e: LayoutChangeEvent) => {
+    onLayout(e)
+    ScrollViewProps?.onLayout?.(e)
+  }
+  const handleContentSizeChange = (w: number, h: number) => {
+    onContentSizeChange(w, h)
+    ScrollViewProps?.onContentSizeChange?.(w, h)
+  }
+  const $scrollStyle = [$outerStyle, ScrollViewProps?.style, style]
+  const $scrollContentStyle = [
+    $innerStyle,
+    ScrollViewProps?.contentContainerStyle,
+    contentContainerStyle,
+  ]
+
+  // KeyboardAwareScrollView needs a KeyboardProvider ancestor, which is
+  // native-only (src/app/_layout.tsx skips it on web per
+  // react-native-keyboard-controller's own platform limits) — a plain
+  // ScrollView covers web instead.
+  if (Platform.OS === "web") {
+    return (
+      <ScrollView
+        ref={webRef}
+        {...{ keyboardShouldPersistTaps, scrollEnabled }}
+        {...ScrollViewProps}
+        onLayout={handleLayout}
+        onContentSizeChange={handleContentSizeChange}
+        style={$scrollStyle}
+        contentContainerStyle={$scrollContentStyle}
+      >
+        {children}
+      </ScrollView>
+    )
+  }
 
   return (
     <KeyboardAwareScrollView
       bottomOffset={keyboardBottomOffset}
       {...{ keyboardShouldPersistTaps, scrollEnabled, ref }}
       {...ScrollViewProps}
-      onLayout={(e) => {
-        onLayout(e)
-        ScrollViewProps?.onLayout?.(e)
-      }}
-      onContentSizeChange={(w: number, h: number) => {
-        onContentSizeChange(w, h)
-        ScrollViewProps?.onContentSizeChange?.(w, h)
-      }}
-      style={[$outerStyle, ScrollViewProps?.style, style]}
-      contentContainerStyle={[
-        $innerStyle,
-        ScrollViewProps?.contentContainerStyle,
-        contentContainerStyle,
-      ]}
+      onLayout={handleLayout}
+      onContentSizeChange={handleContentSizeChange}
+      style={$scrollStyle}
+      contentContainerStyle={$scrollContentStyle}
     >
       {children}
     </KeyboardAwareScrollView>
