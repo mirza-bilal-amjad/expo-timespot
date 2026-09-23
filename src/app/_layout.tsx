@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Platform } from "react-native"
 import { Slot, SplashScreen } from "expo-router"
 import { useFonts } from "@expo-google-fonts/space-grotesk"
 import { KeyboardProvider } from "react-native-keyboard-controller"
@@ -44,13 +45,15 @@ export default function Root() {
     return null
   }
 
+  const content = (
+    <ThemeProvider>
+      <Slot />
+    </ThemeProvider>
+  )
+
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <ThemeProvider>
-        <KeyboardProvider>
-          <Slot />
-        </KeyboardProvider>
-      </ThemeProvider>
+      {Platform.OS === "web" ? content : <KeyboardProvider>{content}</KeyboardProvider>}
     </SafeAreaProvider>
   )
 }

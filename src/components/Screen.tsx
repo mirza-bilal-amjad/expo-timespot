@@ -9,7 +9,6 @@ import {
   View,
   ViewStyle,
 } from "react-native"
-import { useScrollToTop } from "@react-navigation/native"
 import { SystemBars, SystemBarsProps, SystemBarStyle } from "react-native-edge-to-edge"
 import {
   KeyboardAwareScrollView,
@@ -202,10 +201,6 @@ function ScreenWithScrolling(props: ScreenProps) {
   const ref = useRef<KeyboardAwareScrollViewRef>(null)
 
   const { scrollEnabled, onContentSizeChange, onLayout } = useAutoPreset(props as AutoScreenProps)
-
-  // Add native behavior of pressing the active tab to scroll to the top of the content
-  // More info at: https://reactnavigation.org/docs/use-scroll-to-top/
-  useScrollToTop(ref)
 
   return (
     <KeyboardAwareScrollView
