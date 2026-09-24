@@ -37,6 +37,22 @@ export interface TabBarProps {
 // — docs/01-design-audit.md §7. No shared token for this control size yet.
 const BUTTON_SIZE = 56
 
+/**
+ * docs/04-screen-specs.md's cross-screen rule 2: "The tab bar floats over
+ * content, so every scroll container carries `contentInset.bottom =
+ * tabBarHeight + space.4`." Anything else that floats near the bottom of a
+ * tabbed screen (a <Toast>, a floating action button) needs the same
+ * clearance so it doesn't render underneath the bar — the single source of
+ * truth for that number lives here, next to the bar's own layout constants,
+ * rather than duplicated per caller.
+ */
+export function useTabBarClearance(): number {
+  const { theme } = useAppTheme()
+  const insets = useSafeAreaInsets()
+  const barHeight = BUTTON_SIZE + theme.spacing.xxs * 2
+  return insets.bottom + theme.spacing.md + barHeight
+}
+
 export function TabBar(props: TabBarProps) {
   const { items, activeKey, onSelect } = props
   const { theme, themed } = useAppTheme()

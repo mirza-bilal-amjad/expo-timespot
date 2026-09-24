@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { Platform } from "react-native"
+import { Platform, ViewStyle } from "react-native"
 import { useFonts } from "expo-font"
 import { Slot, SplashScreen } from "expo-router"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
 
@@ -52,8 +53,12 @@ export default function Root() {
   )
 
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      {Platform.OS === "web" ? content : <KeyboardProvider>{content}</KeyboardProvider>}
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={$gestureRoot}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        {Platform.OS === "web" ? content : <KeyboardProvider>{content}</KeyboardProvider>}
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }
+
+const $gestureRoot: ViewStyle = { flex: 1 }

@@ -30,6 +30,8 @@ const ar: Translations = {
     emptyTitle: "لا توجد مدن بعد",
     emptyBody: "أضف مدينة لرؤية وقتها بجانب وقتك.",
     emptyCta: "أضف مدينتك الأولى",
+    cityRemoved: "تمت إزالة المدينة",
+    undo: "تراجع",
   },
   tabBar: {
     list: "التوقيت العالمي",

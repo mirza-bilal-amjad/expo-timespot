@@ -28,6 +28,8 @@ const en = {
     emptyTitle: "No cities yet",
     emptyBody: "Add a city to see its time next to yours.",
     emptyCta: "Add your first city",
+    cityRemoved: "City removed",
+    undo: "Undo",
   },
   tabBar: {
     list: "World time",

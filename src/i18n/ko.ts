@@ -30,6 +30,8 @@ const ko: Translations = {
     emptyTitle: "아직 도시가 없습니다",
     emptyBody: "도시를 추가하면 내 시간 옆에서 바로 볼 수 있어요.",
     emptyCta: "첫 도시 추가하기",
+    cityRemoved: "도시가 삭제되었습니다",
+    undo: "실행 취소",
   },
   tabBar: {
     list: "세계 시간",

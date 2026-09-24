@@ -31,6 +31,8 @@ const ja: Translations = {
     emptyTitle: "まだ都市がありません",
     emptyBody: "都市を追加すると、自分の時間と並べて表示されます。",
     emptyCta: "最初の都市を追加",
+    cityRemoved: "都市を削除しました",
+    undo: "元に戻す",
   },
   tabBar: {
     list: "世界時計",

@@ -30,6 +30,8 @@ const hi: Translations = {
     emptyTitle: "अभी कोई शहर नहीं",
     emptyBody: "अपने समय के साथ किसी शहर का समय देखने के लिए एक शहर जोड़ें।",
     emptyCta: "अपना पहला शहर जोड़ें",
+    cityRemoved: "शहर हटा दिया गया",
+    undo: "पूर्ववत करें",
   },
   tabBar: {
     list: "विश्व समय",

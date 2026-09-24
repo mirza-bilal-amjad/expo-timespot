@@ -31,6 +31,8 @@ const fr: Translations = {
     emptyTitle: "Aucune ville pour l'instant",
     emptyBody: "Ajoutez une ville pour voir son heure à côté de la vôtre.",
     emptyCta: "Ajoutez votre première ville",
+    cityRemoved: "Ville supprimée",
+    undo: "Annuler",
   },
   tabBar: {
     list: "Heure mondiale",

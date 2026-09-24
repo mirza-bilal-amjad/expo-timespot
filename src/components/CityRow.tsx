@@ -1,5 +1,5 @@
 import { useCallback, useEffect, memo } from "react"
-import { Platform, View, ViewStyle } from "react-native"
+import { AccessibilityActionEvent, Platform, View, ViewStyle } from "react-native"
 import * as Haptics from "expo-haptics"
 import Animated, {
   interpolateColor,
@@ -22,12 +22,17 @@ import { Text } from "./Text"
 /**
  * docs/03-component-library.md "<CityRow> — S1 list row",
  * docs/04-screen-specs.md "City row — anatomy", docs/08-motion-spec.md §4
- * "Row selection". Receives `time` as a prop — it does not subscribe to the
- * clock (CLAUDE.md rule 3, "one clock"): the S1 list ticks once and
- * re-renders N memo'd rows, not N subscriptions.
+ * "Row selection", docs/09-accessibility.md §2 (the row's exact a11y
+ * contract) and §4 "Drag has a non-drag alternative" (2.5.7). Receives
+ * `time` as a prop — it does not subscribe to the clock (CLAUDE.md rule 3,
+ * "one clock"): the S1 list ticks once and re-renders N memo'd rows, not N
+ * subscriptions.
  *
- * `dragHandleProps` is accepted per the doc's type but unused until task 3.6
- * wires reorder — passing it through now avoids a signature change later.
+ * The drag-to-reorder gesture and swipe-to-delete gesture both live in the
+ * wrapping `<ReorderableCityRow>` (task 3.6), not here — this stays a plain
+ * presentational row. `onDelete`/`onMoveUp`/`onMoveDown` exist so the
+ * accessibility actions below trigger the *identical* store operation a
+ * gesture would, not a parallel code path.
  */
 export interface CityRowProps {
   city: SavedCity
@@ -35,20 +40,41 @@ export interface CityRowProps {
   selected: boolean
   onPress: () => void
   onLongPress?: () => void
+  onDelete?: () => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
   dragHandleProps?: Record<string, unknown>
 }
 
+/**
+ * docs/09-accessibility.md §2's own worked example: "Tokyo, 1:40 AM,
+ * night-time, 9 hours ahead of UTC" — screen readers read "UTC+9" as "utc
+ * plus nine" at best, so the offset is spelled out, and the clock face is
+ * spoken as printed ("1:40 AM"), not digit-by-digit.
+ */
 function citySpeechLabel(name: string, time: ZonedTime): string {
-  const hour = parseInt(time.hours, 10)
-  const spokenTime = time.meridiem
-    ? `${hour} ${time.minutes} ${time.meridiem}`
-    : `${hour} ${time.minutes}`
-  const dayOrNight = time.isDay ? "day" : "night"
-  const spokenOffset = time.offsetLabel
-    .replace("UTC", "UTC ")
-    .replace("+", "plus ")
-    .replace("−", "minus ")
-  return `${name}, ${spokenTime}, ${dayOrNight}, ${spokenOffset}`
+  // time.hours is always 2-digit ("01") for <Numeral>'s fixed-width cells —
+  // strip the leading zero for speech, matching the doc's own worked
+  // example ("1:40 AM", not "01:40 AM").
+  const hour = String(parseInt(time.hours, 10))
+  const clock = time.meridiem
+    ? `${hour}:${time.minutes} ${time.meridiem}`
+    : `${hour}:${time.minutes}`
+  const dayPart = time.isDay ? "day-time" : "night-time"
+  return `${name}, ${clock}, ${dayPart}, ${spokenOffset(time.offsetMinutes)}`
+}
+
+function spokenOffset(offsetMinutes: number): string {
+  if (offsetMinutes === 0) return "UTC"
+  const direction = offsetMinutes > 0 ? "ahead of" : "behind"
+  const abs = Math.abs(offsetMinutes)
+  const hours = Math.floor(abs / 60)
+  const minutes = abs % 60
+  const parts = [
+    hours > 0 ? `${hours} hour${hours === 1 ? "" : "s"}` : null,
+    minutes > 0 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : null,
+  ].filter(Boolean)
+  return `${parts.join(" ")} ${direction} UTC`
 }
 
 const AnimatedText = Animated.createAnimatedComponent(Text)
@@ -63,7 +89,7 @@ const SELECT_STAGGER_MS = 40
 
 export const CityRow = memo(
   function CityRow(props: CityRowProps) {
-    const { city, time, selected, onPress, onLongPress } = props
+    const { city, time, selected, onPress, onLongPress, onDelete, onMoveUp, onMoveDown } = props
     const { theme, themed } = useAppTheme()
 
     const cityData = getCityById(city.cityId)
@@ -113,6 +139,30 @@ export const CityRow = memo(
       onPress()
     }, [selected, onPress])
 
+    // docs/09-accessibility.md §2 and §4 (WCAG 2.5.7): reorder and delete
+    // both need a non-drag, non-swipe path. `magicTap` (S5 city detail) is
+    // a documented no-op for now — that screen doesn't exist yet (it's
+    // outside Phase 3's scope), same as the header add-button placeholder.
+    const handleAccessibilityAction = useCallback(
+      (event: AccessibilityActionEvent) => {
+        switch (event.nativeEvent.actionName) {
+          case "activate":
+            handlePress()
+            break
+          case "delete":
+            onDelete?.()
+            break
+          case "moveUp":
+            onMoveUp?.()
+            break
+          case "moveDown":
+            onMoveDown?.()
+            break
+        }
+      },
+      [handlePress, onDelete, onMoveUp, onMoveDown],
+    )
+
     return (
       <Pressable
         onPress={handlePress}
@@ -121,6 +171,14 @@ export const CityRow = memo(
         accessibilityLabel={citySpeechLabel(name, time)}
         accessibilityState={{ selected }}
         accessibilityHint="Double tap to focus"
+        accessibilityActions={[
+          { name: "activate", label: "Focus" },
+          { name: "magicTap", label: "Open details" },
+          { name: "delete", label: "Remove city" },
+          { name: "moveUp", label: "Move up" },
+          { name: "moveDown", label: "Move down" },
+        ]}
+        onAccessibilityAction={handleAccessibilityAction}
       >
         <Animated.View style={[themed($row), $animatedRow]}>
           <View style={$topLine}>
@@ -161,7 +219,10 @@ export const CityRow = memo(
     prev.time.display === next.time.display &&
     prev.selected === next.selected &&
     prev.city.cityId === next.city.cityId &&
-    prev.city.label === next.city.label,
+    prev.city.label === next.city.label &&
+    prev.onDelete === next.onDelete &&
+    prev.onMoveUp === next.onMoveUp &&
+    prev.onMoveDown === next.onMoveDown,
 )
 
 const $row: ThemedStyle<ViewStyle> = (theme) => ({

@@ -43,6 +43,13 @@ jest.mock("react-native-reanimated", () => {
     },
     useSharedValue: (initial: unknown) => React.useRef({ value: initial }).current,
     useAnimatedStyle: (factory: () => unknown) => factory(),
+    useAnimatedRef: () => React.useRef(null),
+    useAnimatedReaction: () => {},
+    useEvent: () => undefined,
+    runOnJS:
+      (fn: (...args: unknown[]) => void) =>
+      (...args: unknown[]) =>
+        fn(...args),
     withSpring: (toValue: unknown) => toValue,
     withTiming: (toValue: unknown) => toValue,
     withDelay: (_delay: unknown, animation: unknown) => animation,
@@ -60,6 +67,15 @@ jest.mock("react-native-reanimated", () => {
     },
   }
 })
+
+// react-native-worklets' own native initializer has the same jest/jsdom
+// problem as reanimated's mock.js above — scheduleOnRN is the only export
+// TimeSpot actually calls (from gesture callbacks), so it's stubbed
+// straight through to a plain function call.
+jest.mock("react-native-worklets", () => ({
+  __esModule: true,
+  scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
+}))
 
 jest.mock("i18next", () => ({
   currentLocale: "en",

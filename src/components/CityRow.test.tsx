@@ -55,12 +55,55 @@ describe("CityRow", () => {
     expect(screen.getByText("Home")).toBeTruthy()
   })
 
-  it("carries a single-node accessibility label with name, time, day/night and offset", () => {
+  it("carries a single-node accessibility label matching docs/09-accessibility.md's worked example", () => {
     renderRow(<CityRow city={savedCity} time={makeTime()} selected={false} onPress={jest.fn()} />)
-    const node = screen.getByLabelText("Tokyo, 1 40, night, UTC plus 9")
+    const node = screen.getByLabelText("Tokyo, 1:40, night-time, 9 hours ahead of UTC")
     expect(node).toBeTruthy()
     expect(node.props.accessibilityHint).toBe("Double tap to focus")
     expect(node.props.accessibilityState).toEqual({ selected: false })
+  })
+
+  it("spells out a sub-hour offset and 'behind' for a negative one", () => {
+    renderRow(
+      <CityRow
+        city={savedCity}
+        time={makeTime({ offsetMinutes: -210, isDay: true })}
+        selected={false}
+        onPress={jest.fn()}
+      />,
+    )
+    expect(
+      screen.getByLabelText("Tokyo, 1:40, day-time, 3 hours 30 minutes behind UTC"),
+    ).toBeTruthy()
+  })
+
+  it("exposes moveUp/moveDown/delete accessibility actions wired to the matching props", () => {
+    const onMoveUp = jest.fn()
+    const onMoveDown = jest.fn()
+    const onDelete = jest.fn()
+    renderRow(
+      <CityRow
+        city={savedCity}
+        time={makeTime()}
+        selected={false}
+        onPress={jest.fn()}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        onDelete={onDelete}
+      />,
+    )
+    const node = screen.getByLabelText("Tokyo, 1:40, night-time, 9 hours ahead of UTC")
+    const actionNames = node.props.accessibilityActions.map((a: { name: string }) => a.name)
+    expect(actionNames).toEqual(["activate", "magicTap", "delete", "moveUp", "moveDown"])
+
+    node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveUp" } })
+    expect(onMoveUp).toHaveBeenCalledTimes(1)
+
+    node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveDown" } })
+    expect(onMoveDown).toHaveBeenCalledTimes(1)
+
+    node.props.onAccessibilityAction({ nativeEvent: { actionName: "delete" } })
+    expect(onDelete).toHaveBeenCalledTimes(1)
   })
 
   it("is memoized: an unrelated prop identity change with the same memo-key values does not remount", () => {
