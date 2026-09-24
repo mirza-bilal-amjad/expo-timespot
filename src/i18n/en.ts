@@ -48,6 +48,17 @@ const en = {
     addHint: "Double tap to add",
     alreadyAdded: ", already added",
   },
+  clock: {
+    noCity: "No city selected yet.",
+    openSettings: "Open settings",
+    formatToggle: "Time format",
+  },
+  sun: {
+    midnightSun: "Midnight sun",
+    polarNight: "Polar night",
+    sunRises: "Sun rises {{date}}",
+    dayLength: "Sun : {{duration}}",
+  },
 }
 
 export default en

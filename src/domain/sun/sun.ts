@@ -37,3 +37,31 @@ export function getSunTimes(lat: number, lon: number, date: Date, zone: string):
 export function isDaylight(lat: number, lon: number, now: number): boolean {
   return getPosition(new Date(now), lat, lon).altitude > 0
 }
+
+/** '10h 05m' — docs/04-screen-specs.md S2's sun block. Always both units,
+ * minutes zero-padded, matching the doc's own "10h 06m" example. */
+export function formatDayLength(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return `${hours}h ${String(mins).padStart(2, "0")}m`
+}
+
+const MAX_SCAN_DAYS = 200
+
+/** docs/04-screen-specs.md S2: polar night renders "the date the sun next
+ * rises". Scans forward day by day — polar night doesn't last more than a
+ * few months anywhere on Earth, so `MAX_SCAN_DAYS` is a generous ceiling,
+ * not a real limit. Returns null only if something is astronomically wrong. */
+export function getNextSunrise(
+  lat: number,
+  lon: number,
+  fromMs: number,
+  zone: string,
+): Date | null {
+  for (let i = 1; i <= MAX_SCAN_DAYS; i++) {
+    const candidate = new Date(fromMs + i * DAY_MS)
+    const times = getSunTimes(lat, lon, candidate, zone)
+    if (times.kind === "normal" && times.sunrise) return times.sunrise
+  }
+  return null
+}

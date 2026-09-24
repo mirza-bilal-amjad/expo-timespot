@@ -11,6 +11,7 @@ import { Numeral } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
 import { Sheet } from "@/components/Sheet"
+import { SunBlock } from "@/components/SunBlock"
 import { Text } from "@/components/Text"
 import { getZonedTime } from "@/domain/time/zone"
 import { useClock } from "@/hooks/useClock"
@@ -191,6 +192,33 @@ export function StoriesScreen() {
         </View>
       </Section>
 
+      <Section title="SunBlock">
+        <View style={themed($sunBlockGrid)}>
+          <View>
+            <Text preset="caption" text="Normal (equator)" />
+            <SunBlock lat={0} lon={30} zone="Africa/Nairobi" now={now} />
+          </View>
+          <View>
+            <Text preset="caption" text="Polar night (Tromsø, Dec)" />
+            <SunBlock
+              lat={69.6496}
+              lon={18.956}
+              zone="Europe/Oslo"
+              now={Date.UTC(2026, 11, 15, 12, 0, 0)}
+            />
+          </View>
+          <View>
+            <Text preset="caption" text="Midnight sun (Tromsø, Jun)" />
+            <SunBlock
+              lat={69.6496}
+              lon={18.956}
+              zone="Europe/Oslo"
+              now={Date.UTC(2026, 5, 15, 12, 0, 0)}
+            />
+          </View>
+        </View>
+      </Section>
+
       <Section title="Sheet">
         <Button preset="pill" text="Open sheet" onPress={() => setSheetOpen(true)} />
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen} title="A sheet story">
@@ -244,3 +272,9 @@ const $iconCell: ThemedStyle<ViewStyle> = (theme) => ({
 const $sheetContent: ThemedStyle<TextStyle> = (theme) => ({ padding: theme.spacing.lg })
 
 const $cityRowStack: ThemedStyle<ViewStyle> = (theme) => ({ gap: theme.spacing.rowGap })
+
+const $sunBlockGrid: ThemedStyle<ViewStyle> = (theme) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: theme.spacing.lg,
+})

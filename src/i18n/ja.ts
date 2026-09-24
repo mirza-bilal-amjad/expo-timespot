@@ -51,6 +51,17 @@ const ja: Translations = {
     addHint: "ダブルタップで追加",
     alreadyAdded: "（追加済み）",
   },
+  clock: {
+    noCity: "都市がまだ選択されていません。",
+    openSettings: "設定を開く",
+    formatToggle: "時刻表示形式",
+  },
+  sun: {
+    midnightSun: "白夜",
+    polarNight: "極夜",
+    sunRises: "{{date}}に日の出",
+    dayLength: "日照 : {{duration}}",
+  },
 }
 
 export default ja

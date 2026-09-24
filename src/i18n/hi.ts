@@ -50,6 +50,17 @@ const hi: Translations = {
     addHint: "जोड़ने के लिए दो बार टैप करें",
     alreadyAdded: ", पहले से जोड़ा गया",
   },
+  clock: {
+    noCity: "अभी तक कोई शहर चुना नहीं गया।",
+    openSettings: "सेटिंग्स खोलें",
+    formatToggle: "समय प्रारूप",
+  },
+  sun: {
+    midnightSun: "मध्यरात्रि सूर्य",
+    polarNight: "ध्रुवीय रात्रि",
+    sunRises: "सूर्य {{date}} को उगेगा",
+    dayLength: "सूर्य : {{duration}}",
+  },
 }
 
 export default hi

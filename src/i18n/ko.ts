@@ -50,6 +50,17 @@ const ko: Translations = {
     addHint: "두 번 탭하여 추가",
     alreadyAdded: ", 이미 추가됨",
   },
+  clock: {
+    noCity: "아직 선택된 도시가 없습니다.",
+    openSettings: "설정 열기",
+    formatToggle: "시간 형식",
+  },
+  sun: {
+    midnightSun: "백야",
+    polarNight: "극야",
+    sunRises: "{{date}}에 해가 뜹니다",
+    dayLength: "일조 : {{duration}}",
+  },
 }
 
 export default ko

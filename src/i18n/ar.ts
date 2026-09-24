@@ -50,6 +50,17 @@ const ar: Translations = {
     addHint: "اضغط مرتين للإضافة",
     alreadyAdded: "، أُضيفت بالفعل",
   },
+  clock: {
+    noCity: "لم يتم اختيار مدينة بعد.",
+    openSettings: "فتح الإعدادات",
+    formatToggle: "تنسيق الوقت",
+  },
+  sun: {
+    midnightSun: "شمس منتصف الليل",
+    polarNight: "الليل القطبي",
+    sunRises: "تشرق الشمس في {{date}}",
+    dayLength: "الشمس : {{duration}}",
+  },
 }
 
 export default ar

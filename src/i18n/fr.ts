@@ -51,6 +51,17 @@ const fr: Translations = {
     addHint: "Appuyez deux fois pour ajouter",
     alreadyAdded: ", déjà ajoutée",
   },
+  clock: {
+    noCity: "Aucune ville sélectionnée pour l'instant.",
+    openSettings: "Ouvrir les réglages",
+    formatToggle: "Format de l'heure",
+  },
+  sun: {
+    midnightSun: "Soleil de minuit",
+    polarNight: "Nuit polaire",
+    sunRises: "Le soleil se lève le {{date}}",
+    dayLength: "Soleil : {{duration}}",
+  },
 }
 
 export default fr

@@ -1,6 +1,6 @@
 import { getPosition } from "suncalc"
 
-import { getSunTimes, isDaylight } from "./sun"
+import { formatDayLength, getNextSunrise, getSunTimes, isDaylight } from "./sun"
 
 const TROMSO = { lat: 69.6496, lon: 18.956 }
 const EQUATOR = { lat: 0, lon: 30 }
@@ -79,5 +79,39 @@ describe("isDaylight", () => {
     const midnightUtc = Date.UTC(2026, 5, 15, 0, 0, 0)
     expect(isDaylight(0, 0, noonUtc)).toBe(true)
     expect(isDaylight(0, 0, midnightUtc)).toBe(false)
+  })
+})
+
+describe("formatDayLength", () => {
+  it("formats hours and minutes, zero-padded, matching the doc's own example", () => {
+    expect(formatDayLength(605)).toBe("10h 05m")
+  })
+
+  it("handles a whole-hour day length", () => {
+    expect(formatDayLength(600)).toBe("10h 00m")
+  })
+
+  it("handles a full 24h midnight-sun day length", () => {
+    expect(formatDayLength(24 * 60)).toBe("24h 00m")
+  })
+})
+
+describe("getNextSunrise", () => {
+  it("finds the next sunrise after a Tromsø polar night", () => {
+    const duringPolarNight = new Date("2026-12-15T12:00:00Z").getTime()
+    const next = getNextSunrise(TROMSO.lat, TROMSO.lon, duringPolarNight, "Europe/Oslo")
+    expect(next).not.toBeNull()
+    expect(next!.getTime()).toBeGreaterThan(duringPolarNight)
+    // The scan should land on a day that's actually out of polar night.
+    const timesThatDay = getSunTimes(TROMSO.lat, TROMSO.lon, next!, "Europe/Oslo")
+    expect(timesThatDay.kind).toBe("normal")
+  })
+
+  it("finds tomorrow's sunrise immediately at the equator, which is never in polar night", () => {
+    const now = new Date("2026-06-15T12:00:00Z").getTime()
+    const next = getNextSunrise(EQUATOR.lat, EQUATOR.lon, now, "UTC")
+    expect(next).not.toBeNull()
+    // Should land on the very next day, not scan far ahead.
+    expect(next!.getTime() - now).toBeLessThan(2 * 86_400_000)
   })
 })
