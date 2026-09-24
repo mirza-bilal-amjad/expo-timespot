@@ -13,6 +13,7 @@ import { SegmentedPill } from "@/components/SegmentedPill"
 import { Sheet } from "@/components/Sheet"
 import { SunBlock } from "@/components/SunBlock"
 import { Text } from "@/components/Text"
+import { WorldMap } from "@/components/WorldMap"
 import { getZonedTime } from "@/domain/time/zone"
 import { useClock } from "@/hooks/useClock"
 import { useAppTheme } from "@/theme/context"
@@ -219,6 +220,12 @@ export function StoriesScreen() {
         </View>
       </Section>
 
+      <Section title="WorldMap">
+        <View style={themed($worldMapDemo)}>
+          <WorldMap width={WORLD_MAP_DEMO_WIDTH} height={WORLD_MAP_DEMO_HEIGHT} />
+        </View>
+      </Section>
+
       <Section title="Sheet">
         <Button preset="pill" text="Open sheet" onPress={() => setSheetOpen(true)} />
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen} title="A sheet story">
@@ -277,4 +284,15 @@ const $sunBlockGrid: ThemedStyle<ViewStyle> = (theme) => ({
   flexDirection: "row",
   flexWrap: "wrap",
   gap: theme.spacing.lg,
+})
+
+// docs/04-screen-specs.md's equirectangular source is naturally ~2:1 — an
+// arbitrary demo size, same status as CARD_DEMO_WIDTH above.
+const WORLD_MAP_DEMO_WIDTH = 360
+const WORLD_MAP_DEMO_HEIGHT = 180
+
+const $worldMapDemo: ThemedStyle<ViewStyle> = (theme) => ({
+  backgroundColor: theme.colors.background,
+  borderRadius: theme.radius.md,
+  overflow: "hidden",
 })
