@@ -36,6 +36,18 @@ const en = {
     clock: "Clock",
     map: "Map",
   },
+  search: {
+    title: "Add a city",
+    placeholder: "Search cities",
+    close: "Close search",
+    popular: "Popular",
+    noResults: "No city called '{{query}}'.",
+    offsetHint: "Try a UTC offset, e.g. +5:30",
+    useOffsetMatch: "Use {{name}} (matches that offset)",
+    focusHint: "Double tap to focus",
+    addHint: "Double tap to add",
+    alreadyAdded: ", already added",
+  },
 }
 
 export default en

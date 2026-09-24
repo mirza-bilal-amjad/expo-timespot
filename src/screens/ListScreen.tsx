@@ -8,6 +8,7 @@ import { Button } from "@/components/Button"
 import { Icon, PressableIcon } from "@/components/Icon"
 import { ReorderableCityRow } from "@/components/ReorderableCityRow"
 import { Screen } from "@/components/Screen"
+import { SearchSheet } from "@/components/SearchSheet"
 import { useTabBarClearance } from "@/components/TabBar"
 import { Text } from "@/components/Text"
 import { Toast } from "@/components/Toast"
@@ -41,7 +42,6 @@ export function ListScreen() {
   const now = useClock()
 
   const cities = useCitiesStore((s) => s.cities)
-  const addCity = useCitiesStore((s) => s.addCity)
   const removeCity = useCitiesStore((s) => s.removeCity)
   const restoreCity = useCitiesStore((s) => s.restoreCity)
   const reorderCities = useCitiesStore((s) => s.reorderCities)
@@ -125,6 +125,8 @@ export function ListScreen() {
     setToastVisible(false)
   }, [])
 
+  const [searchOpen, setSearchOpen] = useState(false)
+
   const avatarItems: AvatarStripItem[] = useMemo(
     () =>
       orderedCities.map((c) => {
@@ -180,15 +182,14 @@ export function ListScreen() {
               size="md"
               accessibilityLabel="Add a city"
               containerStyle={themed($addButton)}
-              // Search sheet (S4) isn't wired until task 3.7 — placeholder no-op.
-              onPress={addCityPlaceholder(addCity)}
+              onPress={() => setSearchOpen(true)}
             />
           </View>
           <Text preset="screenTitle" tx="list:title" style={themed($title)} />
         </View>
 
         {orderedCities.length === 0 ? (
-          <EmptyState onAddFirst={addCityPlaceholder(addCity)} />
+          <EmptyState onAddFirst={() => setSearchOpen(true)} />
         ) : (
           <FlashList
             data={orderedCities}
@@ -207,15 +208,10 @@ export function ListScreen() {
         onDismiss={handleToastDismiss}
         bottomOffset={tabBarClearance + theme.spacing.md}
       />
+
+      <SearchSheet open={searchOpen} onOpenChange={setSearchOpen} />
     </View>
   )
-}
-
-// Placeholder until task 3.7 (S4 Search sheet) exists to hand `addCity` a
-// real city id — keeps the button wired and testable without a fake city
-// silently entering the real store.
-function addCityPlaceholder(_addCity: (cityId: string, label?: string) => void) {
-  return () => {}
 }
 
 function EmptyState({ onAddFirst }: { onAddFirst: () => void }) {

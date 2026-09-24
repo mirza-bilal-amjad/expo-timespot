@@ -1,4 +1,4 @@
-import { getCityByZone, getRepresentativeCity, searchCities } from "./search"
+import { getCityByZone, getPopularCities, getRepresentativeCity, searchCities } from "./search"
 
 describe("searchCities", () => {
   it("returns [] for an empty or whitespace-only query", () => {
@@ -87,5 +87,19 @@ describe("getRepresentativeCity", () => {
   it("returns undefined for an offset nothing currently sits at", () => {
     const now = Date.UTC(2026, 5, 15)
     expect(getRepresentativeCity(841, now)).toBeUndefined() // one past UTC+14, the max
+  })
+})
+
+describe("getPopularCities", () => {
+  it("returns the top N cities by population, descending", () => {
+    const top5 = getPopularCities(5)
+    expect(top5).toHaveLength(5)
+    for (let i = 1; i < top5.length; i++) {
+      expect(top5[i - 1].population).toBeGreaterThanOrEqual(top5[i].population)
+    }
+  })
+
+  it("defaults to 12", () => {
+    expect(getPopularCities()).toHaveLength(12)
   })
 })

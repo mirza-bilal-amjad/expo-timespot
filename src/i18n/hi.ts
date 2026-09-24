@@ -38,6 +38,18 @@ const hi: Translations = {
     clock: "घड़ी",
     map: "नक़्शा",
   },
+  search: {
+    title: "शहर जोड़ें",
+    placeholder: "शहर खोजें",
+    close: "खोज बंद करें",
+    popular: "लोकप्रिय",
+    noResults: "'{{query}}' नाम का कोई शहर नहीं मिला।",
+    offsetHint: "UTC ऑफ़सेट आज़माएं, जैसे +5:30",
+    useOffsetMatch: "{{name}} का उपयोग करें (यह ऑफ़सेट मेल खाता है)",
+    focusHint: "फ़ोकस करने के लिए दो बार टैप करें",
+    addHint: "जोड़ने के लिए दो बार टैप करें",
+    alreadyAdded: ", पहले से जोड़ा गया",
+  },
 }
 
 export default hi

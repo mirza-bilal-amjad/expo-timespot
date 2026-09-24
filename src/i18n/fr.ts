@@ -39,6 +39,18 @@ const fr: Translations = {
     clock: "Horloge",
     map: "Carte",
   },
+  search: {
+    title: "Ajouter une ville",
+    placeholder: "Rechercher des villes",
+    close: "Fermer la recherche",
+    popular: "Populaire",
+    noResults: "Aucune ville nommée « {{query}} ».",
+    offsetHint: "Essayez un fuseau horaire, ex. +5:30",
+    useOffsetMatch: "Utiliser {{name}} (correspond à ce fuseau)",
+    focusHint: "Appuyez deux fois pour activer",
+    addHint: "Appuyez deux fois pour ajouter",
+    alreadyAdded: ", déjà ajoutée",
+  },
 }
 
 export default fr

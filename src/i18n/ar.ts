@@ -38,6 +38,18 @@ const ar: Translations = {
     clock: "الساعة",
     map: "الخريطة",
   },
+  search: {
+    title: "إضافة مدينة",
+    placeholder: "ابحث عن المدن",
+    close: "إغلاق البحث",
+    popular: "الأكثر شيوعًا",
+    noResults: "لا توجد مدينة باسم '{{query}}'.",
+    offsetHint: "جرّب فارق التوقيت العالمي، مثل +5:30",
+    useOffsetMatch: "استخدم {{name}} (يطابق هذا الفارق)",
+    focusHint: "اضغط مرتين للتركيز",
+    addHint: "اضغط مرتين للإضافة",
+    alreadyAdded: "، أُضيفت بالفعل",
+  },
 }
 
 export default ar

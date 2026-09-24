@@ -39,6 +39,18 @@ const ja: Translations = {
     clock: "時計",
     map: "地図",
   },
+  search: {
+    title: "都市を追加",
+    placeholder: "都市を検索",
+    close: "検索を閉じる",
+    popular: "人気の都市",
+    noResults: "「{{query}}」という都市は見つかりません。",
+    offsetHint: "UTCオフセットで検索、例: +5:30",
+    useOffsetMatch: "{{name}}を使用する（このオフセットに一致）",
+    focusHint: "ダブルタップでフォーカス",
+    addHint: "ダブルタップで追加",
+    alreadyAdded: "（追加済み）",
+  },
 }
 
 export default ja

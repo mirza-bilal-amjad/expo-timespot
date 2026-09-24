@@ -7,6 +7,7 @@ import {
   getOffsetMinutes,
   getZonedTime,
   isValidZone,
+  parseOffsetQuery,
 } from "./zone"
 import { FIXTURE_ZONE_NAMES, FIXTURE_ZONES } from "../__fixtures__/zones"
 
@@ -200,5 +201,42 @@ describe("getNextTransition", () => {
     expect(next).not.toBeNull()
     expect(next!.deltaMinutes).not.toBe(0)
     expect(next!.at).toBeGreaterThan(Date.UTC(2026, 0, 1))
+  })
+})
+
+describe("parseOffsetQuery", () => {
+  it("parses a whole-hour offset with a plus sign", () => {
+    expect(parseOffsetQuery("+5")).toBe(300)
+  })
+
+  it("parses a whole-hour offset with a hyphen minus", () => {
+    expect(parseOffsetQuery("-8")).toBe(-480)
+  })
+
+  it("parses a whole-hour offset with U+2212 minus", () => {
+    expect(parseOffsetQuery("−8")).toBe(-480)
+  })
+
+  it("parses a sub-hour offset", () => {
+    expect(parseOffsetQuery("+5:30")).toBe(330)
+    expect(parseOffsetQuery("-3:30")).toBe(-210)
+  })
+
+  it("accepts an optional leading 'utc' and surrounding whitespace, case-insensitively", () => {
+    expect(parseOffsetQuery("UTC+9")).toBe(540)
+    expect(parseOffsetQuery("utc +9")).toBe(540)
+    expect(parseOffsetQuery("  +9  ")).toBe(540)
+  })
+
+  it("rejects an hour beyond +14, the real maximum (Kiritimati)", () => {
+    expect(parseOffsetQuery("+15")).toBeNull()
+  })
+
+  it("rejects a minutes value of 60 or more", () => {
+    expect(parseOffsetQuery("+5:60")).toBeNull()
+  })
+
+  it("returns null for a plain city-name query", () => {
+    expect(parseOffsetQuery("tokyo")).toBeNull()
   })
 })

@@ -208,3 +208,18 @@ export function getNextTransition(
   }
   return null
 }
+
+/**
+ * docs/04-screen-specs.md S4's "no results" fallback: "Search by UTC offset
+ * instead". "+5", "-8:30", "utc+5", "UTC−3:30" -> offset minutes, or null.
+ * Minus can be a hyphen (typed) or U+2212 (pasted from a label elsewhere).
+ */
+export function parseOffsetQuery(query: string): number | null {
+  const match = /^(?:utc)?\s*([+−-])\s*(\d{1,2})(?::(\d{2}))?$/i.exec(query.trim())
+  if (!match) return null
+  const sign = match[1] === "+" ? 1 : -1
+  const hours = Number(match[2])
+  const minutes = Number(match[3] ?? 0)
+  if (hours > 14 || minutes >= 60) return null
+  return sign * (hours * 60 + minutes)
+}

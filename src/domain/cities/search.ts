@@ -88,6 +88,13 @@ export function getCityById(id: string): City | undefined {
   return cityById.get(id)
 }
 
+/** Top `limit` cities by population — cities.min.json is already sorted that
+ * way, so this is a plain slice. docs/04-screen-specs.md S4's empty-query
+ * "Popular cities" state. */
+export function getPopularCities(limit = 12): City[] {
+  return typed.slice(0, limit)
+}
+
 /**
  * The best-known city currently at a given UTC offset. Takes `now` (not in the
  * doc's original signature — offset-to-zone matching is DST-dependent, so it

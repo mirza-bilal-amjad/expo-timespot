@@ -39,6 +39,18 @@ const es: Translations = {
     clock: "Reloj",
     map: "Mapa",
   },
+  search: {
+    title: "Añadir una ciudad",
+    placeholder: "Buscar ciudades",
+    close: "Cerrar búsqueda",
+    popular: "Popular",
+    noResults: "No hay ninguna ciudad llamada '{{query}}'.",
+    offsetHint: "Prueba con un huso horario, p. ej. +5:30",
+    useOffsetMatch: "Usar {{name}} (coincide con ese huso)",
+    focusHint: "Doble toque para enfocar",
+    addHint: "Doble toque para añadir",
+    alreadyAdded: ", ya añadida",
+  },
 }
 
 export default es

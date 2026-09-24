@@ -38,6 +38,18 @@ const ko: Translations = {
     clock: "시계",
     map: "지도",
   },
+  search: {
+    title: "도시 추가",
+    placeholder: "도시 검색",
+    close: "검색 닫기",
+    popular: "인기 도시",
+    noResults: "'{{query}}'라는 도시를 찾을 수 없습니다.",
+    offsetHint: "UTC 오프셋으로 검색해보세요, 예: +5:30",
+    useOffsetMatch: "{{name}} 사용 (해당 오프셋과 일치)",
+    focusHint: "두 번 탭하여 포커스",
+    addHint: "두 번 탭하여 추가",
+    alreadyAdded: ", 이미 추가됨",
+  },
 }
 
 export default ko
