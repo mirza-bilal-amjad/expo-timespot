@@ -2,6 +2,7 @@ import { useState } from "react"
 import { LayoutChangeEvent, TextStyle, View, ViewStyle } from "react-native"
 import { useSharedValue } from "react-native-reanimated"
 
+import { FloatingCityCard } from "@/components/FloatingCityCard"
 import { MeridianLine } from "@/components/MeridianLine"
 import { Screen } from "@/components/Screen"
 import { useTabBarClearance } from "@/components/TabBar"
@@ -13,6 +14,7 @@ import { getCityById } from "@/domain/cities/search"
 import { getOffsetMinutes } from "@/domain/time/zone"
 import { useClock } from "@/hooks/useClock"
 import { useFocusStore } from "@/store/focus"
+import { usePrefsStore } from "@/store/prefs"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -26,10 +28,13 @@ import type { ThemedStyle } from "@/theme/types"
  * if the focused city changes elsewhere while this screen is mounted; that
  * kind of cross-screen sync is more naturally task 4.6's job once the
  * floating card exists to show what it resolved to.
- * `<FloatingCityCard>` (4.6) layers on top in a later task — that's also
- * when the avatar strip + add-button header row the mockup shows gets
- * pulled out into shared chrome; for now this screen owns just its own
- * title, like ClockScreen did before 3.9.
+ * `<FloatingCityCard>` (task 4.6) now layers on top, reading `offsetMinutes`
+ * directly rather than through another prop threaded from here — it owns
+ * its own throttled bridge to the dataset lookup (see its own doc comment
+ * for why that has to live there and not on `<MeridianLine>`). The avatar
+ * strip + add-button header row the mockup shows is still out of scope —
+ * pulling that into shared chrome is unrelated to the map itself; for now
+ * this screen owns just its own title, like ClockScreen did before 3.9.
  */
 export function MapScreen() {
   const { themed } = useAppTheme()
@@ -37,6 +42,7 @@ export function MapScreen() {
   const tabBarClearance = useTabBarClearance()
   const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
   const focusedCityId = useFocusStore((s) => s.focusedCityId)
+  const { prefs } = usePrefsStore()
 
   const focusedCity = focusedCityId ? getCityById(focusedCityId) : undefined
   const markerLat = focusedCity?.lat ?? 0
@@ -68,6 +74,13 @@ export function MapScreen() {
               height={mapSize.height}
               markerLat={markerLat}
               offsetMinutes={offsetMinutes}
+            />
+            <FloatingCityCard
+              width={mapSize.width}
+              height={mapSize.height}
+              offsetMinutes={offsetMinutes}
+              now={now}
+              prefs={prefs}
             />
           </>
         )}

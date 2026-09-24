@@ -103,3 +103,42 @@ export function getPopularCities(limit = 12): City[] {
 export function getRepresentativeCity(offsetMinutes: number, now: number): City | undefined {
   return typed.find((c) => getOffsetMinutes(now, c.zone) === offsetMinutes)
 }
+
+/**
+ * Like `getRepresentativeCity`, but never returns `undefined` — it finds the
+ * *nearest* city instead of requiring an exact offset match. Task 4.6's
+ * `<FloatingCityCard>` needs a live answer while the meridian is still
+ * mid-drag, passing through offsets no real zone sits at exactly; the
+ * meridian only lands on an exact match once task 4.5's snap has settled
+ * (`domain/map/snap.ts`'s own target list is exactly the set of offsets this
+ * function can return an exact — distance-0 — match for).
+ *
+ * `getOffsetMinutes` is memoized per zone rather than called once per city:
+ * cities.min.json has 5,000 rows over only ~386 distinct IANA zones, and
+ * this runs on the JS thread inside a 60ms-throttled callback during an
+ * active drag, so avoiding ~4,600 redundant `Intl` computations per call
+ * matters.
+ */
+export function getNearestRepresentativeCity(offsetMinutes: number, now: number): City {
+  const offsetByZone = new Map<string, number>()
+  const offsetFor = (zone: string): number => {
+    let offset = offsetByZone.get(zone)
+    if (offset === undefined) {
+      offset = getOffsetMinutes(now, zone)
+      offsetByZone.set(zone, offset)
+    }
+    return offset
+  }
+
+  let nearest = typed[0]
+  let smallestDistance = Math.abs(offsetFor(nearest.zone) - offsetMinutes)
+  for (let i = 1; i < typed.length; i++) {
+    const candidate = typed[i]
+    const distance = Math.abs(offsetFor(candidate.zone) - offsetMinutes)
+    if (distance < smallestDistance) {
+      nearest = candidate
+      smallestDistance = distance
+    }
+  }
+  return nearest
+}

@@ -1,4 +1,11 @@
-import { getCityByZone, getPopularCities, getRepresentativeCity, searchCities } from "./search"
+import {
+  getCityByZone,
+  getNearestRepresentativeCity,
+  getPopularCities,
+  getRepresentativeCity,
+  searchCities,
+} from "./search"
+import { getOffsetMinutes } from "../time/zone"
 
 describe("searchCities", () => {
   it("returns [] for an empty or whitespace-only query", () => {
@@ -87,6 +94,28 @@ describe("getRepresentativeCity", () => {
   it("returns undefined for an offset nothing currently sits at", () => {
     const now = Date.UTC(2026, 5, 15)
     expect(getRepresentativeCity(841, now)).toBeUndefined() // one past UTC+14, the max
+  })
+})
+
+describe("getNearestRepresentativeCity", () => {
+  const now = Date.UTC(2026, 5, 15)
+
+  it("agrees with getRepresentativeCity on an offset something sits at exactly", () => {
+    const exact = getRepresentativeCity(540, now)!
+    const nearest = getNearestRepresentativeCity(540, now)
+    expect(nearest.id).toBe(exact.id)
+  })
+
+  it("never returns undefined, even for an offset nothing sits at (mid-drag)", () => {
+    expect(getNearestRepresentativeCity(841, now)).toBeDefined() // one past UTC+14
+    expect(getNearestRepresentativeCity(37, now)).toBeDefined() // between UTC+0 and UTC+1
+  })
+
+  it("picks the side it's actually closer to", () => {
+    const low = getNearestRepresentativeCity(5, now) // near UTC+0
+    const high = getNearestRepresentativeCity(595, now) // near UTC+10
+    expect(getOffsetMinutes(now, low.zone)).toBe(0)
+    expect(getOffsetMinutes(now, high.zone)).toBe(600)
   })
 })
 

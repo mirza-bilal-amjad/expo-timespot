@@ -39,12 +39,17 @@ import { useAppTheme } from "@/theme/context"
  * travel several zones) with `theme.timing.spring.press`, plus
  * `Haptics.selectionAsync()` on the snap itself — never during the drag,
  * which is direct manipulation and must track the finger exactly
- * (docs/08-motion-spec.md §5). `onOffsetChange`, if given, is pushed with
- * `runOnJS` throttled to 60 ms (never per frame — the same non-negotiable
- * CLAUDE.md's "things that will bite" calls out by name): task 4.6's
- * floating card is its first real consumer, reading the offset to resolve
- * a zone label from the city dataset, which is JS-only work this component
- * has no business doing itself.
+ * (docs/08-motion-spec.md §5).
+ *
+ * Task 4.5 originally also pushed a throttled `onOffsetChange` from here —
+ * removed in 4.6 once `<FloatingCityCard>` proved it wrong: `offsetMinutes`
+ * is shared with `<UtcRuler>`, and a ruler tap or scroll writes it directly,
+ * without ever going through this component's own gesture at all, so a
+ * bridge that only fired from *this* component's `.onUpdate()`/`.onEnd()`
+ * silently missed most real changes. The throttled JS bridge now lives in
+ * `<FloatingCityCard>` itself, watching `offsetMinutes` directly via
+ * `useAnimatedReaction` — the one place that actually sees every source of
+ * a write to the shared value, gesture or not.
  *
  * Not yet wired: the real `accessibilityRole="adjustable"` slider contract
  * (4.8, docs/09-accessibility.md §2 "The map" — "the SVG map itself is
@@ -59,10 +64,6 @@ export interface MeridianLineProps {
    * when nothing is focused. */
   markerLat?: number
   offsetMinutes: SharedValue<number>
-  /** Pushed via `runOnJS`, throttled to 60 ms during the drag and once more
-   * on release/snap settle. Optional — with no listener, nothing crosses
-   * onto the JS thread while dragging at all. */
-  onOffsetChange?: (offsetMinutes: number) => void
 }
 
 // Matches the ruler tick's own "44pt hitSlop even though the visual is 13pt"
@@ -74,10 +75,6 @@ const RING_DIAMETER = 10
 const RING_STROKE_WIDTH = 2
 const LINE_STROKE_WIDTH = 1
 
-// docs/08-motion-spec.md §5, non-negotiable #2: "pushed with runOnJS
-// throttled to 60ms — about 16 updates/second... 4x cheaper than per-frame."
-const OFFSET_CHANGE_THROTTLE_MS = 60
-
 function triggerSnapHaptic() {
   if (Platform.OS !== "web") {
     Haptics.selectionAsync().catch(() => {})
@@ -85,12 +82,11 @@ function triggerSnapHaptic() {
 }
 
 export function MeridianLine(props: MeridianLineProps) {
-  const { width, height, markerLat = 0, offsetMinutes, onOffsetChange } = props
+  const { width, height, markerLat = 0, offsetMinutes } = props
   const { theme } = useAppTheme()
   const springPress = theme.timing.spring.press
 
   const startOffset = useSharedValue(offsetMinutes.value)
-  const lastOffsetPushMs = useSharedValue(0)
 
   const pan = useMemo(
     () =>
@@ -109,20 +105,6 @@ export function MeridianLine(props: MeridianLineProps) {
           // indexShared.value write.
           // eslint-disable-next-line react-hooks/immutability
           offsetMinutes.value = xToOffsetMinutes(nextX, width)
-
-          if (onOffsetChange) {
-            // A UI-thread clock read, needed to gate the runOnJS bridge to
-            // 60ms — the lint rule can't tell this from an impure read
-            // during render. Same established false positive as task 4.3's
-            // now-removed throttle (still correct here; this one is load
-            // bearing, not leftover plumbing).
-            // eslint-disable-next-line react-hooks/purity
-            const now = performance.now()
-            if (now - lastOffsetPushMs.value >= OFFSET_CHANGE_THROTTLE_MS) {
-              lastOffsetPushMs.value = now
-              runOnJS(onOffsetChange)(offsetMinutes.value)
-            }
-          }
         })
         .onEnd((e) => {
           const velocity = pixelVelocityToOffsetVelocity(e.velocityX, width)
@@ -130,13 +112,9 @@ export function MeridianLine(props: MeridianLineProps) {
           // eslint-disable-next-line react-hooks/immutability
           offsetMinutes.value = withSpring(target, springPress)
           runOnJS(triggerSnapHaptic)()
-          if (onOffsetChange) {
-            lastOffsetPushMs.value = performance.now() // eslint-disable-line react-hooks/purity
-            runOnJS(onOffsetChange)(target)
-          }
         }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- gesture callback is workletized; shared values (startOffset, offsetMinutes, lastOffsetPushMs) are stable refs, not reactive deps.
-    [width, springPress, onOffsetChange],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gesture callback is workletized; shared values (startOffset, offsetMinutes) are stable refs, not reactive deps.
+    [width, springPress],
   )
 
   const $animatedStyle = useAnimatedStyle(() => ({
