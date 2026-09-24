@@ -40,11 +40,14 @@ jest.mock("react-native-reanimated", () => {
     default: {
       createAnimatedComponent: (Component: unknown) => Component,
       View: require("react-native").View,
+      ScrollView: require("react-native").ScrollView,
     },
     useSharedValue: (initial: unknown) => React.useRef({ value: initial }).current,
     useAnimatedStyle: (factory: () => unknown) => factory(),
     useAnimatedRef: () => React.useRef(null),
     useAnimatedReaction: () => {},
+    useAnimatedScrollHandler: (handlers: unknown) => handlers,
+    scrollTo: () => {},
     useEvent: () => undefined,
     runOnJS:
       (fn: (...args: unknown[]) => void) =>

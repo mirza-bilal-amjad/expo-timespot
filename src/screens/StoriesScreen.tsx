@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
+import { useSharedValue } from "react-native-reanimated"
 
 import { Avatar } from "@/components/Avatar"
 import { AvatarStrip } from "@/components/AvatarStrip"
@@ -15,6 +16,7 @@ import { Sheet } from "@/components/Sheet"
 import { SunBlock } from "@/components/SunBlock"
 import { Terminator } from "@/components/Terminator"
 import { Text } from "@/components/Text"
+import { UtcRuler } from "@/components/UtcRuler"
 import { WorldMap } from "@/components/WorldMap"
 import { getZonedTime } from "@/domain/time/zone"
 import { useClock } from "@/hooks/useClock"
@@ -59,6 +61,7 @@ export function StoriesScreen() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<string | null>("tokyo")
+  const meridianOffsetDemo = useSharedValue(540)
 
   const now = useClock()
   const prefs = {
@@ -222,7 +225,7 @@ export function StoriesScreen() {
         </View>
       </Section>
 
-      <Section title="WorldMap + Terminator + MeridianLine (drag the first one)">
+      <Section title="WorldMap + Terminator + MeridianLine + UtcRuler (drag either one)">
         <View style={themed($sunBlockGrid)}>
           {WORLD_MAP_DEMO_INSTANTS.map(({ label, at }, index) => (
             <View key={label}>
@@ -241,12 +244,15 @@ export function StoriesScreen() {
                     width={WORLD_MAP_DEMO_WIDTH}
                     height={WORLD_MAP_DEMO_HEIGHT}
                     markerLat={35.6812}
-                    initialOffsetMinutes={540}
+                    offsetMinutes={meridianOffsetDemo}
                   />
                 )}
               </View>
             </View>
           ))}
+        </View>
+        <View style={themed($rulerDemo)}>
+          <UtcRuler offsetMinutes={meridianOffsetDemo} />
         </View>
       </Section>
 
@@ -333,3 +339,5 @@ const $worldMapDemo: ThemedStyle<ViewStyle> = (theme) => ({
 })
 
 const $worldMapOverlay: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }
+
+const $rulerDemo: ThemedStyle<ViewStyle> = (theme) => ({ marginTop: theme.spacing.sm })
