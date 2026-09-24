@@ -1,11 +1,23 @@
 import { useMemo } from "react"
-import { View, ViewStyle } from "react-native"
+import { Platform, View, ViewStyle } from "react-native"
+import * as Haptics from "expo-haptics"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
-import Animated, { SharedValue, useAnimatedStyle, useSharedValue } from "react-native-reanimated"
+import Animated, {
+  runOnJS,
+  SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated"
 import { Circle, Line, Svg } from "react-native-svg"
 
-import { offsetMinutesToX, xToOffsetMinutes } from "@/domain/map/meridian"
+import {
+  offsetMinutesToX,
+  pixelVelocityToOffsetVelocity,
+  xToOffsetMinutes,
+} from "@/domain/map/meridian"
 import { projectLonLat } from "@/domain/map/projection"
+import { snapToNearestOffset } from "@/domain/map/snap"
 import { useAppTheme } from "@/theme/context"
 
 /**
@@ -18,16 +30,24 @@ import { useAppTheme } from "@/theme/context"
  * `offsetMinutes` is owned by the caller (`MapScreen`, via `useSharedValue`)
  * and shared with `<UtcRuler>` — task 4.4's "the ruler and the meridian are
  * two views of one shared value... no JS round-trip" turned out to mean
- * exactly that literally: this component no longer owns its own position or
- * emits a throttled JS callback (task 4.3's approach) — it reads and writes
- * the *same* shared value the ruler does, entirely on the UI thread. A JS
- * consumer (task 4.6's floating card) will read this shared value with its
- * own throttled reaction when it exists; it doesn't need this component to
- * plumb one through.
+ * exactly that literally: this component no longer owns its own position
+ * (task 4.3's approach) — it reads and writes the *same* shared value the
+ * ruler does, entirely on the UI thread for the drag itself.
  *
- * Not yet wired: snap-on-release + selection haptic (4.5), and the real
- * `accessibilityRole="adjustable"` slider contract (4.8,
- * docs/09-accessibility.md §2 "The map" — "the SVG map itself is
+ * Task 4.5 adds the release behaviour: `.onEnd()` snaps to the nearest real
+ * UTC offset (`domain/map/snap.ts`, velocity-aware so a fast flick can
+ * travel several zones) with `theme.timing.spring.press`, plus
+ * `Haptics.selectionAsync()` on the snap itself — never during the drag,
+ * which is direct manipulation and must track the finger exactly
+ * (docs/08-motion-spec.md §5). `onOffsetChange`, if given, is pushed with
+ * `runOnJS` throttled to 60 ms (never per frame — the same non-negotiable
+ * CLAUDE.md's "things that will bite" calls out by name): task 4.6's
+ * floating card is its first real consumer, reading the offset to resolve
+ * a zone label from the city dataset, which is JS-only work this component
+ * has no business doing itself.
+ *
+ * Not yet wired: the real `accessibilityRole="adjustable"` slider contract
+ * (4.8, docs/09-accessibility.md §2 "The map" — "the SVG map itself is
  * aria-hidden... the ruler + card is the accessible interface"), which is
  * why this stays `accessibilityElementsHidden` for now rather than a
  * half-built slider that would announce the wrong thing.
@@ -39,6 +59,10 @@ export interface MeridianLineProps {
    * when nothing is focused. */
   markerLat?: number
   offsetMinutes: SharedValue<number>
+  /** Pushed via `runOnJS`, throttled to 60 ms during the drag and once more
+   * on release/snap settle. Optional — with no listener, nothing crosses
+   * onto the JS thread while dragging at all. */
+  onOffsetChange?: (offsetMinutes: number) => void
 }
 
 // Matches the ruler tick's own "44pt hitSlop even though the visual is 13pt"
@@ -50,11 +74,23 @@ const RING_DIAMETER = 10
 const RING_STROKE_WIDTH = 2
 const LINE_STROKE_WIDTH = 1
 
+// docs/08-motion-spec.md §5, non-negotiable #2: "pushed with runOnJS
+// throttled to 60ms — about 16 updates/second... 4x cheaper than per-frame."
+const OFFSET_CHANGE_THROTTLE_MS = 60
+
+function triggerSnapHaptic() {
+  if (Platform.OS !== "web") {
+    Haptics.selectionAsync().catch(() => {})
+  }
+}
+
 export function MeridianLine(props: MeridianLineProps) {
-  const { width, height, markerLat = 0, offsetMinutes } = props
+  const { width, height, markerLat = 0, offsetMinutes, onOffsetChange } = props
   const { theme } = useAppTheme()
+  const springPress = theme.timing.spring.press
 
   const startOffset = useSharedValue(offsetMinutes.value)
+  const lastOffsetPushMs = useSharedValue(0)
 
   const pan = useMemo(
     () =>
@@ -73,9 +109,34 @@ export function MeridianLine(props: MeridianLineProps) {
           // indexShared.value write.
           // eslint-disable-next-line react-hooks/immutability
           offsetMinutes.value = xToOffsetMinutes(nextX, width)
+
+          if (onOffsetChange) {
+            // A UI-thread clock read, needed to gate the runOnJS bridge to
+            // 60ms — the lint rule can't tell this from an impure read
+            // during render. Same established false positive as task 4.3's
+            // now-removed throttle (still correct here; this one is load
+            // bearing, not leftover plumbing).
+            // eslint-disable-next-line react-hooks/purity
+            const now = performance.now()
+            if (now - lastOffsetPushMs.value >= OFFSET_CHANGE_THROTTLE_MS) {
+              lastOffsetPushMs.value = now
+              runOnJS(onOffsetChange)(offsetMinutes.value)
+            }
+          }
+        })
+        .onEnd((e) => {
+          const velocity = pixelVelocityToOffsetVelocity(e.velocityX, width)
+          const target = snapToNearestOffset(offsetMinutes.value, velocity)
+          // eslint-disable-next-line react-hooks/immutability
+          offsetMinutes.value = withSpring(target, springPress)
+          runOnJS(triggerSnapHaptic)()
+          if (onOffsetChange) {
+            lastOffsetPushMs.value = performance.now() // eslint-disable-line react-hooks/purity
+            runOnJS(onOffsetChange)(target)
+          }
         }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- gesture callback is workletized; shared values (startOffset, offsetMinutes) are stable refs, not reactive deps.
-    [width],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gesture callback is workletized; shared values (startOffset, offsetMinutes, lastOffsetPushMs) are stable refs, not reactive deps.
+    [width, springPress, onOffsetChange],
   )
 
   const $animatedStyle = useAnimatedStyle(() => ({

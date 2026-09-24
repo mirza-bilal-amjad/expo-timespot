@@ -2,6 +2,7 @@ import {
   MAX_OFFSET_MINUTES,
   MIN_OFFSET_MINUTES,
   offsetMinutesToX,
+  pixelVelocityToOffsetVelocity,
   xToOffsetMinutes,
 } from "./meridian"
 
@@ -48,5 +49,16 @@ describe("offsetMinutesToX", () => {
   it("clamps an offset beyond ±12h (e.g. Kiritimati's +14) to the map's own edge", () => {
     expect(offsetMinutesToX(MAX_OFFSET_MINUTES, WIDTH)).toBe(WIDTH)
     expect(offsetMinutesToX(15 * 60, WIDTH)).toBe(WIDTH)
+  })
+})
+
+describe("pixelVelocityToOffsetVelocity", () => {
+  it("is the same scale as xToOffsetMinutes — a full-width flick in one second covers the full 360° range", () => {
+    expect(pixelVelocityToOffsetVelocity(WIDTH, WIDTH)).toBeCloseTo(24 * 60, 5)
+  })
+
+  it("is linear and sign-preserving", () => {
+    expect(pixelVelocityToOffsetVelocity(-WIDTH, WIDTH)).toBeCloseTo(-24 * 60, 5)
+    expect(pixelVelocityToOffsetVelocity(0, WIDTH)).toBe(0)
   })
 })

@@ -48,3 +48,15 @@ export function offsetMinutesToX(offsetMinutes: number, width: number): number {
   const x = ((lon + 180) / 360) * width
   return clamp(x, 0, width)
 }
+
+/** `xToOffsetMinutes`'s own linear scale (1440 offset-minutes per full map
+ * width), applied to a *velocity* rather than a position — used by task
+ * 4.5's release-time snap to project a fast flick's landing point
+ * (docs/08-motion-spec.md: "a fast flick can travel several zones"), the
+ * same way `Gesture.Pan()`'s own `e.velocityX` is px/s. Not clamped: it
+ * feeds `snapToNearestOffset`'s own nearest-neighbour search, which is
+ * self-limiting regardless of how far the projection overshoots. */
+export function pixelVelocityToOffsetVelocity(pixelsPerSecond: number, width: number): number {
+  "worklet"
+  return (pixelsPerSecond / width) * 360 * MINUTES_PER_DEGREE_LONGITUDE
+}
