@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { View } from "react-native"
 import { Path, Svg } from "react-native-svg"
 
+import { getCountrySvgPath } from "@/domain/map/countries"
 import { getLandSvgPath } from "@/domain/map/land"
 import { useAppTheme } from "@/theme/context"
 
@@ -13,15 +14,28 @@ import { useAppTheme } from "@/theme/context"
  * component owns no layout of its own so the terminator/meridian/ruler
  * layers still to come can share the exact same (width, height) and agree
  * pixel-for-pixel with the land silhouette underneath them.
+ *
+ * Task 4.7: "no borders except at the country of the focused city, which
+ * fills `map.landActive`." That's a second, optional `<Path>` stacked on
+ * top of the same land silhouette, not a switch to per-country borders
+ * everywhere — `activeCountryCode` is undefined whenever nothing is
+ * focused, or when the focused city's country has no geometry at this
+ * resolution (`getCountrySvgPath`'s own doc comment), and either way this
+ * component just renders one path instead of two.
  */
 export interface WorldMapProps {
   width: number
   height: number
+  activeCountryCode?: string
 }
 
-export function WorldMap({ width, height }: WorldMapProps) {
+export function WorldMap({ width, height, activeCountryCode }: WorldMapProps) {
   const { theme } = useAppTheme()
   const landPath = useMemo(() => getLandSvgPath(width, height), [width, height])
+  const activeCountryPath = useMemo(
+    () => (activeCountryCode ? getCountrySvgPath(activeCountryCode, width, height) : undefined),
+    [activeCountryCode, width, height],
+  )
 
   if (width <= 0 || height <= 0) return null
 
@@ -36,6 +50,7 @@ export function WorldMap({ width, height }: WorldMapProps) {
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         <Path d={landPath} fill={theme.colors.mapLand} />
+        {activeCountryPath && <Path d={activeCountryPath} fill={theme.colors.mapLandActive} />}
       </Svg>
     </View>
   )

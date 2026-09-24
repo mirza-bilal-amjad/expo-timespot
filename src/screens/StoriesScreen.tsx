@@ -231,7 +231,11 @@ export function StoriesScreen() {
             <View key={label}>
               <Text preset="caption" text={label} />
               <View style={themed($worldMapDemo)}>
-                <WorldMap width={WORLD_MAP_DEMO_WIDTH} height={WORLD_MAP_DEMO_HEIGHT} />
+                <WorldMap
+                  width={WORLD_MAP_DEMO_WIDTH}
+                  height={WORLD_MAP_DEMO_HEIGHT}
+                  activeCountryCode={index === 0 ? "JP" : undefined}
+                />
                 <View style={$worldMapOverlay}>
                   <Terminator
                     now={at}

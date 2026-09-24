@@ -31,10 +31,16 @@ import type { ThemedStyle } from "@/theme/types"
  * `<FloatingCityCard>` (task 4.6) now layers on top, reading `offsetMinutes`
  * directly rather than through another prop threaded from here — it owns
  * its own throttled bridge to the dataset lookup (see its own doc comment
- * for why that has to live there and not on `<MeridianLine>`). The avatar
- * strip + add-button header row the mockup shows is still out of scope —
- * pulling that into shared chrome is unrelated to the map itself; for now
- * this screen owns just its own title, like ClockScreen did before 3.9.
+ * for why that has to live there and not on `<MeridianLine>`).
+ * `activeCountryCode` (task 4.7) uses the same `focusedCity` this screen
+ * already resolves for `markerLat` — docs/04-screen-specs.md's "the country
+ * of the focused city" sits right next to "the focused city's latitude" in
+ * the same paragraph, so both read as the one persistently-focused city
+ * (`useFocusStore`), not wherever the meridian is currently being dragged.
+ * The avatar strip + add-button header row the mockup shows is still out of
+ * scope — pulling that into shared chrome is unrelated to the map itself;
+ * for now this screen owns just its own title, like ClockScreen did before
+ * 3.9.
  */
 export function MapScreen() {
   const { themed } = useAppTheme()
@@ -65,7 +71,11 @@ export function MapScreen() {
       <View style={$mapArea} onLayout={handleMapAreaLayout}>
         {mapSize.width > 0 && (
           <>
-            <WorldMap width={mapSize.width} height={mapSize.height} />
+            <WorldMap
+              width={mapSize.width}
+              height={mapSize.height}
+              activeCountryCode={focusedCity?.countryCode}
+            />
             <View style={$overlay}>
               <Terminator now={now} width={mapSize.width} height={mapSize.height} />
             </View>
