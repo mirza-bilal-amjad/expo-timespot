@@ -26,6 +26,17 @@ const fr: Translations = {
       button: "Essayons à nouveau",
     },
   },
+  list: {
+    title: "Heure mondiale",
+    emptyTitle: "Aucune ville pour l'instant",
+    emptyBody: "Ajoutez une ville pour voir son heure à côté de la vôtre.",
+    emptyCta: "Ajoutez votre première ville",
+  },
+  tabBar: {
+    list: "Heure mondiale",
+    clock: "Horloge",
+    map: "Carte",
+  },
 }
 
 export default fr

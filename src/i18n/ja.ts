@@ -26,6 +26,17 @@ const ja: Translations = {
       button: "もう一度やってみよう",
     },
   },
+  list: {
+    title: "世界時計",
+    emptyTitle: "まだ都市がありません",
+    emptyBody: "都市を追加すると、自分の時間と並べて表示されます。",
+    emptyCta: "最初の都市を追加",
+  },
+  tabBar: {
+    list: "世界時計",
+    clock: "時計",
+    map: "地図",
+  },
 }
 
 export default ja

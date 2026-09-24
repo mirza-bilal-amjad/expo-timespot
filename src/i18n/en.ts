@@ -23,6 +23,17 @@ const en = {
       button: "Let's try this again",
     },
   },
+  list: {
+    title: "World Time",
+    emptyTitle: "No cities yet",
+    emptyBody: "Add a city to see its time next to yours.",
+    emptyCta: "Add your first city",
+  },
+  tabBar: {
+    list: "World time",
+    clock: "Clock",
+    map: "Map",
+  },
 }
 
 export default en

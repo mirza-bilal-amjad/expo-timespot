@@ -25,6 +25,17 @@ const hi: Translations = {
       button: "चलो फिर से कोशिश करते हैं",
     },
   },
+  list: {
+    title: "विश्व समय",
+    emptyTitle: "अभी कोई शहर नहीं",
+    emptyBody: "अपने समय के साथ किसी शहर का समय देखने के लिए एक शहर जोड़ें।",
+    emptyCta: "अपना पहला शहर जोड़ें",
+  },
+  tabBar: {
+    list: "विश्व समय",
+    clock: "घड़ी",
+    map: "नक़्शा",
+  },
 }
 
 export default hi

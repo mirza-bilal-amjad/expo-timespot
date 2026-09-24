@@ -122,7 +122,7 @@ Centred block, replaces the list:
 ### Overflow states
 
 - **1 city:** list renders normally; the avatar strip hides (a strip of one is noise).
-- **40 cities:** `FlashList` with `estimatedItemSize={104}`; the strip caps at 6 + overflow tile.
+- **40 cities:** `FlashList`. ~~`estimatedItemSize={104}`~~ — **corrected 2026-09-24**: `@shopify/flash-list@2.0.2` (what's actually installed) dropped manual size estimation entirely; v2's recycler measures automatically and the prop no longer exists on `FlashListProps`. Nothing to pass. The strip caps at 6 + overflow tile.
 - **Long name:** `"Ho Chi Minh City"` at `title` 20 in a 334-pt row with a 48-pt time — measured to fit at 16 chars; 17+ truncates. Verified in visual tests.
 
 ### Web adaptation

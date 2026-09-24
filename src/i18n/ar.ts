@@ -25,6 +25,17 @@ const ar: Translations = {
       button: "لنحاول هذا مرّة أخرى",
     },
   },
+  list: {
+    title: "التوقيت العالمي",
+    emptyTitle: "لا توجد مدن بعد",
+    emptyBody: "أضف مدينة لرؤية وقتها بجانب وقتك.",
+    emptyCta: "أضف مدينتك الأولى",
+  },
+  tabBar: {
+    list: "التوقيت العالمي",
+    clock: "الساعة",
+    map: "الخريطة",
+  },
 }
 
 export default ar

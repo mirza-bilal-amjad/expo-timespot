@@ -26,6 +26,17 @@ const es: Translations = {
       button: "Intentemos de nuevo",
     },
   },
+  list: {
+    title: "Hora mundial",
+    emptyTitle: "Aún no hay ciudades",
+    emptyBody: "Añade una ciudad para ver su hora junto a la tuya.",
+    emptyCta: "Añade tu primera ciudad",
+  },
+  tabBar: {
+    list: "Hora mundial",
+    clock: "Reloj",
+    map: "Mapa",
+  },
 }
 
 export default es

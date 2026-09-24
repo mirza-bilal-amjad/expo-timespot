@@ -25,6 +25,17 @@ const ko: Translations = {
       button: "다시 시도해봅시다",
     },
   },
+  list: {
+    title: "세계 시간",
+    emptyTitle: "아직 도시가 없습니다",
+    emptyBody: "도시를 추가하면 내 시간 옆에서 바로 볼 수 있어요.",
+    emptyCta: "첫 도시 추가하기",
+  },
+  tabBar: {
+    list: "세계 시간",
+    clock: "시계",
+    map: "지도",
+  },
 }
 
 export default ko
