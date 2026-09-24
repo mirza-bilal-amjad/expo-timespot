@@ -72,12 +72,11 @@ function terminatorLatitude(lonDeg: number, subLat: number, subLon: number): num
   return Math.max(-MAX_ABS_LAT, Math.min(MAX_ABS_LAT, raw))
 }
 
-/**
- * docs/06-data-model.md §4. An SVG path 'd' string for the day/night boundary
- * on an equirectangular world map of the given pixel size (lon -180..180 ->
- * x 0..width, lat 90..-90 -> y 0..height).
- */
-export function getTerminatorPath(now: number, width: number, height: number): string {
+function sampleTerminator(
+  now: number,
+  width: number,
+  height: number,
+): { points: [number, number][]; subLat: number } {
   const date = new Date(now)
   const { lat: subLat, lon: subLon } = getSubsolarPoint(date)
 
@@ -90,8 +89,45 @@ export function getTerminatorPath(now: number, width: number, height: number): s
     const y = ((90 - lat) / 180) * height
     points.push([x, y])
   }
+  return { points, subLat }
+}
 
+function pointsToPath(points: [number, number][]): string {
   return points
     .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`)
     .join(" ")
+}
+
+/**
+ * docs/06-data-model.md §4. An SVG path 'd' string for the day/night boundary
+ * on an equirectangular world map of the given pixel size (lon -180..180 ->
+ * x 0..width, lat 90..-90 -> y 0..height).
+ */
+export function getTerminatorPath(now: number, width: number, height: number): string {
+  const { points } = sampleTerminator(now, width, height)
+  return pointsToPath(points)
+}
+
+/**
+ * docs/04-screen-specs.md "S3 · Map" / task 4.2: the night hemisphere as a
+ * closed, fillable region — the terminator curve plus the map's north or
+ * south edge (whichever is on the night side), spanning the full width.
+ *
+ * Night sits toward the pole opposite the sun's current hemisphere: the
+ * south edge (y=height, lat=-90) when the subsolar point is north of the
+ * equator, the north edge (y=0, lat=90) when it's south. Closing the curve
+ * against *that* edge — never the other one — is what makes the filled
+ * region the night side rather than the day side; verified in
+ * terminator.test.ts by checking the subsolar point falls outside the
+ * region and the far pole at the antisolar longitude falls inside.
+ */
+export function getNightRegionPath(now: number, width: number, height: number): string {
+  const { points, subLat } = sampleTerminator(now, width, height)
+  const edgeY = subLat >= 0 ? height : 0
+  const [firstX] = points[0]
+  const [lastX] = points[points.length - 1]
+  return (
+    `${pointsToPath(points)} ` +
+    `L${lastX.toFixed(2)},${edgeY.toFixed(2)} L${firstX.toFixed(2)},${edgeY.toFixed(2)} Z`
+  )
 }

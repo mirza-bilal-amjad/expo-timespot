@@ -12,6 +12,7 @@ import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
 import { Sheet } from "@/components/Sheet"
 import { SunBlock } from "@/components/SunBlock"
+import { Terminator } from "@/components/Terminator"
 import { Text } from "@/components/Text"
 import { WorldMap } from "@/components/WorldMap"
 import { getZonedTime } from "@/domain/time/zone"
@@ -220,9 +221,23 @@ export function StoriesScreen() {
         </View>
       </Section>
 
-      <Section title="WorldMap">
-        <View style={themed($worldMapDemo)}>
-          <WorldMap width={WORLD_MAP_DEMO_WIDTH} height={WORLD_MAP_DEMO_HEIGHT} />
+      <Section title="WorldMap + Terminator">
+        <View style={themed($sunBlockGrid)}>
+          {WORLD_MAP_DEMO_INSTANTS.map(({ label, at }) => (
+            <View key={label}>
+              <Text preset="caption" text={label} />
+              <View style={themed($worldMapDemo)}>
+                <WorldMap width={WORLD_MAP_DEMO_WIDTH} height={WORLD_MAP_DEMO_HEIGHT} />
+                <View style={$worldMapOverlay}>
+                  <Terminator
+                    now={at}
+                    width={WORLD_MAP_DEMO_WIDTH}
+                    height={WORLD_MAP_DEMO_HEIGHT}
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
         </View>
       </Section>
 
@@ -291,8 +306,21 @@ const $sunBlockGrid: ThemedStyle<ViewStyle> = (theme) => ({
 const WORLD_MAP_DEMO_WIDTH = 360
 const WORLD_MAP_DEMO_HEIGHT = 180
 
+// docs/10-implementation-plan.md task 4.2's acceptance: "visually correct at
+// equinox and both solstices" — the same three instants terminator.test.ts
+// snapshots, so a code-level correctness check and a by-eye one cover the
+// same ground.
+const WORLD_MAP_DEMO_INSTANTS = [
+  { label: "March equinox, noon UTC", at: Date.UTC(2026, 2, 20, 12) },
+  { label: "June solstice, noon UTC", at: Date.UTC(2026, 5, 21, 12) },
+  { label: "December solstice, noon UTC", at: Date.UTC(2026, 11, 21, 12) },
+]
+
 const $worldMapDemo: ThemedStyle<ViewStyle> = (theme) => ({
   backgroundColor: theme.colors.background,
   borderRadius: theme.radius.md,
   overflow: "hidden",
+  position: "relative",
 })
+
+const $worldMapOverlay: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }
