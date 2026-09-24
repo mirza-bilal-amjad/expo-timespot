@@ -45,6 +45,19 @@ jest.mock("react-native-reanimated", () => {
     useAnimatedStyle: (factory: () => unknown) => factory(),
     withSpring: (toValue: unknown) => toValue,
     withTiming: (toValue: unknown) => toValue,
+    withDelay: (_delay: unknown, animation: unknown) => animation,
+    interpolateColor: (value: number, input: number[], output: string[]) => {
+      let closest = 0
+      let closestDistance = Infinity
+      input.forEach((v, i) => {
+        const distance = Math.abs(v - value)
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closest = i
+        }
+      })
+      return output[closest]
+    },
   }
 })
 
