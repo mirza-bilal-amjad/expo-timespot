@@ -7,6 +7,7 @@ import { Button } from "@/components/Button"
 import { Card } from "@/components/Card"
 import { CityRow } from "@/components/CityRow"
 import { Icon, ICON_NAMES } from "@/components/Icon"
+import { MeridianLine } from "@/components/MeridianLine"
 import { Numeral } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
@@ -221,9 +222,9 @@ export function StoriesScreen() {
         </View>
       </Section>
 
-      <Section title="WorldMap + Terminator">
+      <Section title="WorldMap + Terminator + MeridianLine (drag the first one)">
         <View style={themed($sunBlockGrid)}>
-          {WORLD_MAP_DEMO_INSTANTS.map(({ label, at }) => (
+          {WORLD_MAP_DEMO_INSTANTS.map(({ label, at }, index) => (
             <View key={label}>
               <Text preset="caption" text={label} />
               <View style={themed($worldMapDemo)}>
@@ -235,6 +236,14 @@ export function StoriesScreen() {
                     height={WORLD_MAP_DEMO_HEIGHT}
                   />
                 </View>
+                {index === 0 && (
+                  <MeridianLine
+                    width={WORLD_MAP_DEMO_WIDTH}
+                    height={WORLD_MAP_DEMO_HEIGHT}
+                    markerLat={35.6812}
+                    initialOffsetMinutes={540}
+                  />
+                )}
               </View>
             </View>
           ))}
