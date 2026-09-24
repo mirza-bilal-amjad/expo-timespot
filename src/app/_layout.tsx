@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
 
+import { useSeedFirstLaunch } from "@/hooks/useSeedFirstLaunch"
 import { initI18n } from "@/i18n"
 import { ThemeProvider } from "@/theme/context"
 import { customFontsToLoad } from "@/theme/typography"
@@ -23,6 +24,8 @@ if (__DEV__) {
 export default function Root() {
   const [fontsLoaded, fontError] = useFonts(customFontsToLoad)
   const [isI18nInitialized, setIsI18nInitialized] = useState(false)
+
+  useSeedFirstLaunch()
 
   useEffect(() => {
     initI18n()

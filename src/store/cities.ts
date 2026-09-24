@@ -7,6 +7,12 @@ import { storageAdapter } from "./storage"
 
 interface CitiesState {
   cities: SavedCity[]
+  /** Set once, permanently, the first time first-launch seeding (task 3.9)
+   * runs — distinct from `cities.length === 0`, which also describes a user
+   * who deleted every city on purpose and should see the real empty state,
+   * not get reseeded. */
+  hasSeeded: boolean
+  markSeeded: () => void
   addCity: (cityId: string, label?: string) => void
   removeCity: (cityId: string) => void
   /** Reinserts an exact `SavedCity` record (its own `order` included) rather
@@ -21,6 +27,8 @@ export const useCitiesStore = create<CitiesState>()(
   persist(
     (set) => ({
       cities: [],
+      hasSeeded: false,
+      markSeeded: () => set({ hasSeeded: true }),
       addCity: (cityId, label) =>
         set((state) => {
           if (state.cities.some((c) => c.cityId === cityId)) return state
@@ -52,9 +60,15 @@ export const useCitiesStore = create<CitiesState>()(
     }),
     {
       name: "ts.cities.v1",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => storageAdapter),
-      migrate: (persisted) => persisted as CitiesState,
+      // v1 had no seeding concept. Existing non-empty state predates it and
+      // must not be reseeded on top; existing empty state (a fresh v1
+      // install that hadn't added anything yet) should still get seeded.
+      migrate: (persisted) => {
+        const state = persisted as CitiesState
+        return { ...state, hasSeeded: state.cities.length > 0 }
+      },
     },
   ),
 )

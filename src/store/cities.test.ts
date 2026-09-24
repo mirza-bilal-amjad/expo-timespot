@@ -14,7 +14,7 @@ import { storageAdapter } from "./storage"
 describe("useCitiesStore", () => {
   beforeEach(() => {
     storage.clearAll()
-    useCitiesStore.setState({ cities: [] })
+    useCitiesStore.setState({ cities: [], hasSeeded: false })
   })
 
   function persistedOrder(): string[] {
@@ -72,5 +72,20 @@ describe("useCitiesStore", () => {
 
     expect(useCitiesStore.getState().cities).toHaveLength(1)
     expect(useCitiesStore.getState().cities[0].order).toBe(0)
+  })
+
+  it("hasSeeded defaults to false and markSeeded flips it permanently", () => {
+    expect(useCitiesStore.getState().hasSeeded).toBe(false)
+
+    useCitiesStore.getState().markSeeded()
+
+    expect(useCitiesStore.getState().hasSeeded).toBe(true)
+
+    useCitiesStore.getState().addCity("tokyo")
+    useCitiesStore.getState().removeCity("tokyo")
+
+    // deleting every city afterward must not reset the flag — task 3.9's
+    // whole point is that hasSeeded !== cities.length === 0.
+    expect(useCitiesStore.getState().hasSeeded).toBe(true)
   })
 })
