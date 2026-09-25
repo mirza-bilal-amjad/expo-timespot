@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import {
   LayoutChangeEvent,
   // eslint-disable-next-line no-restricted-imports
@@ -169,11 +169,28 @@ function RollingDigit(props: RollingDigitProps) {
     y.value = withSpring(-cellHeight, theme.timing.spring.numeral, (finished) => {
       if (finished) {
         runOnJS(setDisplayDigit)(digit)
-        y.value = 0
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- y/cellHeight/theme.timing.spring.numeral are stable refs/constants for this component's lifetime; only `digit` and `reducedMotion` should retrigger the effect.
   }, [digit, reducedMotion])
+
+  // The roll's completion callback above runs on the UI thread and can only
+  // *ask* the JS thread to update `displayDigit` (`runOnJS`) — it can't do
+  // that update itself. Resetting `y` back to 0 inside that same callback
+  // used to apply instantly on the UI thread, one or more frames before the
+  // JS thread actually committed the new `displayDigit` — so the strip
+  // rendered its *old* content (the digit that just rolled away) at the
+  // reset offset for a frame: a visible jitter back to the previous digit
+  // right after the roll lands. Doing the reset here instead — keyed on
+  // `displayDigit`, in a *layout* effect so it lands before paint rather
+  // than after — puts the offset reset in the exact same commit as the
+  // content it has to match, whichever path got `displayDigit` there (a
+  // roll, the reduced-motion cut, or the jump guard).
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- `y` is a Reanimated shared value (a stable, intentionally mutable ref outside React's render model), not React state — same false positive documented elsewhere in this codebase (e.g. ReorderableCityRow.tsx).
+    y.value = 0
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- y is a stable Reanimated shared value ref; only displayDigit should retrigger this.
+  }, [displayDigit])
 
   const $animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -cellHeight + y.value }],
