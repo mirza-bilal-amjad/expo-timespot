@@ -36,6 +36,16 @@ Tokens are in `02-design-system.md` §6. This document says what uses them, and 
 | 14 | Hero enter | screen mount | 320 ms | `ease.decelerate` | UI |
 | 15 | Theme change | toggle | 200 ms | `linear` | native/CSS |
 
+**Implementation status (as of task 5.5's reduced-motion audit):** rows 6
+(tab change), 13 (terminator update) and 15 (theme change) have no animation
+built yet — a tab switch, a per-minute terminator recompute and a theme
+toggle each apply their new state as a plain synchronous re-render, with no
+cross-fade/wipe/color-tween at all. This isn't a reduced-motion defect (an
+instant, lossless update is exactly what reduced motion asks for), so it
+didn't block 5.5 — but it means the crossfade/wipe/tween these three rows
+describe is still open work, not merely unverified. Tracked as a follow-up,
+not assumed done.
+
 ---
 
 ## 3. The second-digit roll ⭐
