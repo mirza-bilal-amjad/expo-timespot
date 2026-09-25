@@ -60,7 +60,24 @@ export function EntranceView(props: EntranceViewProps) {
     transform: [{ translateY: (1 - progress.value) * distance }],
   }))
 
-  if (!active) return <View style={style}>{children}</View>
+  // This wrapper is purely visual choreography, never a touch target itself
+  // — without `box-none`, a caller that sizes it to `StyleSheet.absoluteFill`
+  // (the tab bar's own usage, so its translateY has a real box to animate
+  // within — see `(tabs)/_layout.tsx`) turns it into a full-screen, invisible
+  // pane sitting over every other screen and swallows every touch that isn't
+  // on the tab bar's own small pill, anywhere in the app. `box-none` makes
+  // the wrapper itself untouchable while leaving its children (here, the tab
+  // bar) hit-testable exactly as before.
+  if (!active)
+    return (
+      <View style={style} pointerEvents="box-none">
+        {children}
+      </View>
+    )
 
-  return <Animated.View style={[style, $animatedStyle]}>{children}</Animated.View>
+  return (
+    <Animated.View style={[style, $animatedStyle]} pointerEvents="box-none">
+      {children}
+    </Animated.View>
+  )
 }
