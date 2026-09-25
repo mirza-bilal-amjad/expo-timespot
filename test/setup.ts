@@ -56,10 +56,6 @@ jest.mock("react-native-reanimated", () => {
     useAnimatedScrollHandler: (handlers: unknown) => handlers,
     scrollTo: () => {},
     useEvent: () => undefined,
-    runOnJS:
-      (fn: (...args: unknown[]) => void) =>
-      (...args: unknown[]) =>
-        fn(...args),
     // The optional 3rd-arg completion callback is invoked synchronously
     // with `true` (finished) — Numeral's roll animation (task 5.1) relies
     // on it firing to settle the digit after the strip's translateY

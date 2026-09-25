@@ -194,7 +194,7 @@ Project skills in `.claude/skills/` load automatically when relevant.
 **Product-specific**
 - **`Intl` on low-end Android** may ignore `timeZone` *silently*. The boot probe in `domain/time/capability.ts` is not optional (`adr/0004`).
 - **Android `includeFontPadding: false`** on every display preset, or 144 pt numerals sit ~8 % low.
-- **`runOnJS` during the meridian drag must be throttled to 60 ms.** Per-frame JS destroys the 60 fps budget.
+- **JS calls from a gesture (`scheduleOnRN`) must be throttled to 60 ms.** Per-frame JS destroys the 60 fps budget. `runOnJS` is deprecated in Reanimated 4 — use `scheduleOnRN` from `react-native-worklets`.
 - **Web hydration:** the static clock is stale by definition. `suppressHydrationWarning` + `useLayoutEffect`, never `useEffect`.
 - **Device clock jumps > 5 s** → cut, never animate a roll through 3 000 values.
 - **45-minute zones are real** — Kathmandu `+5:45`, Chatham `+12:45`, Eucla `+8:45`.

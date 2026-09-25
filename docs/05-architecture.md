@@ -209,7 +209,7 @@ function schedule(cb) {
 |---|---|---|
 | Cold start → readable clock | < 900 ms p75 | fonts preloaded; city dataset lazily loaded *after* first paint; map code-split off the initial route |
 | List re-render | 1 component per tick | `useClock` at the screen, memo'd rows, `showSeconds` off by default |
-| Meridian drag | 60 fps | shared value on the UI thread; `runOnJS` throttled to 60 ms |
+| Meridian drag | 60 fps | shared value on the UI thread; `scheduleOnRN` throttled to 60 ms |
 | Map first paint | < 120 ms | ~210 KB 50 m topology, decoded once per process; raster fallback below a device tier |
 | Web initial route | < 180 KB gz | map and search chunks lazy; dataset fetched, not bundled |
 | Memory, 40 cities | < 120 MB | FlashList recycling, `expo-image` `recyclingKey` |

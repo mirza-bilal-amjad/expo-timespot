@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { LayoutChangeEvent, TextStyle, ViewStyle } from "react-native"
 import Animated, {
-  runOnJS,
   scrollTo,
   SharedValue,
   useAnimatedReaction,
@@ -10,6 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated"
+import { scheduleOnRN } from "react-native-worklets"
 
 import { getRulerTicks, offsetToRulerX, rulerXToOffset } from "@/domain/map/ruler"
 import { formatOffset } from "@/domain/time/zone"
@@ -86,7 +86,7 @@ export function UtcRuler({ offsetMinutes, onSettle }: UtcRulerProps) {
       // mutating a plain prop.
       // eslint-disable-next-line react-hooks/immutability
       offsetMinutes.value = offset
-      runOnJS(scheduleSettle)(offset)
+      scheduleOnRN(scheduleSettle, offset)
     },
   })
 

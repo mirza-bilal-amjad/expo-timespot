@@ -99,7 +99,7 @@ The hardest phase. Budget the most review time here.
 | 4.2 | Night overlay — hatching clipped to land, inside `WorldMap`, recomputed per minute | visually correct at equinox and both solstices |
 | 4.3 | ~~`MeridianLine` on a Reanimated shared value~~ `MeridianMap` point-anywhere pointer (corrected 2026-09-25) | drag is 60 fps with the map rendered |
 | 4.4 | `UtcRuler` follows the pointed-at city's offset; settling it selects that zone's city | ruler and pointer never disagree; includes `+5:45`, `+12:45`, `+14` |
-| 4.5 | Snap + haptic + `runOnJS` throttled to 60 ms | profiler shows no per-frame JS |
+| 4.5 | Snap + haptic + `scheduleOnRN` (was `runOnJS`, deprecated in Reanimated 4) throttled to 60 ms | profiler shows no per-frame JS |
 | 4.6 | `FloatingCityCard`, clamped to the gutter | at map edges the card stays fully on screen |
 | 4.7 | Active-country fill for the focused city | Algeria fills black when UTC+1/Algiers is selected |
 | 4.8 | a11y: `adjustable` role, keyboard arrows on web | VoiceOver swipe changes zone; the screen works with the map hidden |

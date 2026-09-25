@@ -2,8 +2,30 @@ import { render, screen } from "@testing-library/react-native"
 import * as Reanimated from "react-native-reanimated"
 
 import { ThemeProvider } from "@/theme/context"
+import { restIndex } from "@/utils/odometer"
 
 import { Numeral } from "./Numeral"
+
+// numeralLg's line height — one odometer cell.
+const NUMERAL_LG_CELL = 48
+
+/** translateY of every odometer strip in the rendered tree, in order. */
+function stripOffsets(): number[] {
+  const offsets: number[] = []
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") return
+    if (Array.isArray(node)) return node.forEach(walk)
+    const { props, children } = node as { props?: { style?: unknown }; children?: unknown }
+    const styles = [props?.style].flat(Infinity) as { transform?: { translateY?: number }[] }[]
+    for (const style of styles) {
+      const translateY = style?.transform?.find((t) => "translateY" in t)?.translateY
+      if (translateY !== undefined) offsets.push(translateY)
+    }
+    walk(children)
+  }
+  walk(screen.toJSON())
+  return offsets
+}
 
 const hidden = { includeHiddenElements: true }
 
@@ -43,61 +65,31 @@ describe("Numeral", () => {
     expect(screen.getByText(":", hidden)).toBeTruthy()
   })
 
-  it("animate='roll' renders the live digit plus its odometer neighbours", () => {
+  // The roll itself (which cell, when to cut, the 9 → 0 wrap, interrupted
+  // ticks) is pure maths, covered in utils/odometer.test.ts — the reanimated
+  // mock can't run a UI-thread reaction. What's checked here is that the
+  // strip mounts positioned on the live digit.
+  it("animate='roll' mounts a static strip positioned on the live digit", () => {
     render(
       <ThemeProvider>
-        <Numeral value="5" animate="roll" />
+        <Numeral value="7" size="numeralLg" animate="roll" />
       </ThemeProvider>,
     )
-    // "the next value rises from below, like an odometer" — neighbours are
-    // digit-1 and digit+1, not arbitrary ghosts.
-    expect(screen.getByText("5", hidden)).toBeTruthy()
-    expect(screen.getByText("4", hidden)).toBeTruthy()
-    expect(screen.getByText("6", hidden)).toBeTruthy()
+    // Every digit is in the strip, twice — the text never changes.
+    expect(digitCount("3")).toBe(2)
+    expect(stripOffsets()).toEqual([-restIndex(7) * NUMERAL_LG_CELL])
   })
 
-  it("wraps the neighbours mod 10 at the digit boundary", () => {
+  it("positions each rolling digit independently", () => {
     render(
       <ThemeProvider>
-        <Numeral value="9" animate="roll" />
+        <Numeral value="09" size="numeralLg" animate="roll" />
       </ThemeProvider>,
     )
-    expect(screen.getByText("9", hidden)).toBeTruthy()
-    expect(screen.getByText("8", hidden)).toBeTruthy()
-    expect(digitCount("0")).toBeGreaterThan(0) // 9 + 1, wrapped
-  })
-
-  it("updates to the new digit on a normal one-step change (e.g. a clock tick)", () => {
-    const { rerender } = render(
-      <ThemeProvider>
-        <Numeral value="5" animate="roll" />
-      </ThemeProvider>,
-    )
-    rerender(
-      <ThemeProvider>
-        <Numeral value="6" animate="roll" />
-      </ThemeProvider>,
-    )
-    expect(screen.getByText("6", hidden)).toBeTruthy()
-  })
-
-  it("still updates to the new digit on a jump beyond the guard threshold (a device clock correction)", () => {
-    // docs/08-motion-spec.md §3: "if the value changes by more than 2, cut
-    // instead of rolling" — the digit must still end up correct, just
-    // without the roll (which this test can't distinguish from a jest
-    // component test alone — that's the domain-level circularDigitDistance
-    // reasoning documented inline in Numeral.tsx, not re-derived here).
-    const { rerender } = render(
-      <ThemeProvider>
-        <Numeral value="1" animate="roll" />
-      </ThemeProvider>,
-    )
-    rerender(
-      <ThemeProvider>
-        <Numeral value="8" animate="roll" />
-      </ThemeProvider>,
-    )
-    expect(screen.getByText("8", hidden)).toBeTruthy()
+    expect(stripOffsets()).toEqual([
+      -restIndex(0) * NUMERAL_LG_CELL,
+      -restIndex(9) * NUMERAL_LG_CELL,
+    ])
   })
 
   it("renders a plain digit with no ghost neighbours under reduced motion", () => {
@@ -110,6 +102,7 @@ describe("Numeral", () => {
     expect(screen.getByText("5", hidden)).toBeTruthy()
     expect(screen.queryByText("4", hidden)).toBeNull()
     expect(screen.queryByText("6", hidden)).toBeNull()
+    expect(stripOffsets()).toEqual([])
   })
 
   it("carries the given accessibilityLabel on the composed value, not per digit", () => {

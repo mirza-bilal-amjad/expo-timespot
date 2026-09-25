@@ -256,7 +256,7 @@ Reference: mobile board, phone 3. The most novel screen and the highest implemen
 ### Meridian — point anywhere
 
 - 1-pt vertical rule in `state.meridian`, full map height, with small triangular caps top and bottom, and a ring-and-dot marker (14 ⌀ ring, 6 ⌀ dot) — the board's pointer.
-- **Touch or drag anywhere on the map.** The line and marker jump under the finger and follow it in both axes, on the **UI thread** (`Gesture.Pan().minDistance(0)`; shared values, no JS per frame). The card and the active-country fill preview the city under the finger, bridged with `runOnJS` **throttled to 60 ms**.
+- **Touch or drag anywhere on the map.** The line and marker jump under the finger and follow it in both axes, on the **UI thread** (`Gesture.Pan().minDistance(0)`; shared values, no JS per frame). The card and the active-country fill preview the city under the finger, bridged with `scheduleOnRN` **throttled to 60 ms**.
 - **Release** resolves the nearest real city (`domain/map/pick.ts`: screen distance − 6 × log₁₀ population, so a tap near London means London) — the marker springs onto it with `spring.press`, the map pans to centre it, `Haptics.selectionAsync()` fires. The zone is the **city's real zone**: pointing at Madrid gives Madrid's, not London's as its longitude would imply.
 - **Drag into the outer 40 pt** of either side and the world scrolls under the finger (up to 700 pt/s), so every place is reachable in one gesture.
 - The selection opens on the focused city (else the device's zone) and is local to this screen — pointing doesn't change the app-wide focus.

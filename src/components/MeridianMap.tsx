@@ -4,7 +4,6 @@ import * as Haptics from "expo-haptics"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import Animated, {
   cancelAnimation,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
@@ -14,6 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated"
 import { Line, Path, Svg } from "react-native-svg"
+import { scheduleOnRN } from "react-native-worklets"
 
 import { getNearestRepresentativeCity } from "@/domain/cities/search"
 import { MAX_OFFSET_MINUTES, MIN_OFFSET_MINUTES } from "@/domain/map/meridian"
@@ -178,7 +178,7 @@ export function MeridianMap(props: MeridianMapProps) {
       const t = performance.now()
       if (t - lastPreviewMs.value < PREVIEW_THROTTLE_MS) return
       lastPreviewMs.value = t
-      runOnJS(updatePreview)(pointerX.value, pointerY.value)
+      scheduleOnRN(updatePreview, pointerX.value, pointerY.value)
     },
   )
 
@@ -206,7 +206,7 @@ export function MeridianMap(props: MeridianMapProps) {
         .onFinalize(() => {
           if (!dragging.value) return
           dragging.value = false
-          runOnJS(commit)(pointerX.value, pointerY.value)
+          scheduleOnRN(commit, pointerX.value, pointerY.value)
         }),
     // Shared values are stable refs; the gesture is rebuilt when geometry
     // or the commit target changes.
