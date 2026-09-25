@@ -104,10 +104,15 @@ export function SearchSheet(props: SearchSheetProps) {
         accessibilityRole="button"
         accessibilityLabel={`${city.name}, ${subtitle}${already ? translate("search:alreadyAdded") : ""}`}
         accessibilityHint={translate(already ? "search:focusHint" : "search:addHint")}
-        style={themed([$row, already && $rowDimmed])}
+        style={themed($row)}
       >
         <View style={themed($rowText)}>
-          <Text preset="cityTitle" text={city.name} numberOfLines={1} />
+          <Text
+            preset="cityTitle"
+            text={city.name}
+            numberOfLines={1}
+            style={already && themed($dimmedTitle)}
+          />
           <Text preset="offset" text={subtitle} numberOfLines={1} />
         </View>
         {already ? (
@@ -173,7 +178,17 @@ const $row: ThemedStyle<ViewStyle> = (theme) => ({
   gap: theme.spacing.sm,
 })
 
-const $rowDimmed: ViewStyle = { opacity: 0.5 }
+// "Already added" was previously a flat `opacity: 0.5` on the whole row —
+// found during task 5.6's contrast audit to drop the offset/subtitle text
+// (already the dimmer `textDim` token before any opacity) well under AA in
+// both themes (as low as 2.1:1 light / 2.8:1 dark — see docs/02-design-system.md
+// §1.4's contrast ledger for the token ratios that opacity was eating into).
+// `textDim` on cityTitle reads as "de-emphasized" exactly like the spec's
+// "row is dimmed" (docs/04-screen-specs.md S4) while staying at textDim's
+// own documented AA ratio (5.46:1 light / 8.28:1 dark) — the subtitle and
+// check icon already render in `textDim`, so this just brings the title in
+// line rather than introducing a new token.
+const $dimmedTitle: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.textDim })
 
 const $rowText: ThemedStyle<ViewStyle> = (theme) => ({ flex: 1, gap: theme.spacing.xxxs })
 
