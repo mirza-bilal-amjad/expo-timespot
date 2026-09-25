@@ -22,11 +22,18 @@ describe("getLandSvgPath", () => {
     expect(Number(firstBig[2])).toBeCloseTo(Number(firstSmall[2]) * 2, 0)
   })
 
-  it("re-projects at a new size in well under a frame budget once decoded", () => {
+  it("re-projects at a new size inside the map's first-paint budget once decoded", () => {
+    // Runs once per map *size* (the caller memoizes), not per frame, so the
+    // budget is docs/05-architecture.md's "map first paint < 120 ms". The
+    // median of several runs, so one GC pause under a loaded CI runner
+    // can't fail it (~30 ms measured in isolation).
     getLandSvgPath(100, 70)
-    const start = performance.now()
-    getLandSvgPath(880, 590)
-    expect(performance.now() - start).toBeLessThan(50)
+    const runs = Array.from({ length: 7 }, (_, i) => {
+      const start = performance.now()
+      getLandSvgPath(880 + i, 590)
+      return performance.now() - start
+    }).sort((x, y) => x - y)
+    expect(runs[3]).toBeLessThan(120)
   })
 })
 
