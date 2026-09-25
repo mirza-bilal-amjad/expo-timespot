@@ -1,12 +1,12 @@
 /**
- * docs/06-data-model.md, docs/10-implementation-plan.md tasks 1.10 and 4.7.
- * Builds two TopoJSON assets for the meridian map from Natural Earth
- * geometry (public domain), via `world-atlas` (the D3/topojson maintainers'
- * own pre-built Natural Earth -> TopoJSON package) rather than processing
- * raw Natural Earth shapefiles directly — that needs GDAL/mapshaper,
- * neither of which is available here, and world-atlas's 110m files are
- * already exactly "Natural Earth, simplified to TopoJSON" at the coarsest
- * of their three published resolutions:
+ * docs/06-data-model.md, docs/10-implementation-plan.md tasks 1.10, 4.7 and
+ * 4.9. Builds three assets for the meridian map from Natural Earth geometry
+ * (public domain), via `world-atlas` (the D3/topojson maintainers' own
+ * pre-built Natural Earth -> TopoJSON package) rather than processing raw
+ * Natural Earth shapefiles directly — that needs GDAL/mapshaper, neither of
+ * which is available here, and world-atlas's 110m files are already exactly
+ * "Natural Earth, simplified to TopoJSON" at the coarsest of their three
+ * published resolutions:
  *
  *  - `world.topo.json` — the merged land silhouette (task 4.1).
  *  - `world.countries.topo.json` — per-country boundaries (task 4.7), for
@@ -17,15 +17,27 @@
  *    runtime mapping table of its own. `properties.name` is dropped before
  *    simplification — nothing at runtime looks a country up by name, and
  *    177 name strings roughly double the file size for no reason.
+ *  - `land-raster.png` — docs/04-screen-specs.md's "pre-rendered raster at
+ *    2x" fallback for low-end devices (task 4.9), rendered from the exact
+ *    same simplified land topology and the same `geometryToSvgPath` runtime
+ *    code the vector map uses, via `sharp` (a devDependency — this script
+ *    is the only thing that touches it; the app never ships it). White
+ *    land on a transparent background, not a themed colour: `<WorldMap>`
+ *    applies `theme.colors.mapLand` at render time with `expo-image`'s own
+ *    `tintColor`, the same way a monochrome icon would, so one raster
+ *    serves both themes.
  *
  * Run: npx tsx scripts/build-map.ts
  */
 import { existsSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { quantize } from "topojson-client"
+import sharp from "sharp"
+import { feature, quantize } from "topojson-client"
 import { filter, filterWeight, presimplify, quantile, simplify } from "topojson-simplify"
 import type { GeometryCollection, Objects, Topology } from "topojson-specification"
+
+import { geometryToSvgPath } from "../src/domain/map/projection"
 
 const LAND_SOURCE_PATH = path.join(__dirname, "..", "node_modules", "world-atlas", "land-110m.json")
 const COUNTRIES_SOURCE_PATH = path.join(
@@ -44,8 +56,18 @@ const COUNTRIES_OUTPUT_PATH = path.join(
   "map",
   "world.countries.topo.json",
 )
+const RASTER_OUTPUT_PATH = path.join(__dirname, "..", "src", "assets", "map", "land-raster.png")
 const LAND_MAX_BYTES = 30_000
 const COUNTRIES_MAX_BYTES = 30_000
+const RASTER_MAX_BYTES = 60_000
+
+// Equirectangular is always 2:1 (width:height) — the same ratio
+// projection.ts's own [-180,180]x[-90,90] domain implies. "At 2x": the
+// reference size a low-end device's map area would actually need is well
+// under 720x360 logical points, so 1440x720 pixels is already a real 2x
+// over that, not a bare doubling of some arbitrary base.
+const RASTER_WIDTH = 1280
+const RASTER_HEIGHT = 640
 
 const GEONAMES_DATA_DIR = path.join(__dirname, ".data", "geonames")
 const GEONAMES_BASE = "https://download.geonames.org/export/dump/"
@@ -95,11 +117,34 @@ async function writeTopology(outputPath: string, topology: Topology<Objects>, ma
   console.log(`Arcs: ${(topology.arcs ?? []).length}`)
 }
 
-async function buildLand() {
+async function buildLand(): Promise<Topology<Objects>> {
   const raw = await readFile(LAND_SOURCE_PATH, "utf-8")
   const source = JSON.parse(raw) as Topology<Objects>
   const best = simplifyToBudget(source, LAND_MAX_BYTES, 0.5)
   await writeTopology(LAND_OUTPUT_PATH, best, LAND_MAX_BYTES)
+  return best
+}
+
+/** Reuses the exact same simplified topology and `geometryToSvgPath` the
+ * vector `<WorldMap>` renders from, so the raster fallback is never more
+ * than a device-tier check away from matching the vector version pixel for
+ * pixel — not a separately-maintained approximation of it. */
+async function buildRaster(landTopology: Topology<Objects>) {
+  const land = feature(landTopology, landTopology.objects.land)
+  const geometry = "geometry" in land ? land.geometry : land.features[0]?.geometry
+  if (!geometry) throw new Error("buildRaster: land object resolved empty")
+
+  const d = geometryToSvgPath(geometry, RASTER_WIDTH, RASTER_HEIGHT)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${RASTER_WIDTH}" height="${RASTER_HEIGHT}" viewBox="0 0 ${RASTER_WIDTH} ${RASTER_HEIGHT}"><path d="${d}" fill="#ffffff"/></svg>`
+
+  const png = await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toBuffer()
+  await mkdir(path.dirname(RASTER_OUTPUT_PATH), { recursive: true })
+  await writeFile(RASTER_OUTPUT_PATH, png)
+
+  console.log(`${path.basename(RASTER_OUTPUT_PATH)} written: ${(png.length / 1024).toFixed(1)} KB`)
+  console.log(
+    `Budget: ${(RASTER_MAX_BYTES / 1024).toFixed(0)} KB — ${png.length <= RASTER_MAX_BYTES ? "within" : "OVER"} budget`,
+  )
 }
 
 async function ensureCountryInfo(): Promise<string> {
@@ -161,8 +206,9 @@ async function buildCountries() {
 }
 
 async function build() {
-  await buildLand()
+  const landTopology = await buildLand()
   await buildCountries()
+  await buildRaster(landTopology)
 }
 
 build().catch((err) => {

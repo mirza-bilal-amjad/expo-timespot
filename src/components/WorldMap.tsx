@@ -1,10 +1,14 @@
 import { useMemo } from "react"
-import { View } from "react-native"
+import { StyleSheet, View } from "react-native"
+import { Image } from "expo-image"
 import { Path, Svg } from "react-native-svg"
 
 import { getCountrySvgPath } from "@/domain/map/countries"
 import { getLandSvgPath } from "@/domain/map/land"
+import { useMapRenderTier } from "@/hooks/useMapRenderTier"
 import { useAppTheme } from "@/theme/context"
+
+const landRaster = require("@/assets/map/land-raster.png")
 
 /**
  * docs/03-component-library.md "<WorldMap>" (task 4.1 of the `<MeridianMap>`
@@ -22,6 +26,15 @@ import { useAppTheme } from "@/theme/context"
  * focused, or when the focused city's country has no geometry at this
  * resolution (`getCountrySvgPath`'s own doc comment), and either way this
  * component just renders one path instead of two.
+ *
+ * Task 4.9: "Low-end devices... swap to a pre-rendered raster at 2×"
+ * (`useMapRenderTier`, `scripts/build-map.ts`'s own `land-raster.png`).
+ * The *base land layer* swaps to a flat `expo-image`, tinted to
+ * `theme.colors.mapLand` via `tintColor` rather than shipping one PNG per
+ * theme — but the active-country highlight stays a real `<Path>` even on
+ * the raster tier: it's a single country's geometry, not the whole
+ * world's, so it's cheap regardless, and dropping it would mean the raster
+ * fallback silently loses a feature rather than just costing less to draw.
  */
 export interface WorldMapProps {
   width: number
@@ -31,7 +44,11 @@ export interface WorldMapProps {
 
 export function WorldMap({ width, height, activeCountryCode }: WorldMapProps) {
   const { theme } = useAppTheme()
-  const landPath = useMemo(() => getLandSvgPath(width, height), [width, height])
+  const tier = useMapRenderTier()
+  const landPath = useMemo(
+    () => (tier === "vector" ? getLandSvgPath(width, height) : ""),
+    [tier, width, height],
+  )
   const activeCountryPath = useMemo(
     () => (activeCountryCode ? getCountrySvgPath(activeCountryCode, width, height) : undefined),
     [activeCountryCode, width, height],
@@ -49,10 +66,31 @@ export function WorldMap({ width, height, activeCountryCode }: WorldMapProps) {
     // accessibility prop names the way a real RN View (and react-native-web's
     // View) does.
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Path d={landPath} fill={theme.colors.mapLand} />
-        {activeCountryPath && <Path d={activeCountryPath} fill={theme.colors.mapLandActive} />}
-      </Svg>
+      {tier === "raster" ? (
+        <>
+          <Image
+            source={landRaster}
+            tintColor={theme.colors.mapLand}
+            contentFit="fill"
+            style={{ width, height }}
+          />
+          {activeCountryPath && (
+            <Svg
+              width={width}
+              height={height}
+              viewBox={`0 0 ${width} ${height}`}
+              style={StyleSheet.absoluteFill}
+            >
+              <Path d={activeCountryPath} fill={theme.colors.mapLandActive} />
+            </Svg>
+          )}
+        </>
+      ) : (
+        <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+          <Path d={landPath} fill={theme.colors.mapLand} />
+          {activeCountryPath && <Path d={activeCountryPath} fill={theme.colors.mapLandActive} />}
+        </Svg>
+      )}
     </View>
   )
 }

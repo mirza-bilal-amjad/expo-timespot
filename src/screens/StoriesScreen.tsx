@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
+import { Image } from "expo-image"
 import { useSharedValue } from "react-native-reanimated"
 
 import { Avatar } from "@/components/Avatar"
@@ -262,6 +263,25 @@ export function StoriesScreen() {
         </View>
       </Section>
 
+      <Section title="Map raster fallback (task 4.9)">
+        {/* useMapRenderTier never picks raster on web (docs/07-responsive-strategy.md's
+         platform-exception table: "never — browsers cope"), so <WorldMap>
+         itself can't demo this tier here — this renders the actual
+         land-raster.png asset the way <WorldMap> would on a forced-raster
+         native device, tinted with the live theme's own map.land, to check
+         the asset and the tint (not the device-tier branching, which
+         domain/map/renderTier.test.ts and useMapRenderTier.test.ts already
+         cover) actually look right in both themes. */}
+        <View style={themed($worldMapDemo)}>
+          <Image
+            source={landRasterDemo}
+            tintColor={theme.colors.mapLand}
+            contentFit="fill"
+            style={{ width: WORLD_MAP_DEMO_WIDTH, height: WORLD_MAP_DEMO_HEIGHT }}
+          />
+        </View>
+      </Section>
+
       <Section title="Sheet">
         <Button preset="pill" text="Open sheet" onPress={() => setSheetOpen(true)} />
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen} title="A sheet story">
@@ -326,6 +346,10 @@ const $sunBlockGrid: ThemedStyle<ViewStyle> = (theme) => ({
 // arbitrary demo size, same status as CARD_DEMO_WIDTH above.
 const WORLD_MAP_DEMO_WIDTH = 360
 const WORLD_MAP_DEMO_HEIGHT = 180
+
+// docs/10-implementation-plan.md task 4.9 — same asset <WorldMap> requires
+// in its own raster branch (src/components/WorldMap.tsx).
+const landRasterDemo = require("@/assets/map/land-raster.png")
 
 // docs/10-implementation-plan.md task 4.2's acceptance: "visually correct at
 // equinox and both solstices" — the same three instants terminator.test.ts
