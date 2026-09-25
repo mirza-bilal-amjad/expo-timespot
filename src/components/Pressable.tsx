@@ -30,13 +30,32 @@ const MIN_TARGET = Platform.select({ ios: 44, android: 48, default: 24 })!
 export interface PressableProps extends Omit<RNPressableProps, "style"> {
   style?: RNPressableProps["style"]
   disabled?: boolean
+  /** Scale the surface shrinks to on press-in, via `spring.press`. Default
+   * `0.97` (buttons, pills, icons — anything the docs don't call out a
+   * specific value for). docs/04-screen-specs.md's own row-states table and
+   * docs/08-motion-spec.md §4 both specify `0.985` for `<CityRow>`
+   * specifically — a full-width row shrinking as much as a small button
+   * would read as an alarming jump, not a tap acknowledgement. */
+  pressedScale?: number
 }
+
+const DEFAULT_PRESSED_SCALE = 0.97
 
 const AnimatedPressable = Animated.createAnimatedComponent(RNPressable)
 
 export const Pressable = forwardRef<View, PressableProps>(function Pressable(props, ref) {
-  const { style, hitSlop, disabled, onPressIn, onPressOut, onLayout, onFocus, onBlur, ...rest } =
-    props
+  const {
+    style,
+    hitSlop,
+    disabled,
+    onPressIn,
+    onPressOut,
+    onLayout,
+    onFocus,
+    onBlur,
+    pressedScale = DEFAULT_PRESSED_SCALE,
+    ...rest
+  } = props
   const { theme } = useAppTheme()
   const scale = useSharedValue(1)
   const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null)
@@ -53,13 +72,13 @@ export const Pressable = forwardRef<View, PressableProps>(function Pressable(pro
 
   const handlePressIn = useCallback(
     (e: GestureResponderEvent) => {
-      scale.value = withSpring(0.97, theme.timing.spring.press)
+      scale.value = withSpring(pressedScale, theme.timing.spring.press)
       if (Platform.OS !== "web") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
       }
       onPressIn?.(e)
     },
-    [onPressIn, scale, theme.timing.spring.press],
+    [onPressIn, scale, pressedScale, theme.timing.spring.press],
   )
 
   const handlePressOut = useCallback(

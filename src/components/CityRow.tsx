@@ -57,6 +57,13 @@ const AnimatedText = Animated.createAnimatedComponent(Text)
 // constants where the design system has no token for it yet.
 const SELECT_STAGGER_MS = 40
 
+// docs/08-motion-spec.md §4: both the outgoing and incoming row cross-fades
+// are explicitly "180ms" — theme/timing.ts's nearest token (`base`, 220ms)
+// is a real, noticeable 40ms off from the doc's own choreography, where the
+// exact stagger timing is called out as mattering. Same "no token for this
+// yet" reasoning as SELECT_STAGGER_MS above.
+const SELECT_CROSSFADE_MS = 180
+
 export const CityRow = memo(
   function CityRow(props: CityRowProps) {
     const { city, time, selected, onPress, onLongPress, onDelete, onMoveUp, onMoveDown } = props
@@ -71,9 +78,9 @@ export const CityRow = memo(
     const progress = useSharedValue(selected ? 1 : 0)
     useEffect(() => {
       progress.value = selected
-        ? withDelay(SELECT_STAGGER_MS, withTiming(1, { duration: theme.timing.base }))
-        : withTiming(0, { duration: theme.timing.base })
-    }, [selected, progress, theme.timing.base])
+        ? withDelay(SELECT_STAGGER_MS, withTiming(1, { duration: SELECT_CROSSFADE_MS }))
+        : withTiming(0, { duration: SELECT_CROSSFADE_MS })
+    }, [selected, progress])
 
     const $animatedRow = useAnimatedStyle(() => ({
       backgroundColor: interpolateColor(
@@ -137,6 +144,7 @@ export const CityRow = memo(
       <Pressable
         onPress={handlePress}
         onLongPress={onLongPress}
+        pressedScale={0.985}
         accessibilityRole="button"
         accessibilityLabel={citySpeechLabel(name, time)}
         accessibilityState={{ selected }}
