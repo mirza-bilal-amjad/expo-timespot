@@ -178,7 +178,7 @@ Three stacked numeral blocks:
 | seconds | `display.xl` 72 | `15` | sits on the minutes' baseline, `space.4` to its right |
 
 - Baseline grid: hour block and minute block are stacked with `lineHeight 0.86` so the two blocks nearly touch. Measured from the board: the `08` cap-bottom to `40` cap-top gap is ≈ 8 pt.
-- `Thu,` / `20 Mar` is a two-line right-aligned block, top-aligned to the hour block's cap height, `display.md` 36.
+- `Thu,` / `20 Mar` is a two-line **left-aligned** block beside the hour block only (not the whole hours+minutes stack), `display.md` 36. ~~right-aligned~~ — corrected 2026-09-25: the board left-aligns both lines, and sharing a row with the whole stack pushed the date off-screen.
 - **Odometer:** the seconds block shows the previous and next values above and below, blurred and at `ink.tertiary`, sliding on each tick. Precise spec in `08-motion-spec.md` §3. In 12-h mode the `AM`/`PM` marker sits below the seconds at `label` 15, `ink.secondary`.
 
 ### City block
@@ -187,7 +187,7 @@ Three stacked numeral blocks:
 
 ### Sun block
 
-Right-aligned beside the city block, `label` 15:
+Right-aligned **above** the city block, `label` 15. ~~Beside the city block~~ — corrected 2026-09-25: React Native can't flow text around a box the way the board's first line does, and a side-by-side row squeezed the city to one word per line. The city now gets the full width:
 
 ```
 Sun ☀ : 10h 05m

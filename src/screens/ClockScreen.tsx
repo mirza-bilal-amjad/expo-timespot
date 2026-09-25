@@ -1,4 +1,4 @@
-import { TextStyle, View, ViewStyle } from "react-native"
+import { View, ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { EntranceView } from "@/components/EntranceView"
@@ -60,7 +60,7 @@ export function ClockScreen() {
     : `${city.name}, ${city.country}`
 
   return (
-    <Screen preset="fixed" contentContainerStyle={themed($screen)}>
+    <Screen preset="auto" contentContainerStyle={themed($screen)}>
       <View
         style={[
           themed($header),
@@ -93,38 +93,40 @@ export function ClockScreen() {
          opacity 0→1, translateY 8→0, 320ms ease.decelerate." */}
         <EntranceView play={shouldPlayEntrance}>
           <View
-            style={$heroRow}
             accessible
             accessibilityLiveRegion="none"
             accessibilityLabel={`${time.hours}:${time.minutes}:${time.seconds}${time.meridiem ? ` ${time.meridiem}` : ""}, ${time.dateLabel}`}
           >
-            <View style={$heroLeft} importantForAccessibility="no-hide-descendants">
-              {/* docs/08-motion-spec.md §3: "Minutes roll on the same mechanism...
-               hours do not roll — an hour change is rare enough that a cut
-               reads as intentional and a roll reads as a glitch." */}
+            {/* The board's arrangement: hours beside the date, minutes beside
+             the seconds — two rows, so the date only competes with two hero
+             digits for width, never with the whole stack.
+             docs/08-motion-spec.md §3: minutes and seconds roll; hours cut. */}
+            <View style={$heroLine}>
               <Numeral value={time.hours} size="hero" />
-              <View style={themed($minuteRow)}>
-                <Numeral value={time.minutes} size="hero" animate="roll" />
-                <View style={themed($secondsBlock)}>
-                  <Numeral value={time.seconds} size="displayXl" animate="roll" />
-                  {time.meridiem && <Text preset="offset" text={time.meridiem} />}
-                </View>
+              <View style={themed($dateBlock)}>
+                <Text size="xxl" text={`${weekdayPart},`} numberOfLines={1} />
+                <Text size="xxl" text={dateLine2} numberOfLines={1} />
               </View>
             </View>
-            <View style={$dateBlock} importantForAccessibility="no-hide-descendants">
-              <Text size="xxl" text={`${weekdayPart},`} style={$dateRight} />
-              <Text size="xxl" text={dateLine2} style={$dateRight} />
+            <View style={$heroLine}>
+              <Numeral value={time.minutes} size="hero" animate="roll" />
+              <View style={themed($secondsBlock)}>
+                <Numeral value={time.seconds} size="displayXl" animate="roll" />
+                {time.meridiem && <Text preset="offset" text={time.meridiem} />}
+              </View>
             </View>
           </View>
         </EntranceView>
 
-        <View style={themed($cityRow)}>
-          <Text size="display" text={locationText} style={themed($cityText)} />
-          <SunBlock lat={city.lat} lon={city.lon} zone={city.zone} now={now} />
+        <View style={themed($cityBlock)}>
+          <View style={$sunRow}>
+            <SunBlock lat={city.lat} lon={city.lon} zone={city.zone} now={now} />
+          </View>
+          <Text size="display" text={locationText} />
         </View>
       </View>
 
-      <View style={{ height: tabBarClearance }} />
+      <View style={{ height: tabBarClearance + theme.spacing.lg }} />
     </Screen>
   )
 }
@@ -153,40 +155,25 @@ const $mark: ThemedStyle<ViewStyle> = (theme) => ({
 const $body: ThemedStyle<ViewStyle> = (theme) => ({
   flex: 1,
   paddingHorizontal: theme.spacing.gutter,
-  justifyContent: "center",
-  gap: theme.spacing.xxl,
+  justifyContent: "space-between",
+  gap: theme.spacing.xl,
 })
 
-const $heroRow: ViewStyle = {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-}
+const $heroLine: ViewStyle = { flexDirection: "row", alignItems: "center" }
 
-const $heroLeft: ViewStyle = { alignItems: "flex-start" }
-
-const $minuteRow: ThemedStyle<ViewStyle> = (theme) => ({
-  flexDirection: "row",
-  alignItems: "flex-end",
-  gap: theme.spacing.xs,
+const $dateBlock: ThemedStyle<ViewStyle> = (theme) => ({
+  flex: 1,
+  marginLeft: theme.spacing.md,
 })
 
 const $secondsBlock: ThemedStyle<ViewStyle> = (theme) => ({
+  marginLeft: theme.spacing.md,
   alignItems: "center",
-  paddingBottom: theme.spacing.sm,
 })
 
-const $dateBlock: ViewStyle = { alignItems: "flex-end" }
-const $dateRight: TextStyle = { textAlign: "right" }
+const $cityBlock: ThemedStyle<ViewStyle> = (theme) => ({ gap: theme.spacing.sm })
 
-const $cityRow: ThemedStyle<ViewStyle> = (theme) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-end",
-  gap: theme.spacing.md,
-})
-
-const $cityText: ThemedStyle<TextStyle> = () => ({ flex: 1, flexShrink: 1 })
+const $sunRow: ViewStyle = { alignItems: "flex-end" }
 
 const $empty: ThemedStyle<ViewStyle> = (theme) => ({
   flex: 1,
