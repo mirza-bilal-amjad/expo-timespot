@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated"
 
 import { getCityById } from "@/domain/cities/search"
+import { citySpeechLabel } from "@/domain/time/speech"
 import type { SavedCity, ZonedTime } from "@/domain/types"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
@@ -44,37 +45,6 @@ export interface CityRowProps {
   onMoveUp?: () => void
   onMoveDown?: () => void
   dragHandleProps?: Record<string, unknown>
-}
-
-/**
- * docs/09-accessibility.md §2's own worked example: "Tokyo, 1:40 AM,
- * night-time, 9 hours ahead of UTC" — screen readers read "UTC+9" as "utc
- * plus nine" at best, so the offset is spelled out, and the clock face is
- * spoken as printed ("1:40 AM"), not digit-by-digit.
- */
-function citySpeechLabel(name: string, time: ZonedTime): string {
-  // time.hours is always 2-digit ("01") for <Numeral>'s fixed-width cells —
-  // strip the leading zero for speech, matching the doc's own worked
-  // example ("1:40 AM", not "01:40 AM").
-  const hour = String(parseInt(time.hours, 10))
-  const clock = time.meridiem
-    ? `${hour}:${time.minutes} ${time.meridiem}`
-    : `${hour}:${time.minutes}`
-  const dayPart = time.isDay ? "day-time" : "night-time"
-  return `${name}, ${clock}, ${dayPart}, ${spokenOffset(time.offsetMinutes)}`
-}
-
-function spokenOffset(offsetMinutes: number): string {
-  if (offsetMinutes === 0) return "UTC"
-  const direction = offsetMinutes > 0 ? "ahead of" : "behind"
-  const abs = Math.abs(offsetMinutes)
-  const hours = Math.floor(abs / 60)
-  const minutes = abs % 60
-  const parts = [
-    hours > 0 ? `${hours} hour${hours === 1 ? "" : "s"}` : null,
-    minutes > 0 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : null,
-  ].filter(Boolean)
-  return `${parts.join(" ")} ${direction} UTC`
 }
 
 const AnimatedText = Animated.createAnimatedComponent(Text)

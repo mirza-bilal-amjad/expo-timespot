@@ -37,6 +37,10 @@ import type { ThemedStyle } from "@/theme/types"
  * of the focused city" sits right next to "the focused city's latitude" in
  * the same paragraph, so both read as the one persistently-focused city
  * (`useFocusStore`), not wherever the meridian is currently being dragged.
+ * `<MeridianLine>` also gets `now`/`prefs` as of task 4.8 — it resolves its
+ * own accessibility-value content the same way `<FloatingCityCard>` does,
+ * independently (see both components' own doc comments on why a throttled
+ * bridge has to watch the shared value itself, not another component).
  * The avatar strip + add-button header row the mockup shows is still out of
  * scope — pulling that into shared chrome is unrelated to the map itself;
  * for now this screen owns just its own title, like ClockScreen did before
@@ -84,6 +88,8 @@ export function MapScreen() {
               height={mapSize.height}
               markerLat={markerLat}
               offsetMinutes={offsetMinutes}
+              now={now}
+              prefs={prefs}
             />
             <FloatingCityCard
               width={mapSize.width}

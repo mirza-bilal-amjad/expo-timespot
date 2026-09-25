@@ -40,10 +40,11 @@ export function WorldMap({ width, height, activeCountryCode }: WorldMapProps) {
   if (width <= 0 || height <= 0) return null
 
   return (
-    // Decorative on its own — the map's real a11y contract (docs/09-accessibility.md,
-    // task 4.8's `adjustable` role + keyboard arrows) lands on the meridian
-    // drag surface once it exists, not on this static land silhouette. These
-    // props go on a wrapping View, not <Svg> itself — react-native-svg's web
+    // Decorative on its own — the map's real a11y contract
+    // (docs/09-accessibility.md §2, task 4.8's `adjustable` role + keyboard
+    // arrows) lives on `<MeridianLine>`'s own drag surface, not this static
+    // land silhouette. These props go on a wrapping View, not <Svg> itself
+    // — react-native-svg's web
     // build renders a bare DOM <svg>, which doesn't understand RN's
     // accessibility prop names the way a real RN View (and react-native-web's
     // View) does.

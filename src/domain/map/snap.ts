@@ -50,3 +50,35 @@ export function snapToNearestOffset(offsetMinutes: number, velocityMinutesPerSec
   }
   return nearest
 }
+
+function nearestSnapTargetIndex(offsetMinutes: number): number {
+  "worklet"
+  let index = 0
+  let smallestDistance = Math.abs(offsetMinutes - SNAP_TARGETS_MINUTES[0])
+  for (let i = 1; i < SNAP_TARGETS_MINUTES.length; i++) {
+    const distance = Math.abs(offsetMinutes - SNAP_TARGETS_MINUTES[i])
+    if (distance < smallestDistance) {
+      index = i
+      smallestDistance = distance
+    }
+  }
+  return index
+}
+
+/**
+ * docs/09-accessibility.md §2 "The map": "VoiceOver swipe-up/down and
+ * TalkBack volume-key adjustment both move it one zone" — one accessibility
+ * increment/decrement steps to the *adjacent real offset* in
+ * `SNAP_TARGETS_MINUTES`, not a raw ±60 minutes (unevenly spaced zones mean
+ * those aren't the same thing: from `+5:45` a raw +60 would land on `+6:45`,
+ * which isn't a real zone, where the adjacent *real* zone is `+6:00`).
+ * Deliberately distinct from the web keyboard's own ±1h/±15min raw steps
+ * (docs/08-motion-spec.md §5.6) — those are a fine-grained continuous
+ * control, this is "next stop."
+ */
+export function stepToAdjacentOffset(offsetMinutes: number, direction: 1 | -1): number {
+  "worklet"
+  const currentIndex = nearestSnapTargetIndex(offsetMinutes)
+  const nextIndex = Math.min(Math.max(currentIndex + direction, 0), SNAP_TARGETS_MINUTES.length - 1)
+  return SNAP_TARGETS_MINUTES[nextIndex]
+}

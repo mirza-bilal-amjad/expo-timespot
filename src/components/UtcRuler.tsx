@@ -34,6 +34,14 @@ import { Text } from "./Text"
  * real 45-minute zones (Kathmandu +5:45, Chatham +12:45), which is what
  * `domain/map/ruler.ts`'s own tests pin down; this component only needs to
  * *label* the whole hours.
+ *
+ * a11y (task 4.8): each tick stays its own real `accessibilityRole="button"`
+ * — a legitimate quick-jump shortcut, not a decoration — but the ScrollView
+ * itself carries no `adjustable` role of its own. `<MeridianLine>` is the
+ * one accessible slider for this shared value (docs/09-accessibility.md §2
+ * "The map": "the meridian scrubber is a slider"); giving the ruler a
+ * second, differently-labelled `adjustable` control for the identical value
+ * would be redundant, not additive.
  */
 export interface UtcRulerProps {
   offsetMinutes: SharedValue<number>
@@ -97,7 +105,6 @@ export function UtcRuler({ offsetMinutes }: UtcRulerProps) {
       onScroll={scrollHandler}
       scrollEventThrottle={16}
       contentContainerStyle={themed($content)}
-      accessibilityRole="adjustable"
     >
       {ticks.map((tickOffset) => (
         <Tick

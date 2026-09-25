@@ -1,4 +1,4 @@
-import { SNAP_TARGETS_MINUTES, snapToNearestOffset } from "./snap"
+import { SNAP_TARGETS_MINUTES, snapToNearestOffset, stepToAdjacentOffset } from "./snap"
 
 describe("snapToNearestOffset", () => {
   it("snaps to the nearest whole-hour target with no velocity", () => {
@@ -35,5 +35,30 @@ describe("snapToNearestOffset", () => {
   it("with zero velocity, never lands anywhere but the nearest target", () => {
     expect(snapToNearestOffset(650)).toBe(660)
     expect(snapToNearestOffset(-655)).toBe(-660)
+  })
+})
+
+describe("stepToAdjacentOffset", () => {
+  it("steps to the next real target from an already-valid one", () => {
+    expect(stepToAdjacentOffset(0, 1)).toBe(60)
+    expect(stepToAdjacentOffset(0, -1)).toBe(-60)
+  })
+
+  it("steps to the *adjacent real zone*, not a raw ±60 minutes, from an uneven zone", () => {
+    // +5:45 (Kathmandu) + a raw hour would be +6:45, which isn't real — the
+    // adjacent real zone is +6:00.
+    expect(stepToAdjacentOffset(345, 1)).toBe(360)
+    expect(stepToAdjacentOffset(345, -1)).toBe(330) // +5:30 (Kolkata)
+  })
+
+  it("clamps at the ends of the range instead of wrapping or going out of bounds", () => {
+    expect(stepToAdjacentOffset(840, 1)).toBe(840) // already at +14, the max
+    expect(stepToAdjacentOffset(-720, -1)).toBe(-720) // already at -12, the min
+  })
+
+  it("from a non-snapped position, steps relative to the nearest target, not the raw value", () => {
+    // 20 min past UTC+0 is nearest to 0 — stepping forward should land on
+    // the next target after 0 (60), not after 20.
+    expect(stepToAdjacentOffset(20, 1)).toBe(60)
   })
 })

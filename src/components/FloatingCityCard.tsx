@@ -1,17 +1,11 @@
-import { useState } from "react"
 import { LayoutChangeEvent, TextStyle, View, ViewStyle } from "react-native"
-import Animated, {
-  runOnJS,
-  SharedValue,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-} from "react-native-reanimated"
+import Animated, { SharedValue, useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 
 import { getNearestRepresentativeCity } from "@/domain/cities/search"
 import { offsetMinutesToX } from "@/domain/map/meridian"
 import { getZonedTime } from "@/domain/time/zone"
 import type { Prefs } from "@/domain/types"
+import { useThrottledSharedValue } from "@/hooks/useThrottledSharedValue"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -31,25 +25,23 @@ import { Text } from "./Text"
  * `offsetMinutes` directly on the UI thread via `useAnimatedStyle` — it has
  * to move exactly as fast as `<MeridianLine>` itself, every frame, or the
  * card would visibly lag the line it's centred on. The city/time content
- * updates at most every 60ms instead, via its own `useAnimatedReaction` on
- * `offsetMinutes` (throttled with the same `performance.now()` gate
- * `<MeridianLine>`'s release snap uses) pushed to JS with `runOnJS` — 16
+ * updates at most every 60ms instead, via `useThrottledSharedValue` — 16
  * dataset lookups a second reads as instant, and there's no reason to pay
  * for one every frame.
  *
- * This bridge deliberately lives *here*, not in `<MeridianLine>` (task
- * 4.5's first attempt put it there): `offsetMinutes` is shared with
- * `<UtcRuler>`, and a ruler tap or scroll writes it directly without ever
- * going through `<MeridianLine>`'s own gesture — a bridge scoped to that
- * gesture misses every ruler-driven change. Watching the shared value
- * itself, here, sees all of them regardless of source.
+ * That throttled bridge deliberately watches `offsetMinutes` itself rather
+ * than piggybacking on `<MeridianLine>`'s own gesture (task 4.5's first
+ * attempt did that, and broke: `offsetMinutes` is shared with `<UtcRuler>`,
+ * and a ruler tap or scroll writes it directly, never through
+ * `<MeridianLine>`'s gesture at all). See `useThrottledSharedValue`'s own
+ * doc comment for the full story.
  *
- * Not yet the real accessible interface: docs/09-accessibility.md §2 "The
- * map" makes the *ruler* (as a slider, `accessibilityValue.text` reading
- * this same "UTC+1, Algiers, 5:40 PM" content) the thing a screen reader
- * exposes, with the map and this card as illustration underneath it. That
- * slider contract is task 4.8; this card stays `accessibilityElementsHidden`
- * until it exists, exactly like `<MeridianLine>` and `<UtcRuler>` do today.
+ * Decorative, not the real accessible interface: task 4.8 makes
+ * `<MeridianLine>` itself the screen-reader-facing slider, with an
+ * `accessibilityValue.text` reading this exact "UTC+1, Algiers, 5:40 PM"
+ * content (`domain/time/speech.ts`'s `meridianValueText`) — announcing the
+ * same content again from this card would be a duplicate, not an addition,
+ * so it stays `accessibilityElementsHidden` for good, not just "until 4.8."
  */
 export interface FloatingCityCardProps {
   width: number
@@ -78,24 +70,7 @@ export function FloatingCityCard(props: FloatingCityCardProps) {
     cardWidth.value = event.nativeEvent.layout.width
   }
 
-  const [resolvedOffsetMinutes, setResolvedOffsetMinutes] = useState(offsetMinutes.value)
-  const lastOffsetPushMs = useSharedValue(0)
-
-  useAnimatedReaction(
-    () => offsetMinutes.value,
-    (current) => {
-      // A UI-thread clock read, needed to gate the runOnJS bridge to 60ms —
-      // the lint rule can't tell this from an impure read during render.
-      // Same established pattern as MeridianLine's own release-snap gate.
-      // eslint-disable-next-line react-hooks/purity
-      const nowMs = performance.now()
-      if (nowMs - lastOffsetPushMs.value >= OFFSET_CHANGE_THROTTLE_MS) {
-        lastOffsetPushMs.value = nowMs
-        runOnJS(setResolvedOffsetMinutes)(current)
-      }
-    },
-  )
-
+  const resolvedOffsetMinutes = useThrottledSharedValue(offsetMinutes, OFFSET_CHANGE_THROTTLE_MS)
   const city = getNearestRepresentativeCity(resolvedOffsetMinutes, now)
   const time = getZonedTime(now, city.zone, prefs)
 

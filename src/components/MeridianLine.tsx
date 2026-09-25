@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Platform, View, ViewStyle } from "react-native"
+import { AccessibilityActionEvent, Platform, View, ViewStyle } from "react-native"
 import * as Haptics from "expo-haptics"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import Animated, {
@@ -8,16 +8,24 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated"
 import { Circle, Line, Svg } from "react-native-svg"
 
+import { getNearestRepresentativeCity } from "@/domain/cities/search"
 import {
+  MAX_OFFSET_MINUTES,
+  MIN_OFFSET_MINUTES,
   offsetMinutesToX,
   pixelVelocityToOffsetVelocity,
   xToOffsetMinutes,
 } from "@/domain/map/meridian"
 import { projectLonLat } from "@/domain/map/projection"
-import { snapToNearestOffset } from "@/domain/map/snap"
+import { snapToNearestOffset, stepToAdjacentOffset } from "@/domain/map/snap"
+import { meridianValueText } from "@/domain/time/speech"
+import { getZonedTime } from "@/domain/time/zone"
+import type { Prefs } from "@/domain/types"
+import { useThrottledSharedValue } from "@/hooks/useThrottledSharedValue"
 import { useAppTheme } from "@/theme/context"
 
 /**
@@ -46,16 +54,22 @@ import { useAppTheme } from "@/theme/context"
  * is shared with `<UtcRuler>`, and a ruler tap or scroll writes it directly,
  * without ever going through this component's own gesture at all, so a
  * bridge that only fired from *this* component's `.onUpdate()`/`.onEnd()`
- * silently missed most real changes. The throttled JS bridge now lives in
- * `<FloatingCityCard>` itself, watching `offsetMinutes` directly via
- * `useAnimatedReaction` — the one place that actually sees every source of
- * a write to the shared value, gesture or not.
+ * silently missed most real changes. `useThrottledSharedValue` (task 4.8)
+ * is the fix that generalised — it watches `offsetMinutes` itself, not this
+ * component's gesture, so it sees every source of a write.
  *
- * Not yet wired: the real `accessibilityRole="adjustable"` slider contract
- * (4.8, docs/09-accessibility.md §2 "The map" — "the SVG map itself is
- * aria-hidden... the ruler + card is the accessible interface"), which is
- * why this stays `accessibilityElementsHidden` for now rather than a
- * half-built slider that would announce the wrong thing.
+ * Task 4.8 makes this the real accessible interface (docs/09-accessibility.md
+ * §2 "The map"): `accessibilityRole="adjustable"` with an
+ * `accessibilityValue.text` reading `domain/time/speech.ts`'s
+ * `meridianValueText` (e.g. "UTC plus 1, Algiers, 5:40 PM") — the SVG stays
+ * `aria-hidden`, but the drag surface around it no longer does.
+ * Increment/decrement (VoiceOver swipe-up/down, TalkBack volume keys) step
+ * to the *adjacent real offset* (`stepToAdjacentOffset`), matching the
+ * doc's "move it one zone." Web adds `←`/`→` for a raw ±1h step and
+ * `Shift+←`/`Shift+→` for ±15min (docs/08-motion-spec.md §5.6) —
+ * deliberately *not* snapped to a real zone the way increment/decrement is:
+ * this is direct fine-grained control, the keyboard equivalent of the drag
+ * itself, not "next stop."
  */
 export interface MeridianLineProps {
   width: number
@@ -64,6 +78,10 @@ export interface MeridianLineProps {
    * when nothing is focused. */
   markerLat?: number
   offsetMinutes: SharedValue<number>
+  /** The one clock tick (CLAUDE.md rule 3) — this component doesn't
+   * subscribe itself, same convention as `<FloatingCityCard now={now}>`. */
+  now: number
+  prefs: Prefs
 }
 
 // Matches the ruler tick's own "44pt hitSlop even though the visual is 13pt"
@@ -81,8 +99,14 @@ function triggerSnapHaptic() {
   }
 }
 
+const ACCESSIBILITY_VALUE_THROTTLE_MS = 60
+
+// docs/08-motion-spec.md §5.6: "←/→ key steps of one hour (Shift → 15 min)."
+const ARROW_KEY_STEP_MINUTES = 60
+const SHIFT_ARROW_KEY_STEP_MINUTES = 15
+
 export function MeridianLine(props: MeridianLineProps) {
-  const { width, height, markerLat = 0, offsetMinutes } = props
+  const { width, height, markerLat = 0, offsetMinutes, now, prefs } = props
   const { theme } = useAppTheme()
   const springPress = theme.timing.spring.press
 
@@ -121,13 +145,104 @@ export function MeridianLine(props: MeridianLineProps) {
     transform: [{ translateX: offsetMinutesToX(offsetMinutes.value, width) - HIT_WIDTH / 2 }],
   }))
 
+  const resolvedOffsetMinutes = useThrottledSharedValue(
+    offsetMinutes,
+    ACCESSIBILITY_VALUE_THROTTLE_MS,
+  )
+  const resolvedCity = getNearestRepresentativeCity(resolvedOffsetMinutes, now)
+  const resolvedTime = getZonedTime(now, resolvedCity.zone, prefs)
+
+  // docs/09-accessibility.md §2: "VoiceOver swipe-up/down and TalkBack
+  // volume-key adjustment both move it one zone" — the *adjacent real
+  // offset*, not a raw ±1h (see stepToAdjacentOffset's own doc comment).
+  const handleAccessibilityAction = (event: AccessibilityActionEvent) => {
+    // offsetMinutes is a Reanimated shared value passed as a prop — see the
+    // gesture callback above's own note on this same established false
+    // positive; this write just happens from a JS-thread a11y callback
+    // instead of a UI-thread worklet.
+    if (event.nativeEvent.actionName === "increment") {
+      // eslint-disable-next-line react-hooks/immutability
+      offsetMinutes.value = withTiming(stepToAdjacentOffset(offsetMinutes.value, 1), {
+        duration: theme.timing.base,
+      })
+    } else if (event.nativeEvent.actionName === "decrement") {
+      // eslint-disable-next-line react-hooks/immutability
+      offsetMinutes.value = withTiming(stepToAdjacentOffset(offsetMinutes.value, -1), {
+        duration: theme.timing.base,
+      })
+    }
+  }
+
+  // Raw, unsnapped ±1h/±15min — the keyboard's own fine-grained control,
+  // not "next real zone" (see this component's own doc comment for why
+  // that's deliberately different from the accessibility increment/decrement
+  // above).
+  const moveByRaw = (deltaMinutes: number) => {
+    const target = Math.min(
+      Math.max(offsetMinutes.value + deltaMinutes, MIN_OFFSET_MINUTES),
+      MAX_OFFSET_MINUTES,
+    )
+    // eslint-disable-next-line react-hooks/immutability -- same established false positive as above
+    offsetMinutes.value = withTiming(target, { duration: theme.timing.base })
+  }
+
+  const webKeyboardProps =
+    Platform.OS === "web"
+      ? {
+          // react-native-web only makes button/checkbox/link/radio/textbox/switch
+          // roles keyboard-focusable by default — "adjustable" (ARIA "slider")
+          // isn't one of them, so without this the ←/→ handler below would
+          // never receive a keydown at all (confirmed against RNW's own
+          // createDOMProps source).
+          focusable: true,
+          onKeyDown: (e: { key: string; shiftKey: boolean }) => {
+            const step = e.shiftKey ? SHIFT_ARROW_KEY_STEP_MINUTES : ARROW_KEY_STEP_MINUTES
+            if (e.key === "ArrowRight") moveByRaw(step)
+            else if (e.key === "ArrowLeft") moveByRaw(-step)
+          },
+        }
+      : undefined
+
   if (width <= 0 || height <= 0) return null
 
   const markerY = projectLonLat(0, markerLat, width, height).y
+  const valueText = meridianValueText(resolvedCity, resolvedTime)
+  const valueMin = MIN_OFFSET_MINUTES / 60
+  const valueMax = MAX_OFFSET_MINUTES / 60
+  const valueNow = resolvedOffsetMinutes / 60
+
+  // react-native-web doesn't read RN native's nested `accessibilityValue`
+  // object at all — it only understands these flat `aria-value*` props
+  // (confirmed against its own createDOMProps source), so the slider's
+  // value is silently missing from the web accessibility tree without
+  // them. Merged into the same web-only, cast-to-any spread as the
+  // keyboard handler below, for the same typing reason.
+  const webAccessibilityValueProps =
+    Platform.OS === "web"
+      ? {
+          "aria-valuemin": valueMin,
+          "aria-valuemax": valueMax,
+          "aria-valuenow": valueNow,
+          "aria-valuetext": valueText,
+        }
+      : undefined
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={[$container(height), $animatedStyle]}>
+      <Animated.View
+        style={[$container(height), $animatedStyle]}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel="Time zone selector"
+        accessibilityValue={{ min: valueMin, max: valueMax, now: valueNow, text: valueText }}
+        accessibilityActions={[
+          { name: "increment", label: "Next time zone" },
+          { name: "decrement", label: "Previous time zone" },
+        ]}
+        onAccessibilityAction={handleAccessibilityAction}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- onKeyDown/aria-value* are react-native-web-only, not in RN's View typings (same pattern as SegmentedPill's own web arrow keys)
+        {...({ ...webKeyboardProps, ...webAccessibilityValueProps } as any)}
+      >
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Svg width={HIT_WIDTH} height={height}>
             <Line

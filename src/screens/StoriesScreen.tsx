@@ -249,6 +249,8 @@ export function StoriesScreen() {
                     height={WORLD_MAP_DEMO_HEIGHT}
                     markerLat={35.6812}
                     offsetMinutes={meridianOffsetDemo}
+                    now={now}
+                    prefs={prefs}
                   />
                 )}
               </View>
