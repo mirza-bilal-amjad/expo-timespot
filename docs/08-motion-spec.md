@@ -104,25 +104,24 @@ Text colour is interpolated via the `Card`'s theme flip (see `03-component-libra
 
 ## 5. Meridian drag ⭐ — the performance-critical path
 
+Point anywhere (corrected 2026-09-25 — the meridian used to be dragged by its own strip and snapped by offset):
+
 ```
-Gesture.Pan()
-  .onBegin(()  => { pressed.value = true; runOnJS(haptic)('light') })
-  .onUpdate(e  => { x.value = clamp(startX.value + e.translationX, 0, mapWidth) })
-  .onEnd(e     => {
-      const target = snapToNearestZone(x.value, e.velocityX)
-      x.value = withSpring(target, SPRING_PRESS)
-      runOnJS(commitZone)(zoneAt(target))
-  })
+Gesture.Pan().minDistance(0)
+  .onBegin(e    => { pointer.value = e.xy − viewportX })      // jump under the finger
+  .onUpdate(e   => { pointer.value = e.xy − viewportX })      // follow, both axes
+  .onFinalize(() => runOnJS(commit)(pointer.value))          // JS: pickCityAt → spring onto it
+useFrameCallback: finger in the outer 40 pt → viewportX scrolls, pointer tracks the finger
 ```
 
 ### Non-negotiables
 
-1. `x` is a **shared value**. The meridian line, the ruler highlight and the floating card's position are all `useAnimatedStyle` derivations of it. No JS state during the drag.
-2. The zone **label** must be JS (it comes from the dataset), so it is pushed with `runOnJS` throttled to **60 ms** — about 16 updates/second, imperceptible as a delay, 4× cheaper than per-frame.
-3. Snap targets are every real UTC offset, including `+5:45`, `+8:45`, `+12:45`, `+14`. Velocity-aware: a fast flick can travel several zones.
-4. Haptic on snap (`selectionAsync`), not during the drag.
-5. The terminator overlay does **not** move with the meridian — it represents the real sun and stays put. Only the meridian and its card move.
-6. Web: the same gesture handler, plus `←`/`→` key steps of one hour (`Shift` → 15 min), each animated over `duration.base`.
+1. The pointer and the map's pan are **shared values**. The line, the marker and the floating card's position are all `useAnimatedStyle` derivations. No JS state per frame.
+2. The city **under the finger** must be JS (it comes from the dataset), so it is pushed with `runOnJS` throttled to **60 ms** — about 16 updates/second, imperceptible as a delay, 4× cheaper than per-frame.
+3. Release lands on a **real city** (`pickCityAt`), so every real zone is reachable — including `+5:45` Kathmandu and `+12:45` Chatham — by pointing at it; the ruler reaches `+14`.
+4. Haptic on the committed selection (`selectionAsync`), not during the drag.
+5. The night hatching does **not** move with the pointer — it represents the real sun. It pans with the map, since it is part of it.
+6. Web: the same gesture handler with the mouse, plus `←`/`→` stepping to the adjacent real zone's city.
 
 ### Budget
 

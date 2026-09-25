@@ -47,7 +47,7 @@ This is the highest-value phase and it needs no simulator. Everything here is un
 | 1.7 | `domain/sun/terminator.ts` → SVG path | snapshot at equinox and both solstices |
 | 1.8 | `scripts/build-cities.ts` → `cities.min.json` + index | 5 000 cities, all slugs unique — **corrected 2026-09-24**: 373/418 canonical zones covered, not all 418. The 45 gaps are real and expected, not a bug: Antarctic research stations with no civilian population, deprecated tzdata aliases GeoNames no longer uses (`Asia/Calcutta`, `Europe/Kiev`, …), and a handful of islands/towns genuinely under ~1,000 people even in GeoNames' broadest population tier (`Australia/Eucla`, `Pacific/Midway`). See the coverage report `scripts/build-cities.ts` prints and `src/domain/cities/dataset.test.ts`. |
 | 1.9 | `domain/cities/search.ts` | "tok"→Tokyo, "köln"→Koeln (fuzzy tier — GeoNames' own asciiName is "Koeln", not "Koln"), "berln"→Berlin; **< 30 ms**, asserted. ~~"nwyork"→New York~~ — **corrected 2026-09-24**: doesn't hold against the real GeoNames name "New York City" (three words) since a single unsplit query term can't fuzzy-match across uFuzzy's word-boundary splitting |
-| 1.10 | `scripts/build-map.ts` — Natural Earth → simplified TopoJSON | ≤ 30 KB, renders recognisably at 393 pt wide |
+| 1.10 | `scripts/build-map.ts` — Natural Earth → simplified TopoJSON | ~~≤ 30 KB, 110 m~~ **≤ 240 KB, 50 m, land + countries in one topology** (corrected 2026-09-25: 30 KB looked low quality and misaligned the active country) |
 
 **Gate:** `pnpm test src/domain` green, 100 % of the fixture matrix, sub-second run. If this phase is solid, the rest of the app cannot be wrong about time.
 
@@ -95,10 +95,10 @@ The hardest phase. Budget the most review time here.
 
 | # | Task | Acceptance |
 |---|---|---|
-| 4.1 | `WorldMap` — SVG paths, equirectangular | first paint < 120 ms on a Pixel 6a |
-| 4.2 | `Terminator` overlay, recomputed per minute | visually correct at equinox and both solstices |
-| 4.3 | `MeridianLine` on a Reanimated shared value | drag is 60 fps with the map rendered |
-| 4.4 | `UtcRuler` derived from the same shared value | ruler and meridian never disagree; includes `+5:45`, `+12:45`, `+14` |
+| 4.1 | `WorldMap` — SVG paths, ~~equirectangular~~ clipped Mercator with borders (corrected 2026-09-25) | first paint < 120 ms on a Pixel 6a |
+| 4.2 | Night overlay — hatching clipped to land, inside `WorldMap`, recomputed per minute | visually correct at equinox and both solstices |
+| 4.3 | ~~`MeridianLine` on a Reanimated shared value~~ `MeridianMap` point-anywhere pointer (corrected 2026-09-25) | drag is 60 fps with the map rendered |
+| 4.4 | `UtcRuler` follows the pointed-at city's offset; settling it selects that zone's city | ruler and pointer never disagree; includes `+5:45`, `+12:45`, `+14` |
 | 4.5 | Snap + haptic + `runOnJS` throttled to 60 ms | profiler shows no per-frame JS |
 | 4.6 | `FloatingCityCard`, clamped to the gutter | at map edges the card stays fully on screen |
 | 4.7 | Active-country fill for the focused city | Algeria fills black when UTC+1/Algiers is selected |

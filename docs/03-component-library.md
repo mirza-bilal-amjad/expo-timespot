@@ -173,9 +173,9 @@ Same data, 320 × 180 layout from `04-screen-specs.md`. Shares the row's view-mo
 Sunrise, sunset, day length, polar cases. Pure function of `(lat, lon, date, tz)`.
 
 ### `<MeridianMap>` ⭐ highest risk
-Composes `<WorldMap>` (static SVG), `<Terminator>` (per-minute path), `<MeridianLine>` (Reanimated shared value), `<UtcRuler>` and `<FloatingCityCard>`.
+Composes `<WorldMap>` (one SVG: land, night hatching clipped to land, borders, active country — the night layer recomputed per minute), the pointer (line + marker) and `<FloatingCityCard>`. `<UtcRuler>` sits below it on the screen.
 
-Contract: **the meridian's position is one shared value**; the ruler, the line and the card are all derived from it on the UI thread. JS is notified at most every 60 ms. Full gesture and performance spec in `08-motion-spec.md` §5.
+Contract: **the pointer's position is shared values** (`pointerX`, `pointerY`, `viewportX`) — the line, the marker, the card's position and the map's pan all derive from them on the UI thread. JS is told the city under the finger at most every 60 ms, and resolves the committed city on release. Props: `city`, `onSelectCity`, `onPreviewCity`. Full gesture and performance spec in `08-motion-spec.md` §5. ~~`<Terminator>`, `<MeridianLine>`, one offset shared value~~ — replaced 2026-09-25 by the point-anywhere design.
 
 ### `<SearchSheet>` · `<DifferenceStrip>` · `<OverlapBand>` · `<TabBar>`
 Specified in `04-screen-specs.md` S4, S5 and the cross-screen rules.

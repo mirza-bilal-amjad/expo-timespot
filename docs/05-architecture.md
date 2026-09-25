@@ -72,7 +72,7 @@ timespot/
 │   ├─ theme/                   colors colorsDark spacing radius typography timing context
 │   ├─ i18n/                    Ignite's — every string lives here
 │   ├─ utils/                   Ignite's — storage/ (MMKV, works on every platform)
-│   ├─ assets/                  fonts/  map/world.topo.json  data/cities.min.json
+│   ├─ assets/                  fonts/  map/world.map.topo.json  data/cities.min.json
 │   └─ stories/                 one file per component, all states × both themes
 ├─ design/                      tokens.json + ignite-theme/ (drop-in theme files)
 ├─ docs/                        this documentation set
@@ -210,7 +210,7 @@ function schedule(cb) {
 | Cold start → readable clock | < 900 ms p75 | fonts preloaded; city dataset lazily loaded *after* first paint; map code-split off the initial route |
 | List re-render | 1 component per tick | `useClock` at the screen, memo'd rows, `showSeconds` off by default |
 | Meridian drag | 60 fps | shared value on the UI thread; `runOnJS` throttled to 60 ms |
-| Map first paint | < 120 ms | 30 KB simplified topology; raster fallback below a device tier |
+| Map first paint | < 120 ms | ~210 KB 50 m topology, decoded once per process; raster fallback below a device tier |
 | Web initial route | < 180 KB gz | map and search chunks lazy; dataset fetched, not bundled |
 | Memory, 40 cities | < 120 MB | FlashList recycling, `expo-image` `recyclingKey` |
 

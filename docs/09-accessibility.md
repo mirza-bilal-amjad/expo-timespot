@@ -74,10 +74,10 @@ The meridian scrubber is a **slider**:
 accessibilityRole="adjustable"
 accessibilityLabel="Time zone selector"
 accessibilityValue={{ min: -12, max: 14, now: 1, text: 'UTC plus 1, Algiers, 5:40 PM' }}
-onAccessibilityAction={/* increment / decrement by one hour */}
+onAccessibilityAction={/* increment / decrement: adjacent real zone's city */}
 ```
 
-VoiceOver swipe-up/down and TalkBack volume-key adjustment both move it one zone. The SVG map itself is `aria-hidden` — it is decorative; the information is in the card and the slider value.
+VoiceOver swipe-up/down and TalkBack volume-key adjustment both move it one zone — to the best-known city of the adjacent real UTC offset. `accessibilityHint`: "Touch anywhere on the map to pick a city". The SVG map itself is `aria-hidden` — it is decorative; the information is in the card and the slider value.
 
 **Critical:** the map screen must be fully usable without the map. The ruler + card is the accessible interface; the drawing is illustration.
 

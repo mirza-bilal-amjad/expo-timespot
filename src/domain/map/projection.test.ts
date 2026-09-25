@@ -1,22 +1,55 @@
-import { geometryToSvgPath, projectLonLat } from "./projection"
+import {
+  geometryToSvgPath,
+  LAT_MAX,
+  LAT_MIN,
+  MAP_ASPECT,
+  projectLonLat,
+  unprojectPoint,
+} from "./projection"
 
-describe("projectLonLat", () => {
-  it("maps the four globe corners to the four viewport corners", () => {
-    expect(projectLonLat(-180, 90, 360, 180)).toEqual({ x: 0, y: 0 })
-    expect(projectLonLat(180, 90, 360, 180)).toEqual({ x: 360, y: 0 })
-    expect(projectLonLat(-180, -90, 360, 180)).toEqual({ x: 0, y: 180 })
-    expect(projectLonLat(180, -90, 360, 180)).toEqual({ x: 360, y: 180 })
+const W = 1000
+const H = W * MAP_ASPECT
+
+describe("projectLonLat (clipped Mercator)", () => {
+  it("maps the clip corners to the four viewport corners", () => {
+    expect(projectLonLat(-180, LAT_MAX, W, H).x).toBeCloseTo(0)
+    expect(projectLonLat(-180, LAT_MAX, W, H).y).toBeCloseTo(0)
+    expect(projectLonLat(180, LAT_MIN, W, H).x).toBeCloseTo(W)
+    expect(projectLonLat(180, LAT_MIN, W, H).y).toBeCloseTo(H)
   })
 
-  it("maps 0,0 (the Gulf of Guinea) to the viewport centre", () => {
-    expect(projectLonLat(0, 0, 360, 180)).toEqual({ x: 180, y: 90 })
+  it("clamps latitudes beyond the clip to the edge instead of running off to infinity", () => {
+    expect(projectLonLat(0, 90, W, H).y).toBeCloseTo(0)
+    expect(projectLonLat(0, -90, W, H).y).toBeCloseTo(H)
   })
 
-  it("is linear in longitude — equal degree steps are equal pixel steps", () => {
-    const a = projectLonLat(-90, 0, 360, 180)
-    const b = projectLonLat(0, 0, 360, 180)
-    const c = projectLonLat(90, 0, 360, 180)
+  it("is linear in longitude — what keeps the meridian and the ruler in step", () => {
+    const a = projectLonLat(-90, 10, W, H)
+    const b = projectLonLat(0, 10, W, H)
+    const c = projectLonLat(90, 10, W, H)
     expect(b.x - a.x).toBeCloseTo(c.x - b.x)
+  })
+
+  it("stretches high latitudes like the board does — 60-70°N is taller than 0-10°N", () => {
+    const equatorBand = projectLonLat(0, 0, W, H).y - projectLonLat(0, 10, W, H).y
+    const arcticBand = projectLonLat(0, 60, W, H).y - projectLonLat(0, 70, W, H).y
+    expect(arcticBand).toBeGreaterThan(equatorBand * 2)
+  })
+})
+
+describe("unprojectPoint", () => {
+  it("round-trips real cities to within a hair", () => {
+    for (const [lon, lat] of [
+      [3.04, 36.75], // Algiers
+      [-46.63, -23.55], // São Paulo
+      [139.69, 35.69], // Tokyo
+      [18.96, 69.65], // Tromsø
+    ]) {
+      const { x, y } = projectLonLat(lon, lat, W, H)
+      const back = unprojectPoint(x, y, W, H)
+      expect(back.lon).toBeCloseTo(lon, 6)
+      expect(back.lat).toBeCloseTo(lat, 6)
+    }
   })
 })
 
@@ -39,7 +72,7 @@ describe("geometryToSvgPath", () => {
       360,
       180,
     )
-    expect(d).toBe("M150.00,170.00 L210.00,170.00 L210.00,10.00 L150.00,170.00 Z")
+    expect(d).toMatch(/^M150\.0,[\d.]+ L210\.0,[\d.]+ L210\.0,[\d.]+ L150\.0,[\d.]+ Z$/)
   })
 
   it("concatenates one subpath per polygon for a MultiPolygon", () => {
@@ -97,14 +130,10 @@ describe("geometryToSvgPath", () => {
     expect(d.match(/M/g)).toHaveLength(2)
   })
 
-  it("breaks into a new subpath at an antimeridian crossing instead of drawing a line across the map", () => {
-    // Russia-shaped: pokes past +180, re-enters near -180, then closes back
-    // to its east-side start — a real coastline that crosses the
-    // antimeridian and comes back necessarily crosses it twice (there and
-    // back), so this ring produces two breaks (three subpaths; the third,
-    // from the closing edge's own crossing, is a harmless zero-area point).
-    // A naive line-to at either crossing would instead draw a spurious edge
-    // straight across the map.
+  it("draws an antimeridian-crossing ring as two closed copies, never a chord across the map", () => {
+    // Russia-shaped: pokes past +180 and re-enters near −180. Unwrapped it's
+    // one continuous ring extending past the right edge; a second copy one
+    // world-width left supplies the part that shows at the left edge.
     const d = geometryToSvgPath(
       {
         type: "Polygon",
@@ -121,18 +150,39 @@ describe("geometryToSvgPath", () => {
       360,
       180,
     )
-    expect(d.match(/M/g)).toHaveLength(3)
-    // No L (line-to) command should jump more than half the map width from
-    // the point before it — that's the signature of the bug this guards
-    // against: a line connecting the map's right edge straight to its left.
-    const points = [...d.matchAll(/([ML])(-?[\d.]+),(-?[\d.]+)/g)]
+    expect(d.match(/M/g)).toHaveLength(2)
+    expect(d.match(/Z/g)).toHaveLength(2)
+    const xs = [...d.matchAll(/[ML](-?[\d.]+),/g)].map((m) => Number(m[1]))
+    expect(Math.max(...xs)).toBeGreaterThan(360) // right copy runs off the right edge
+    expect(Math.min(...xs)).toBeLessThan(0) // left copy runs off the left edge
+    // No segment jumps anywhere near a full map width — the bug's signature.
+    const points = [...d.matchAll(/([ML])(-?[\d.]+),/g)]
     for (let i = 1; i < points.length; i++) {
-      const [command, xStr] = points[i]
-      if (command !== "L") continue
-      const x = Number(xStr)
-      const prevX = Number(points[i - 1][2])
-      expect(Math.abs(x - prevX)).toBeLessThan(180)
+      if (points[i][1] !== "L") continue
+      expect(Math.abs(Number(points[i][2]) - Number(points[i - 1][2]))).toBeLessThan(180)
     }
+  })
+
+  it("renders a MultiLineString (country borders) as open subpaths, never closed", () => {
+    const d = geometryToSvgPath(
+      {
+        type: "MultiLineString",
+        coordinates: [
+          [
+            [0, 0],
+            [10, 10],
+          ],
+          [
+            [20, 20],
+            [30, 30],
+          ],
+        ],
+      },
+      360,
+      180,
+    )
+    expect(d.match(/M/g)).toHaveLength(2)
+    expect(d).not.toContain("Z")
   })
 
   it("throws on an unsupported geometry type rather than silently rendering nothing", () => {

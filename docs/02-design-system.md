@@ -59,7 +59,7 @@ neutral.600  #7A7A7A      orange.700   #A93B18
 | `state.meridian` | `#D9433B` | map meridian rule |
 | `map.land` | `#828282` | landmass fill |
 | `map.landActive` | `#000000` | country of the focused city |
-| `map.night` | `rgba(0,0,0,0.10)` | terminator hatch overlay |
+| `map.night` | `rgba(0,0,0,0.10)` | night wash on the low-end raster map only — the vector map hatches night with `bg.canvas` hairlines clipped to land |
 
 ### 1.3 Semantic — dark theme (designed from first principles; absent from the boards)
 

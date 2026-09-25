@@ -47,6 +47,12 @@ jest.mock("react-native-reanimated", () => {
     useAnimatedStyle: (factory: () => unknown) => factory(),
     useAnimatedRef: () => React.useRef(null),
     useAnimatedReaction: () => {},
+    // <MeridianMap>'s derived anchors and edge auto-scroll: a derived value
+    // is just its factory's current result here, and a frame callback never
+    // fires (there are no frames under jest).
+    useDerivedValue: (factory: () => unknown) => ({ value: factory() }),
+    useFrameCallback: () => ({ setActive: () => {}, isActive: false }),
+    cancelAnimation: () => {},
     useAnimatedScrollHandler: (handlers: unknown) => handlers,
     scrollTo: () => {},
     useEvent: () => undefined,

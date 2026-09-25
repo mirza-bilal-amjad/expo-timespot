@@ -1,5 +1,7 @@
 import { getPosition } from "suncalc"
 
+import { projectLonLat } from "../map/projection"
+
 const DEG = Math.PI / 180
 const MAX_ABS_LAT = 89.5 // keeps the path finite and renderable right at the poles
 
@@ -85,8 +87,7 @@ function sampleTerminator(
   for (let i = 0; i <= samples; i++) {
     const lonDeg = -180 + (360 * i) / samples
     const lat = terminatorLatitude(lonDeg, subLat, subLon)
-    const x = ((lonDeg + 180) / 360) * width
-    const y = ((90 - lat) / 180) * height
+    const { x, y } = projectLonLat(lonDeg, lat, width, height)
     points.push([x, y])
   }
   return { points, subLat }
@@ -100,8 +101,8 @@ function pointsToPath(points: [number, number][]): string {
 
 /**
  * docs/06-data-model.md §4. An SVG path 'd' string for the day/night boundary
- * on an equirectangular world map of the given pixel size (lon -180..180 ->
- * x 0..width, lat 90..-90 -> y 0..height).
+ * on the map's own projection (`domain/map/projection.ts`, clipped
+ * Mercator) at the given pixel size.
  */
 export function getTerminatorPath(now: number, width: number, height: number): string {
   const { points } = sampleTerminator(now, width, height)
@@ -114,8 +115,8 @@ export function getTerminatorPath(now: number, width: number, height: number): s
  * south edge (whichever is on the night side), spanning the full width.
  *
  * Night sits toward the pole opposite the sun's current hemisphere: the
- * south edge (y=height, lat=-90) when the subsolar point is north of the
- * equator, the north edge (y=0, lat=90) when it's south. Closing the curve
+ * south edge (y=height, the clip's LAT_MIN) when the subsolar point is north of the
+ * equator, the north edge (y=0, LAT_MAX) when it's south. Closing the curve
  * against *that* edge — never the other one — is what makes the filled
  * region the night side rather than the day side; verified in
  * terminator.test.ts by checking the subsolar point falls outside the

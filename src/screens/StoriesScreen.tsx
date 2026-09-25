@@ -9,17 +9,19 @@ import { Button } from "@/components/Button"
 import { Card } from "@/components/Card"
 import { CityRow } from "@/components/CityRow"
 import { Icon, ICON_NAMES } from "@/components/Icon"
-import { MeridianLine } from "@/components/MeridianLine"
+import { MeridianMap } from "@/components/MeridianMap"
 import { Numeral } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
 import { Sheet } from "@/components/Sheet"
 import { SunBlock } from "@/components/SunBlock"
-import { Terminator } from "@/components/Terminator"
 import { Text } from "@/components/Text"
 import { UtcRuler } from "@/components/UtcRuler"
 import { WorldMap } from "@/components/WorldMap"
+import { getCityByZone } from "@/domain/cities/search"
+import { MAP_ASPECT } from "@/domain/map/projection"
 import { getZonedTime } from "@/domain/time/zone"
+import type { City } from "@/domain/types"
 import { useClock } from "@/hooks/useClock"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
@@ -62,7 +64,8 @@ export function StoriesScreen() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedRow, setSelectedRow] = useState<string | null>("tokyo")
-  const meridianOffsetDemo = useSharedValue(540)
+  const rulerOffsetDemo = useSharedValue(60)
+  const [mapCity, setMapCity] = useState<City>(() => getCityByZone("Africa/Algiers")!)
 
   const now = useClock()
   const prefs = {
@@ -232,40 +235,37 @@ export function StoriesScreen() {
         </View>
       </Section>
 
-      <Section title="WorldMap + Terminator + MeridianLine + UtcRuler (drag either one)">
+      <Section title="MeridianMap + UtcRuler (touch anywhere on the map)">
+        <View style={themed($worldMapDemo)}>
+          <MeridianMap
+            width={WORLD_MAP_DEMO_WIDTH}
+            height={MERIDIAN_DEMO_HEIGHT}
+            city={mapCity}
+            onSelectCity={setMapCity}
+            now={now}
+            prefs={prefs}
+          />
+        </View>
+        <View style={themed($rulerDemo)}>
+          <UtcRuler offsetMinutes={rulerOffsetDemo} />
+        </View>
+      </Section>
+
+      <Section title="WorldMap night hatching (task 4.2)">
         <View style={themed($sunBlockGrid)}>
-          {WORLD_MAP_DEMO_INSTANTS.map(({ label, at }, index) => (
+          {WORLD_MAP_DEMO_INSTANTS.map(({ label, at }) => (
             <View key={label}>
               <Text preset="caption" text={label} />
               <View style={themed($worldMapDemo)}>
                 <WorldMap
                   width={WORLD_MAP_DEMO_WIDTH}
-                  height={WORLD_MAP_DEMO_HEIGHT}
-                  activeCountryCode={index === 0 ? "JP" : undefined}
+                  height={WORLD_MAP_DEMO_WIDTH * MAP_ASPECT}
+                  activeCountryCode={label.startsWith("March") ? "DZ" : undefined}
+                  now={at}
                 />
-                <View style={$worldMapOverlay}>
-                  <Terminator
-                    now={at}
-                    width={WORLD_MAP_DEMO_WIDTH}
-                    height={WORLD_MAP_DEMO_HEIGHT}
-                  />
-                </View>
-                {index === 0 && (
-                  <MeridianLine
-                    width={WORLD_MAP_DEMO_WIDTH}
-                    height={WORLD_MAP_DEMO_HEIGHT}
-                    markerLat={35.6812}
-                    offsetMinutes={meridianOffsetDemo}
-                    now={now}
-                    prefs={prefs}
-                  />
-                )}
               </View>
             </View>
           ))}
-        </View>
-        <View style={themed($rulerDemo)}>
-          <UtcRuler offsetMinutes={meridianOffsetDemo} />
         </View>
       </Section>
 
@@ -283,7 +283,7 @@ export function StoriesScreen() {
             source={landRasterDemo}
             tintColor={theme.colors.mapLand}
             contentFit="fill"
-            style={{ width: WORLD_MAP_DEMO_WIDTH, height: WORLD_MAP_DEMO_HEIGHT }}
+            style={{ width: WORLD_MAP_DEMO_WIDTH, height: WORLD_MAP_DEMO_WIDTH * MAP_ASPECT }}
           />
         </View>
       </Section>
@@ -348,10 +348,9 @@ const $sunBlockGrid: ThemedStyle<ViewStyle> = (theme) => ({
   gap: theme.spacing.lg,
 })
 
-// docs/04-screen-specs.md's equirectangular source is naturally ~2:1 — an
-// arbitrary demo size, same status as CARD_DEMO_WIDTH above.
+// Arbitrary demo sizes, same status as CARD_DEMO_WIDTH above.
 const WORLD_MAP_DEMO_WIDTH = 360
-const WORLD_MAP_DEMO_HEIGHT = 180
+const MERIDIAN_DEMO_HEIGHT = 420
 
 // docs/10-implementation-plan.md task 4.9 — same asset <WorldMap> requires
 // in its own raster branch (src/components/WorldMap.tsx).
@@ -373,7 +372,5 @@ const $worldMapDemo: ThemedStyle<ViewStyle> = (theme) => ({
   overflow: "hidden",
   position: "relative",
 })
-
-const $worldMapOverlay: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }
 
 const $rulerDemo: ThemedStyle<ViewStyle> = (theme) => ({ marginTop: theme.spacing.sm })

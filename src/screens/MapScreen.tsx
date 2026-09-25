@@ -1,17 +1,16 @@
-import { useState } from "react"
-import { LayoutChangeEvent, TextStyle, View, ViewStyle } from "react-native"
-import { useSharedValue } from "react-native-reanimated"
+import { useCallback, useEffect, useState } from "react"
+import { LayoutChangeEvent, StyleSheet, TextStyle, View, ViewStyle } from "react-native"
+import { useSharedValue, withTiming } from "react-native-reanimated"
 
-import { FloatingCityCard } from "@/components/FloatingCityCard"
-import { MeridianLine } from "@/components/MeridianLine"
+import { MeridianMap } from "@/components/MeridianMap"
 import { Screen } from "@/components/Screen"
 import { useTabBarClearance } from "@/components/TabBar"
-import { Terminator } from "@/components/Terminator"
 import { Text } from "@/components/Text"
 import { UtcRuler } from "@/components/UtcRuler"
-import { WorldMap } from "@/components/WorldMap"
-import { getCityById } from "@/domain/cities/search"
-import { getOffsetMinutes } from "@/domain/time/zone"
+import { getCityById, getCityByZone, getNearestRepresentativeCity } from "@/domain/cities/search"
+import { snapToNearestOffset } from "@/domain/map/snap"
+import { getDeviceZone, getOffsetMinutes } from "@/domain/time/zone"
+import type { City } from "@/domain/types"
 import { useClock } from "@/hooks/useClock"
 import { useFocusStore } from "@/store/focus"
 import { usePrefsStore } from "@/store/prefs"
@@ -19,50 +18,52 @@ import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
 /**
- * docs/04-screen-specs.md "S3 · Map". Tasks 4.1-4.4 of Phase 4 so far — the
- * static `<WorldMap>` land silhouette, the `<Terminator>` night overlay, the
- * draggable `<MeridianLine>` and the `<UtcRuler>` below it, all sharing one
- * `offsetMinutes` Reanimated shared value ("the ruler and the meridian are
- * two views of one shared value... no JS round-trip") created here and
- * seeded once from the focused city's current offset — it does not resync
- * if the focused city changes elsewhere while this screen is mounted; that
- * kind of cross-screen sync is more naturally task 4.6's job once the
- * floating card exists to show what it resolved to.
- * `<FloatingCityCard>` (task 4.6) now layers on top, reading `offsetMinutes`
- * directly rather than through another prop threaded from here — it owns
- * its own throttled bridge to the dataset lookup (see its own doc comment
- * for why that has to live there and not on `<MeridianLine>`).
- * `activeCountryCode` (task 4.7) uses the same `focusedCity` this screen
- * already resolves for `markerLat` — docs/04-screen-specs.md's "the country
- * of the focused city" sits right next to "the focused city's latitude" in
- * the same paragraph, so both read as the one persistently-focused city
- * (`useFocusStore`), not wherever the meridian is currently being dragged.
- * `<MeridianLine>` also gets `now`/`prefs` as of task 4.8 — it resolves its
- * own accessibility-value content the same way `<FloatingCityCard>` does,
- * independently (see both components' own doc comments on why a throttled
- * bridge has to watch the shared value itself, not another component).
- * The avatar strip + add-button header row the mockup shows is still out of
- * scope — pulling that into shared chrome is unrelated to the map itself;
- * for now this screen owns just its own title, like ClockScreen did before
- * 3.9.
+ * docs/04-screen-specs.md "S3 · Map". The map runs edge to edge, as on the
+ * board; only the title keeps the gutter.
+ *
+ * The map's selection is this screen's own state — a city, not an offset.
+ * It opens on the focused city (else the device's zone) and changes when
+ * the user points at the map (<MeridianMap>) or settles the ruler on an
+ * offset (<UtcRuler>), which resolves to that zone's best-known city.
+ * Pointing at the map doesn't change the app-wide focus.
+ *
+ * `rulerOffset` is the ruler's display value, animated to the offset of
+ * the city under the finger mid-drag, else the selected city's.
  */
 export function MapScreen() {
-  const { themed } = useAppTheme()
+  const { theme, themed } = useAppTheme()
   const now = useClock()
   const tabBarClearance = useTabBarClearance()
-  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
-  const focusedCityId = useFocusStore((s) => s.focusedCityId)
   const { prefs } = usePrefsStore()
+  const focusedCityId = useFocusStore((s) => s.focusedCityId)
 
-  const focusedCity = focusedCityId ? getCityById(focusedCityId) : undefined
-  const markerLat = focusedCity?.lat ?? 0
-  const initialOffsetMinutes = focusedCity ? getOffsetMinutes(now, focusedCity.zone) : 0
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
+  const [selected, setSelected] = useState<City>(
+    () =>
+      (focusedCityId ? getCityById(focusedCityId) : undefined) ??
+      getCityByZone(getDeviceZone()) ??
+      getNearestRepresentativeCity(0, now),
+  )
 
-  // Only read once, at mount, to seed the shared value — useSharedValue
-  // ignores this argument on every render after the first, which is
-  // exactly what's wanted here: re-seeding on every clock tick would fight
-  // the user's own drag.
-  const offsetMinutes = useSharedValue(initialOffsetMinutes)
+  const [preview, setPreview] = useState<City | null>(null)
+
+  const rulerOffset = useSharedValue(getOffsetMinutes(now, selected.zone))
+  const shownOffset = getOffsetMinutes(now, (preview ?? selected).zone)
+  useEffect(() => {
+    rulerOffset.value = withTiming(shownOffset, { duration: theme.timing.base })
+  }, [shownOffset, rulerOffset, theme.timing.base])
+
+  const handleRulerSettle = useCallback(
+    (offset: number) => {
+      const target = snapToNearestOffset(offset)
+      setSelected((current) =>
+        getOffsetMinutes(now, current.zone) === target
+          ? current
+          : getNearestRepresentativeCity(target, now),
+      )
+    },
+    [now],
+  )
 
   const handleMapAreaLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout
@@ -72,37 +73,21 @@ export function MapScreen() {
   return (
     <Screen preset="fixed" contentContainerStyle={themed($screen)}>
       <Text preset="screenTitle" tx="list:title" style={themed($title)} />
-      <View style={$mapArea} onLayout={handleMapAreaLayout}>
+      <View style={themed($mapArea)} onLayout={handleMapAreaLayout}>
         {mapSize.width > 0 && (
-          <>
-            <WorldMap
-              width={mapSize.width}
-              height={mapSize.height}
-              activeCountryCode={focusedCity?.countryCode}
-            />
-            <View style={$overlay}>
-              <Terminator now={now} width={mapSize.width} height={mapSize.height} />
-            </View>
-            <MeridianLine
-              width={mapSize.width}
-              height={mapSize.height}
-              markerLat={markerLat}
-              offsetMinutes={offsetMinutes}
-              now={now}
-              prefs={prefs}
-            />
-            <FloatingCityCard
-              width={mapSize.width}
-              height={mapSize.height}
-              offsetMinutes={offsetMinutes}
-              now={now}
-              prefs={prefs}
-            />
-          </>
+          <MeridianMap
+            width={mapSize.width}
+            height={mapSize.height}
+            city={selected}
+            onSelectCity={setSelected}
+            onPreviewCity={setPreview}
+            now={now}
+            prefs={prefs}
+          />
         )}
       </View>
-      <View style={[themed($rulerRow), { marginBottom: tabBarClearance }]}>
-        <UtcRuler offsetMinutes={offsetMinutes} />
+      <View style={{ marginBottom: tabBarClearance }}>
+        <UtcRuler offsetMinutes={rulerOffset} onSettle={handleRulerSettle} />
       </View>
     </Screen>
   )
@@ -111,13 +96,17 @@ export function MapScreen() {
 const $screen: ThemedStyle<ViewStyle> = (theme) => ({
   flex: 1,
   backgroundColor: theme.colors.background,
+})
+
+const $title: ThemedStyle<TextStyle> = (theme) => ({
+  marginTop: theme.spacing.xl,
+  marginBottom: theme.spacing.md,
   paddingHorizontal: theme.spacing.gutter,
 })
 
-const $title: ThemedStyle<TextStyle> = (theme) => ({ marginTop: theme.spacing.xl })
-
-const $mapArea: ViewStyle = { flex: 1 }
-
-const $overlay: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }
-
-const $rulerRow: ThemedStyle<ViewStyle> = (theme) => ({ marginTop: theme.spacing.sm })
+const $mapArea: ThemedStyle<ViewStyle> = (theme) => ({
+  flex: 1,
+  borderTopWidth: StyleSheet.hairlineWidth,
+  borderBottomWidth: StyleSheet.hairlineWidth,
+  borderColor: theme.colors.separator,
+})

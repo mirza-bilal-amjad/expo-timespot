@@ -244,34 +244,40 @@ Reference: mobile board, phone 3. The most novel screen and the highest implemen
 
 ### Map
 
-- **Source:** Natural Earth 1:110 m admin-0 countries → TopoJSON → simplified to ≈ 30 KB → SVG paths, rendered with `react-native-svg`. Equirectangular projection (plate carrée) — mandatory, because it makes longitude linear, which is what makes the meridian and the ruler agree.
-- Land `map.land`, no borders except at the country of the focused city, which fills `map.landActive`.
-- **Terminator:** the night hemisphere as a `map.night` overlay. Computed from the solar declination and the Greenwich hour angle for the current instant, as a path with a sinusoidal boundary. Recomputed once per minute, not per second.
-- Low-end devices (`expo-device` tier check or `> 16 ms` first paint): swap to a pre-rendered raster at 2×.
+> **Corrected 2026-09-25.** The first build followed the earlier text here (110 m data cut to 30 KB, equirectangular, no borders, a flat night wash, a meridian dragged by its own 44 pt strip) and read as low quality next to the board. What's below is what's built.
 
-### Meridian
+- **Source:** Natural Earth 1:50 m admin-0 countries → one TopoJSON holding both `countries` and `land` (merged with `mergeArcs`, so they share arcs and can never misalign) → ~210 KB → SVG paths via `react-native-svg`. Antarctica dropped.
+- **Projection:** Web Mercator clipped to 58°S–84°N — the board's own projection (big Greenland, tall Europe). Any cylindrical projection keeps longitude linear; ~~equirectangular — mandatory~~ was stronger than needed.
+- **Framing:** the world is zoomed so its height fills the map area (the board's framing, roughly 160° of longitude visible on a phone) and pans horizontally. Full-bleed, edge to edge; only the title keeps the gutter.
+- Land `map.land`; **country borders** as `bg.canvas` hairlines (0.75 pt), as on the board. The pointed-at city's country fills `map.landActive`.
+- **Night:** diagonal hatching (`bg.canvas` hairlines, 4 pt apart, 45°) over the night hemisphere, **clipped to land** so the sea stays clean — the board's treatment. Terminator computed from suncalc's subsolar point for the current instant; recomputed once per minute. Paths that cross ±180° (Russia, Fiji) are unwrapped and drawn twice, one world-width apart, so each half closes on its own side.
+- Low-end devices (`expo-device` tier check or `> 16 ms` first paint): swap the land layer to a pre-rendered raster (borders knocked out); night becomes a flat `map.night` wash there.
 
-- 1-pt vertical rule in `state.meridian`, full map height, with a 10 ⌀ ring marker at the focused city's latitude.
-- **Drag:** `Gesture.Pan()` from `react-native-gesture-handler`, driven on the **UI thread** with Reanimated. `translateX` is a shared value; the derived zone label is computed in a `useDerivedValue` and written back to JS with `runOnJS` **throttled to 60 ms** — never per frame.
-- Snapping: releases snap to the nearest whole UTC offset with `spring.press`, plus `Haptics.selectionAsync()`. Half- and quarter-hour zones are snap targets too.
-- Tapping a ruler tick animates the meridian to it over `duration.base`.
+### Meridian — point anywhere
+
+- 1-pt vertical rule in `state.meridian`, full map height, with small triangular caps top and bottom, and a ring-and-dot marker (14 ⌀ ring, 6 ⌀ dot) — the board's pointer.
+- **Touch or drag anywhere on the map.** The line and marker jump under the finger and follow it in both axes, on the **UI thread** (`Gesture.Pan().minDistance(0)`; shared values, no JS per frame). The card and the active-country fill preview the city under the finger, bridged with `runOnJS` **throttled to 60 ms**.
+- **Release** resolves the nearest real city (`domain/map/pick.ts`: screen distance − 6 × log₁₀ population, so a tap near London means London) — the marker springs onto it with `spring.press`, the map pans to centre it, `Haptics.selectionAsync()` fires. The zone is the **city's real zone**: pointing at Madrid gives Madrid's, not London's as its longitude would imply.
+- **Drag into the outer 40 pt** of either side and the world scrolls under the finger (up to 700 pt/s), so every place is reachable in one gesture.
+- The selection opens on the focused city (else the device's zone) and is local to this screen — pointing doesn't change the app-wide focus.
 
 ### Ruler
 
 - Horizontal `ScrollView`, ticks every 1 h from UTC−12 to UTC+14 (**+14 is real** — Kiritimati).
 - Tick label `caption` 13 `ink.secondary`; active tick `ink.primary` weight 600 with a `radius.xs` `bg.card` chip behind it.
 - Hit area 44 pt tall via `hitSlop` even though the visual is 13 pt.
-- The ruler and the meridian are two views of one shared value — moving either moves the other, with no JS round-trip.
+- The active tick is centred under the screen's middle, as on the board. It follows the pointed-at city's offset (live during a drag).
+- Scrolling the ruler or tapping a tick selects that offset's best-known city (after 180 ms of scroll idle); the pointer then flies to it. ~~One shared value, no JS round-trip~~ — corrected 2026-09-25: the map now selects a place, not an offset, so the ruler is a view of the selection.
 
 ### Floating card
 
-Identical anatomy to the S1 row (offset / city / time / day-night) but `elev.float`, `bg.inverse`, positioned at the map's lower third, horizontally centred on the meridian and **clamped** to the gutter so it never leaves the screen.
+Identical anatomy to the S1 row (offset / city / time / day-night) but `elev.float`, `bg.inverse`, positioned at the map's lower third, horizontally centred on the meridian and **clamped** to the gutter so it never leaves the screen. When the marker is itself in the lower half, the card flips to the top so it never covers the city being pointed at.
 
 If the meridian's offset matches **no saved city**, the card shows the representative city for that zone from the dataset, with a `plus` affordance — "Add Algiers".
 
 ### Web adaptation
 
-Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Meridian drag works with the mouse and with **← / →** keys (1 h per press, `Shift` for 15 min). The ruler is always visible; the floating card docks to the right at `≥ 1200 px`.
+Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Pointing works with the mouse; **← / →** step to the adjacent real zone's city. The ruler is always visible; the floating card docks to the right at `≥ 1200 px`.
 
 ---
 
