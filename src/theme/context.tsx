@@ -66,6 +66,9 @@ function invertTheme(theme: Theme): Theme {
 
 export type ThemeContextType = {
   setThemeContextOverride: (newTheme: ThemeContextModeT) => void
+  /** The user's explicit choice, or `undefined` when following the OS —
+   * what a System / Light / Dark picker shows as selected. */
+  themeOverride: "light" | "dark" | undefined
   theme: Theme
   themeContext: ImmutableThemeContextModeT
   themed: ThemedFnT
@@ -133,9 +136,13 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
 
   const themed = useMemo(() => createThemedFn(theme), [theme])
 
+  const themeOverride: ThemeContextType["themeOverride"] =
+    themeScheme === "light" || themeScheme === "dark" ? themeScheme : undefined
+
   const value = {
     theme,
     themeContext,
+    themeOverride,
     setThemeContextOverride,
     themed,
   }

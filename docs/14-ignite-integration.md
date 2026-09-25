@@ -419,9 +419,9 @@ Approved `@expo/ui` surface for v1:
 ```
 BottomSheet   → Sheet          (search, settings)
 TextInput     → SearchField    (keyboard, autofill, dictation, IME)
-Picker        → Settings: theme, day/night style
-Switch        → Settings: 12/24h, show seconds
-FieldGroup    → Settings groups
+Picker        → SettingsForm (theme; day/night style later)
+Switch        → SettingsForm (24-hour time; show seconds later)
+FieldGroup    → SettingsForm groups
 ContextMenu   → long-press city menu
 ```
 

@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { View, ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -6,6 +7,7 @@ import { PressableIcon } from "@/components/Icon"
 import { Numeral } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
+import { SettingsSheet } from "@/components/SettingsSheet"
 import { SunBlock } from "@/components/SunBlock"
 import { useTabBarClearance } from "@/components/TabBar"
 import { Text } from "@/components/Text"
@@ -34,6 +36,7 @@ export function ClockScreen() {
 
   const focusedCityId = useFocusStore((s) => s.focusedCityId)
   const { prefs, setPrefs } = usePrefsStore()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const city =
     (focusedCityId && getCityById(focusedCityId)) ?? getCityByZone(getDeviceZone()) ?? null
@@ -60,76 +63,81 @@ export function ClockScreen() {
     : `${city.name}, ${city.country}`
 
   return (
-    <Screen preset="auto" contentContainerStyle={themed($screen)}>
-      <View
-        style={[
-          themed($header),
-          { paddingTop: insets.top + theme.spacing.sm, paddingBottom: theme.spacing.xl },
-        ]}
-      >
-        <PressableIcon
-          icon="clock"
-          size="md"
-          color={theme.colors.textOnInverse}
-          accessibilityLabel={translate("clock:openSettings")}
-          containerStyle={themed($mark)}
-          // Settings (S7) isn't built yet — outside Phase 3's scope, same
-          // pattern as the header add-button placeholder was before task 3.7.
-          onPress={() => {}}
-        />
-        <SegmentedPill
-          options={[
-            { value: "12h", label: "12h" },
-            { value: "24h", label: "24h" },
+    // The sheet is a sibling of <Screen>, never inside its scroll view
+    // (docs/14-ignite-integration.md §6 rule 4).
+    <View style={$root}>
+      <Screen preset="auto" contentContainerStyle={themed($screen)}>
+        <View
+          style={[
+            themed($header),
+            { paddingTop: insets.top + theme.spacing.sm, paddingBottom: theme.spacing.xl },
           ]}
-          value={prefs.timeFormat}
-          onChange={(timeFormat) => setPrefs({ timeFormat })}
-          accessibilityLabel={translate("clock:formatToggle")}
-        />
-      </View>
-
-      <View style={themed($body)}>
-        {/* docs/08-motion-spec.md §7: "Hero clock / screen title | 0 |
-         opacity 0→1, translateY 8→0, 320ms ease.decelerate." */}
-        <EntranceView play={shouldPlayEntrance}>
-          <View
-            accessible
-            accessibilityLiveRegion="none"
-            accessibilityLabel={`${time.hours}:${time.minutes}:${time.seconds}${time.meridiem ? ` ${time.meridiem}` : ""}, ${time.dateLabel}`}
-          >
-            {/* The board's arrangement: hours beside the date, minutes beside
-             the seconds — two rows, so the date only competes with two hero
-             digits for width, never with the whole stack.
-             docs/08-motion-spec.md §3: minutes and seconds roll; hours cut. */}
-            <View style={$heroLine}>
-              <Numeral value={time.hours} size="hero" />
-              <View style={themed($dateBlock)}>
-                <Text size="xxl" text={`${weekdayPart},`} numberOfLines={1} />
-                <Text size="xxl" text={dateLine2} numberOfLines={1} />
-              </View>
-            </View>
-            <View style={$heroLine}>
-              <Numeral value={time.minutes} size="hero" animate="roll" />
-              <View style={themed($secondsBlock)}>
-                <Numeral value={time.seconds} size="displayXl" animate="roll" />
-                {time.meridiem && <Text preset="offset" text={time.meridiem} />}
-              </View>
-            </View>
-          </View>
-        </EntranceView>
-
-        <View style={themed($cityBlock)}>
-          <View style={$sunRow}>
-            <SunBlock lat={city.lat} lon={city.lon} zone={city.zone} now={now} />
-          </View>
-          <Text size="display" text={locationText} />
+        >
+          <PressableIcon
+            icon="clock"
+            size="md"
+            color={theme.colors.textOnInverse}
+            accessibilityLabel={translate("clock:openSettings")}
+            containerStyle={themed($mark)}
+            onPress={() => setSettingsOpen(true)}
+          />
+          <SegmentedPill
+            options={[
+              { value: "12h", label: "12h" },
+              { value: "24h", label: "24h" },
+            ]}
+            value={prefs.timeFormat}
+            onChange={(timeFormat) => setPrefs({ timeFormat })}
+            accessibilityLabel={translate("clock:formatToggle")}
+          />
         </View>
-      </View>
 
-      <View style={{ height: tabBarClearance + theme.spacing.lg }} />
-    </Screen>
+        <View style={themed($body)}>
+          {/* docs/08-motion-spec.md §7: "Hero clock / screen title | 0 |
+           opacity 0→1, translateY 8→0, 320ms ease.decelerate." */}
+          <EntranceView play={shouldPlayEntrance}>
+            <View
+              accessible
+              accessibilityLiveRegion="none"
+              accessibilityLabel={`${time.hours}:${time.minutes}:${time.seconds}${time.meridiem ? ` ${time.meridiem}` : ""}, ${time.dateLabel}`}
+            >
+              {/* The board's arrangement: hours beside the date, minutes beside
+               the seconds — two rows, so the date only competes with two hero
+               digits for width, never with the whole stack.
+               docs/08-motion-spec.md §3: minutes and seconds roll; hours cut. */}
+              <View style={$heroLine}>
+                <Numeral value={time.hours} size="hero" />
+                <View style={themed($dateBlock)}>
+                  <Text size="xxl" text={`${weekdayPart},`} numberOfLines={1} />
+                  <Text size="xxl" text={dateLine2} numberOfLines={1} />
+                </View>
+              </View>
+              <View style={$heroLine}>
+                <Numeral value={time.minutes} size="hero" animate="roll" />
+                <View style={themed($secondsBlock)}>
+                  <Numeral value={time.seconds} size="displayXl" animate="roll" />
+                  {time.meridiem && <Text preset="offset" text={time.meridiem} />}
+                </View>
+              </View>
+            </View>
+          </EntranceView>
+
+          <View style={themed($cityBlock)}>
+            <View style={$sunRow}>
+              <SunBlock lat={city.lat} lon={city.lon} zone={city.zone} now={now} />
+            </View>
+            <Text size="display" text={locationText} />
+          </View>
+        </View>
+
+        <View style={{ height: tabBarClearance + theme.spacing.lg }} />
+      </Screen>
+      <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </View>
   )
 }
+
+const $root: ViewStyle = { flex: 1 }
 
 const $screen: ThemedStyle<ViewStyle> = (theme) => ({
   flex: 1,

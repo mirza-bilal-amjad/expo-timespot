@@ -321,11 +321,12 @@ Statically generated at build time for the top 1 000 cities. `/time/tokyo`, `/ti
 
 `@expo/ui` `FieldGroup` — this is exactly the case where native-feeling system controls beat custom ones.
 
-- Theme: System / Light / Dark (`Picker`)
-- Time format: 12 h / 24 h (`Switch`)
-- Show seconds on the list (`Switch`, default off — saves a per-second re-render across N rows)
-- Temperature-style day/night: by icon / by card tint (`Picker`)
-- About, licences (GeoNames CC-BY attribution), privacy, version + build number.
+Built 2026-09-25 — opened from the S2 app mark; `SettingsForm` is the @expo/ui adapter, `SettingsSheet` the feature component.
+
+- Theme: System / Light / Dark (`Picker`) — writes Ignite's own `ignite.themeScheme` override, the value the ThemeProvider actually reads. (`prefs.theme` was never wired to it and stays unused.)
+- Time format: "24-hour time" (`Switch`) — the same `prefs.timeFormat` the S2 pill writes; the two stay in sync.
+- About: version, GeoNames CC BY 4.0, Natural Earth (public domain), Space Grotesk (OFL).
+- **Not yet shipped** — each needs its feature first, and a switch that does nothing is worse than none: show seconds on the list (`Switch`), temperature-style day/night by icon / by card tint (`Picker`), privacy link.
 
 ---
 
