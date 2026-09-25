@@ -107,6 +107,12 @@ export function StoriesScreen() {
           <Numeral value="12:34" size="numeralMd" />
           <Numeral value="15" size="display" color="textAccent" />
         </View>
+        <View style={themed($row)}>
+          <Text preset="caption" text='animate="roll" — the live second, ticking' />
+        </View>
+        <View style={themed($row)}>
+          <Numeral value={getZonedTime(now, "UTC", prefs).seconds} size="display" animate="roll" />
+        </View>
       </Section>
 
       <Section title="Card">

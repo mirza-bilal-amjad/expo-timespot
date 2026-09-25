@@ -93,11 +93,14 @@ export function ClockScreen() {
           accessibilityLabel={`${time.hours}:${time.minutes}:${time.seconds}${time.meridiem ? ` ${time.meridiem}` : ""}, ${time.dateLabel}`}
         >
           <View style={$heroLeft} importantForAccessibility="no-hide-descendants">
+            {/* docs/08-motion-spec.md §3: "Minutes roll on the same mechanism...
+             hours do not roll — an hour change is rare enough that a cut
+             reads as intentional and a roll reads as a glitch." */}
             <Numeral value={time.hours} size="hero" />
             <View style={themed($minuteRow)}>
-              <Numeral value={time.minutes} size="hero" />
+              <Numeral value={time.minutes} size="hero" animate="roll" />
               <View style={themed($secondsBlock)}>
-                <Numeral value={time.seconds} size="displayXl" />
+                <Numeral value={time.seconds} size="displayXl" animate="roll" />
                 {time.meridiem && <Text preset="offset" text={time.meridiem} />}
               </View>
             </View>

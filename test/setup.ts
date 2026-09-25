@@ -53,9 +53,21 @@ jest.mock("react-native-reanimated", () => {
       (fn: (...args: unknown[]) => void) =>
       (...args: unknown[]) =>
         fn(...args),
-    withSpring: (toValue: unknown) => toValue,
-    withTiming: (toValue: unknown) => toValue,
+    // The optional 3rd-arg completion callback is invoked synchronously
+    // with `true` (finished) — Numeral's roll animation (task 5.1) relies
+    // on it firing to settle the digit after the strip's translateY
+    // animation; every earlier 2-arg call site is unaffected since there's
+    // no callback to invoke.
+    withSpring: (toValue: unknown, _config?: unknown, callback?: (finished: boolean) => void) => {
+      callback?.(true)
+      return toValue
+    },
+    withTiming: (toValue: unknown, _config?: unknown, callback?: (finished: boolean) => void) => {
+      callback?.(true)
+      return toValue
+    },
     withDelay: (_delay: unknown, animation: unknown) => animation,
+    useReducedMotion: () => false,
     interpolateColor: (value: number, input: number[], output: string[]) => {
       let closest = 0
       let closestDistance = Infinity
