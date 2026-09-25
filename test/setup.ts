@@ -112,6 +112,31 @@ jest.mock("react-native-worklets", () => ({
   scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
 }))
 
+// react-native-keyboard-controller's native module isn't linked under jest
+// (no real device/simulator) — its own bindings.native.ts throws just from
+// being required. <Screen>'s native (non-web) branch is the only caller
+// (src/components/Screen.tsx), and it only needs a scrollable container, so
+// KeyboardAwareScrollView stands in as a plain ScrollView here.
+jest.mock("react-native-keyboard-controller", () => {
+  const { ScrollView } = require("react-native")
+  return {
+    __esModule: true,
+    KeyboardAwareScrollView: ScrollView,
+    KeyboardProvider: ({ children }: { children: React.ReactNode }) => children,
+  }
+})
+
+// Same "not linked under jest" problem as keyboard-controller above, one
+// layer earlier: useSafeAreaInsets() throws without a real
+// <SafeAreaProvider> ancestor measuring a native view. The library ships
+// its own jest mock (fixed 0-inset metrics) for exactly this; every screen
+// pulls in useSafeAreaInsets somewhere (directly or via <Screen>/<TabBar>),
+// so it's registered globally rather than per test file.
+jest.mock(
+  "react-native-safe-area-context",
+  () => require("react-native-safe-area-context/jest/mock").default,
+)
+
 jest.mock("i18next", () => ({
   currentLocale: "en",
   t: (key: string, params: Record<string, string>) => {
