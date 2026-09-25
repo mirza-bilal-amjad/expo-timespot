@@ -40,6 +40,7 @@ jest.mock("react-native-reanimated", () => {
     default: {
       createAnimatedComponent: (Component: unknown) => Component,
       View: require("react-native").View,
+      Text: require("react-native").Text,
       ScrollView: require("react-native").ScrollView,
     },
     useSharedValue: (initial: unknown) => React.useRef({ value: initial }).current,
@@ -74,6 +75,18 @@ jest.mock("react-native-reanimated", () => {
     // (task 5.4) and SegmentedPill already both use is enough.
     Easing: {
       bezier: () => (t: number) => t,
+    },
+    Extrapolation: { IDENTITY: "identity", CLAMP: "clamp", EXTEND: "extend" },
+    // Plain linear interpolation, clamped to the output range regardless of
+    // the requested extrapolation mode — every call site in this codebase
+    // asks for Extrapolation.CLAMP, so a fuller identity/extend
+    // implementation isn't needed here.
+    interpolate: (value: number, input: [number, number], output: [number, number]) => {
+      const [x0, x1] = input
+      const [y0, y1] = output
+      if (x1 === x0) return y0
+      const t = Math.min(Math.max((value - x0) / (x1 - x0), 0), 1)
+      return y0 + t * (y1 - y0)
     },
     interpolateColor: (value: number, input: number[], output: string[]) => {
       let closest = 0

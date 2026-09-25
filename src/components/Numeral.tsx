@@ -9,7 +9,11 @@ import {
   ViewStyle,
 } from "react-native"
 import Animated, {
+  Extrapolation,
+  interpolate,
+  interpolateColor,
   runOnJS,
+  SharedValue,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -69,6 +73,40 @@ const JUMP_GUARD_THRESHOLD = 2
 function circularDigitDistance(a: number, b: number): number {
   const diff = Math.abs(a - b)
   return Math.min(diff, 10 - diff)
+}
+
+// "Native: opacity + a 0.94 scale instead [of expo-blur], which reads as
+// blur at this size and costs nothing."
+const GHOST_OPACITY = 0.18
+const GHOST_SCALE = 0.94
+
+/**
+ * One cell's opacity/scale/colour, all driven by the same `y` shared value
+ * the strip's own translateY uses — `distance` is how far *this* cell
+ * currently sits from the visible window's centre (its rest offset plus
+ * the in-flight scroll), so as the strip moves every cell fades and scales
+ * continuously between "live" and "ghost" together, rather than each cell
+ * having a fixed, discontinuous look that only swaps at the moment the
+ * strip's contents rotate. `baseOffset` is that cell's rest position:
+ * `-cellHeight` for the previous digit, `0` for the live one, `cellHeight`
+ * for the next — the same three positions `RollingDigit` always renders.
+ */
+function useCellStyle(
+  y: SharedValue<number>,
+  cellHeight: number,
+  baseOffset: number,
+  liveColor: string,
+  ghostColor: string,
+) {
+  return useAnimatedStyle(() => {
+    const distance = Math.abs(baseOffset + y.value)
+    const progress = interpolate(distance, [0, cellHeight], [0, 1], Extrapolation.CLAMP)
+    return {
+      opacity: interpolate(progress, [0, 1], [1, GHOST_OPACITY]),
+      transform: [{ scale: interpolate(progress, [0, 1], [1, GHOST_SCALE]) }],
+      color: interpolateColor(progress, [0, 1], [liveColor, ghostColor]),
+    }
+  })
 }
 
 interface RollingDigitProps {
@@ -141,6 +179,12 @@ function RollingDigit(props: RollingDigitProps) {
     transform: [{ translateY: -cellHeight + y.value }],
   }))
 
+  const liveColor = textStyle.color as string
+  const ghostColor = theme.colors.textFaint
+  const $prevStyle = useCellStyle(y, cellHeight, -cellHeight, liveColor, ghostColor)
+  const $currentStyle = useCellStyle(y, cellHeight, 0, liveColor, ghostColor)
+  const $nextStyle = useCellStyle(y, cellHeight, cellHeight, liveColor, ghostColor)
+
   if (reducedMotion) {
     return (
       <View style={$cellWidthOnly(cellWidth)}>
@@ -157,27 +201,19 @@ function RollingDigit(props: RollingDigitProps) {
   const nextChar = String((Number(displayDigit) + 1) % 10)
 
   const $cell: TextStyle = { ...textStyle, width: cellWidth, height: cellHeight }
-  // "Native: opacity + a 0.94 scale instead [of expo-blur], which reads as
-  // blur at this size and costs nothing."
-  const $ghostCell: TextStyle = {
-    ...$cell,
-    opacity: 0.18,
-    transform: [{ scale: 0.94 }],
-    color: theme.colors.textFaint,
-  }
 
   return (
     <View style={$strip(cellWidth, cellHeight)}>
       <Animated.View style={$animatedStyle}>
-        <RNText style={$ghostCell} {...$hidden}>
+        <Animated.Text style={[$cell, $prevStyle]} {...$hidden}>
           {prevChar}
-        </RNText>
-        <RNText style={$cell} maxFontSizeMultiplier={1.3} {...$hidden}>
+        </Animated.Text>
+        <Animated.Text style={[$cell, $currentStyle]} maxFontSizeMultiplier={1.3} {...$hidden}>
           {displayDigit}
-        </RNText>
-        <RNText style={$ghostCell} {...$hidden}>
+        </Animated.Text>
+        <Animated.Text style={[$cell, $nextStyle]} {...$hidden}>
           {nextChar}
-        </RNText>
+        </Animated.Text>
       </Animated.View>
     </View>
   )
