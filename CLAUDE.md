@@ -97,7 +97,7 @@ Ignite wires `i18next` and `Text` takes a `tx` prop. Use it from the first commi
 
 ## Stack
 
-**Ignite** (Expo Router conversion) · Expo SDK 57 · RN 0.86 · React 19.2 · `@expo/ui` · Ignite `ThemedStyle` theming · Reanimated 4 · Zustand 5 over Ignite's MMKV · `Intl` + `@date-fns/tz` · `suncalc` · `react-native-svg` · FlashList · Geist
+**Ignite** (Expo Router conversion) · Expo SDK 57 · RN 0.86 · React 19.2 · `@expo/ui` · Ignite `ThemedStyle` theming · Reanimated 4 · Zustand 5 over Ignite's MMKV · `Intl` + `@date-fns/tz` · `suncalc` · `react-native-svg` · FlashList · Space Grotesk
 
 **Already in Ignite — do not re-add:** MMKV, i18next, date-fns, expo-localization, Reanimated, Gesture Handler, Safe Area, Edge-to-Edge, Keyboard Controller, Reactotron.
 

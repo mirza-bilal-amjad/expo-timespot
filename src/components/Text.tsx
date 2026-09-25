@@ -142,10 +142,10 @@ const $presets: Record<Presets, ThemedStyleArray<TextStyle>> = {
   // TimeSpot's presets
   screenTitle: [
     $baseStyle,
-    { ...$sizeStyles.xxl, ...$fontWeightStyles.medium, letterSpacing: -0.7 },
+    { ...$sizeStyles.xxl, ...$fontWeightStyles.normal, letterSpacing: -0.7 },
   ],
-  cityName: [$baseStyle, { ...$sizeStyles.display, ...$fontWeightStyles.medium }],
-  cityTitle: [$baseStyle, { ...$sizeStyles.lg, ...$fontWeightStyles.medium }],
+  cityName: [$baseStyle, { ...$sizeStyles.display, ...$fontWeightStyles.normal }],
+  cityTitle: [$baseStyle, { ...$sizeStyles.lg, ...$fontWeightStyles.normal }],
   offset: [$baseStyle, (theme) => ({ ...$sizeStyles.xs, color: theme.colors.textDim })],
   caption: [$baseStyle, (theme) => ({ ...$sizeStyles.xxs, color: theme.colors.textDim })],
 }

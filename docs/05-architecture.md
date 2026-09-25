@@ -29,7 +29,7 @@ Verified against the Expo changelog and docs on 2026-09-23. **Do not pin from me
 | Time | `Intl` + **`@date-fns/tz`** + `date-fns` v4 | latest | see §4 |
 | Sun | `suncalc` | latest | 4 KB, MIT, deterministic, offline |
 | Search | prebuilt inverted index + `uFuzzy` | latest | < 30 ms over 5 000 cities |
-| Fonts | `expo-font` (Geist Variable) | via SDK | |
+| Fonts | `expo-font` (Space Grotesk, 4 weights) | via SDK | |
 | i18n | `i18next` + `expo-localization` | latest | strings externalised from day one |
 | Testing | Jest + RNTL, Playwright, Maestro | latest | `11-testing-strategy.md` |
 | CI/CD | EAS Build + EAS Workflows + EAS Hosting | — | `12-release-ops.md` |

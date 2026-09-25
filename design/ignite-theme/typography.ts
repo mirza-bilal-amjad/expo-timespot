@@ -2,40 +2,39 @@
  * TimeSpot — typography.
  * Drop-in replacement for Ignite's `src/theme/typography.ts`.
  *
- * Swaps Ignite's Space Grotesk for Geist — the closest free match to the
- * mockups' neo-grotesk (see docs/01-design-audit.md §6).
+ * Space Grotesk — the mockups' actual face, identified by glyph comparison
+ * (the straight-tailed `y` in "Sydney", the flat-topped `3`, the flagged
+ * `1`; docs/01-design-audit.md §6). An earlier pass misread it as a
+ * Neue-Montreal-style grotesk and shipped Geist instead.
  *
- *   npx expo install @expo-google-fonts/geist
- *   npm uninstall @expo-google-fonts/space-grotesk
- *
- * Only three weights ship. Every extra weight is a font file on the critical
- * path, and the design uses exactly three.
+ * Four weights ship; every extra weight is a font file on the critical path.
  */
 
 import { Platform } from "react-native"
 import {
-  Geist_400Regular as geistRegular,
-  Geist_500Medium as geistMedium,
-  Geist_600SemiBold as geistSemiBold,
-} from "@expo-google-fonts/geist"
+  SpaceGrotesk_300Light as spaceGroteskLight,
+  SpaceGrotesk_400Regular as spaceGroteskRegular,
+  SpaceGrotesk_500Medium as spaceGroteskMedium,
+  SpaceGrotesk_600SemiBold as spaceGroteskSemiBold,
+} from "@expo-google-fonts/space-grotesk"
 
 export const customFontsToLoad = {
-  geistRegular,
-  geistMedium,
-  geistSemiBold,
+  spaceGroteskLight,
+  spaceGroteskRegular,
+  spaceGroteskMedium,
+  spaceGroteskSemiBold,
 }
 
 const fonts = {
-  geist: {
-    // ⚠️ `light` and `bold` are ALIASES, not separate files.
-    //    Ignite's own presets reference typography.primary.bold and
-    //    typography.primary.light — a missing key falls back to the system
-    //    font silently, which is a very confusing bug to chase.
-    light: "geistRegular",
-    normal: "geistRegular",
-    medium: "geistMedium",
-    semiBold: "geistSemiBold",
-    bold: "geistSemiBold",
+  spaceGrotesk: {
+    // ⚠️ `bold` is an ALIAS for semiBold, not a separate file. Ignite's own
+    //    presets reference typography.primary.bold and .light — a missing
+    //    key falls back to the system font silently.
+    light: "spaceGroteskLight",
+    normal: "spaceGroteskRegular",
+    medium: "spaceGroteskMedium",
+    semiBold: "spaceGroteskSemiBold",
+    bold: "spaceGroteskSemiBold",
   },
   helveticaNeue: {
     thin: "HelveticaNeue-Thin",
@@ -56,9 +55,9 @@ const fonts = {
 export const typography = {
   fonts,
   /** Used everywhere. */
-  primary: fonts.geist,
+  primary: fonts.spaceGrotesk,
   /** TimeSpot is a single-family design — secondary points at the same face. */
-  secondary: fonts.geist,
+  secondary: fonts.spaceGrotesk,
   code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
 }
 

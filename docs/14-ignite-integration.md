@@ -107,9 +107,9 @@ npx expo-doctor
 ```bash
 npx expo install @expo/ui @date-fns/tz react-native-svg @shopify/flash-list expo-image expo-haptics
 npm i zustand suncalc @uiw/react-use-fuzzy   # or uFuzzy
-npx expo install @expo-google-fonts/geist
-npm uninstall @expo-google-fonts/space-grotesk
 ```
+
+Keep Ignite's `@expo-google-fonts/space-grotesk` — it is the board's actual face (audit §6, corrected 2026-09-25).
 
 Always `npx expo install`, never `npm i`, for anything with a native side — it resolves the SDK-compatible version.
 
@@ -207,36 +207,39 @@ export const spacing = {
 
 `spacingDark.ts` re-exports the same object — TimeSpot does not vary spacing by theme.
 
-### 3.3 `src/theme/typography.ts` — Space Grotesk → Geist
+### 3.3 `src/theme/typography.ts` — keep Space Grotesk
+
+~~Space Grotesk → Geist~~ — **corrected 2026-09-25**: Space Grotesk is the board's actual face (audit §6).
 
 ```ts
 import {
-  Geist_400Regular as geistRegular,
-  Geist_500Medium  as geistMedium,
-  Geist_600SemiBold as geistSemiBold,
-} from "@expo-google-fonts/geist"
+  SpaceGrotesk_300Light as spaceGroteskLight,
+  SpaceGrotesk_400Regular as spaceGroteskRegular,
+  SpaceGrotesk_500Medium as spaceGroteskMedium,
+  SpaceGrotesk_600SemiBold as spaceGroteskSemiBold,
+} from "@expo-google-fonts/space-grotesk"
 
-export const customFontsToLoad = { geistRegular, geistMedium, geistSemiBold }
+export const customFontsToLoad = { spaceGroteskLight, spaceGroteskRegular, spaceGroteskMedium, spaceGroteskSemiBold }
 
 const fonts = {
-  geist: { normal: "geistRegular", medium: "geistMedium", semiBold: "geistSemiBold",
-           light: "geistRegular", bold: "geistSemiBold" },   // aliases so Ignite presets still resolve
+  spaceGrotesk: { light: "spaceGroteskLight", normal: "spaceGroteskRegular", medium: "spaceGroteskMedium",
+                  semiBold: "spaceGroteskSemiBold", bold: "spaceGroteskSemiBold" },   // bold is an alias
   // …keep Ignite's platform fonts for fallbacks
 }
 
 export const typography = {
   fonts,
-  primary: fonts.geist,
-  secondary: fonts.geist,
+  primary: fonts.spaceGrotesk,
+  secondary: fonts.spaceGrotesk,
   code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
 }
 ```
 
 Keep the `light` and `bold` aliases: Ignite's own presets reference `typography.primary.bold`, and a missing key silently falls back to the system font.
 
-Load only three weights. Every extra weight is a font file on the critical path, and the design uses exactly three.
+Load only four weights. Every extra weight is a font file on the critical path.
 
-> **Tabular figures.** Geist has them; enable with `fontVariant: ['tabular-nums']`. But `<Numeral>` does **not** rely on that — it also pins a measured per-digit width, so the clock stays stable even if a font or platform ignores the feature. See §4.2.
+> **Tabular figures.** Space Grotesk has them; enable with `fontVariant: ['tabular-nums']`. But `<Numeral>` does **not** rely on that — it also pins a measured per-digit width, so the clock stays stable even if a font or platform ignores the feature. See §4.2.
 
 ### 3.4 `src/theme/timing.ts`
 
@@ -536,7 +539,7 @@ Replaces Phase 0 in `10-implementation-plan.md`. ~1.5 days.
 | 0.3 | **SDK 55 → 57 upgrade** (§2.3); pin `expo@>=57.0.17` | `expo-doctor` clean; boots on iOS, Android **and web** |
 | 0.4 | ~~`storage.web.ts` localStorage adapter~~ — not needed, MMKV 3.3.3 has a real web build (§7) | `ThemeProvider` and MMKV-backed persistence both work on web, verified across a reload |
 | 0.5 | Replace the 5 theme files + add `radius.ts`, wire into `Theme` | a sample screen renders in TimeSpot colours, both themes |
-| 0.6 | Geist swap in `typography.ts` | fonts load on all three platforms |
+| 0.6 | Font setup in `typography.ts` (Space Grotesk, corrected 2026-09-25) | fonts load on all three platforms |
 | 0.7 | Extend `Text` sizes + presets; add `includeFontPadding: false` | `preset="hero"` renders at 144 and is vertically centred on Android |
 | 0.8 | Build `<Numeral>` (no roll yet) | `08:40 → 08:41` causes zero layout shift, measured |
 | 0.9 | Add `@expo/ui`; build the `Sheet` adapter | sheet opens on iOS, Android and web |

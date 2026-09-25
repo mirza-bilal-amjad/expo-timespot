@@ -21,7 +21,7 @@ Estimates assume agent-assisted implementation with you reviewing. Halve them if
 | 0.3 | **SDK 55 → 57 upgrade**, pin `expo@>=57.0.17` ⚠️ riskiest step | `expo-doctor` clean; boots on iOS, Android **and web** |
 | 0.4 | ~~`storage.web.ts`~~ — not needed, MMKV 3.3.3 has its own web build | theme choice survives a web reload |
 | 0.5 | Copy `design/ignite-theme/*` into `src/theme/`; wire `radius` into `theme.ts` + `types.ts` | sample screen in TimeSpot colours, both schemes |
-| 0.6 | Geist swap in `typography.ts` (keep the `light`/`bold` aliases) | fonts load on all three platforms |
+| 0.6 | Font swap in `typography.ts` (keep the `light`/`bold` aliases) — ~~Geist~~ **Space Grotesk**, corrected 2026-09-25 (audit §6) | fonts load on all three platforms |
 | 0.7 | Extend Ignite `Text` with display sizes + TimeSpot presets; `includeFontPadding: false` | `preset="hero"` is vertically centred on Android |
 | 0.8 | Build `<Numeral>` — measured width + `tabular-nums`, no roll yet | `08:40 → 08:41` causes zero layout shift, **measured** |
 | 0.9 | Add `@expo/ui`; build the `Sheet` adapter | sheet opens on iOS, Android and web |

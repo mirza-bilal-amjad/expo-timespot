@@ -240,7 +240,7 @@ export const Numeral = memo(function Numeral(props: NumeralProps) {
   const { value, size = "numeralLg", color, animate = "none", accessibilityLabel, style } = props
   const { theme } = useAppTheme()
 
-  const fontFamily = theme.typography.primary.medium
+  const fontFamily = theme.typography.primary.normal
   const fontSize = $sizeStyles[size].fontSize as number
   const cellHeight = $sizeStyles[size].lineHeight as number
   const cacheKey = `${fontFamily}-${fontSize}`
