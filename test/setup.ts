@@ -68,6 +68,13 @@ jest.mock("react-native-reanimated", () => {
     },
     withDelay: (_delay: unknown, animation: unknown) => animation,
     useReducedMotion: () => false,
+    // A real cubic-bezier curve isn't meaningful under this mock (withTiming
+    // itself is stubbed to skip straight to the end value) — a stand-in
+    // that satisfies the `Easing.bezier(...)` call shape EntranceView
+    // (task 5.4) and SegmentedPill already both use is enough.
+    Easing: {
+      bezier: () => (t: number) => t,
+    },
     interpolateColor: (value: number, input: number[], output: string[]) => {
       let closest = 0
       let closestDistance = Infinity

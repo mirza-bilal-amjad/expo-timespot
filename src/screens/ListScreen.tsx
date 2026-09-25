@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { AvatarStrip, AvatarStripItem } from "@/components/AvatarStrip"
 import { Button } from "@/components/Button"
+import { EntranceView } from "@/components/EntranceView"
 import { Icon, PressableIcon } from "@/components/Icon"
 import { ReorderableCityRow } from "@/components/ReorderableCityRow"
 import { Screen } from "@/components/Screen"
@@ -16,6 +17,7 @@ import { getCityById } from "@/domain/cities/search"
 import { getZonedTime } from "@/domain/time/zone"
 import type { SavedCity } from "@/domain/types"
 import { useClock } from "@/hooks/useClock"
+import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
 import { useCitiesStore } from "@/store/cities"
 import { useFocusStore } from "@/store/focus"
@@ -35,11 +37,21 @@ import type { ThemedStyle } from "@/theme/types"
 // radius.md in theme/radius.ts.
 const TITLE_GAP = 20
 
+// docs/08-motion-spec.md §7 "Entrance choreography": "City rows | 40ms
+// each, capped at 6 rows | same, 280ms." No token for either the stagger
+// step or the 280ms duration (theme/timing.ts's nearest is base at 220 or
+// slow at 320, both a real difference) — same "no token yet" precedent as
+// CityRow's own SELECT_STAGGER_MS/SELECT_CROSSFADE_MS.
+const ENTRANCE_ROW_STAGGER_MS = 40
+const ENTRANCE_ROW_DURATION_MS = 280
+const ENTRANCE_ROW_CAP = 6
+
 export function ListScreen() {
   const { theme, themed } = useAppTheme()
   const insets = useSafeAreaInsets()
   const tabBarClearance = useTabBarClearance()
   const now = useClock()
+  const shouldPlayEntrance = useShouldPlayEntrance("list")
 
   const cities = useCitiesStore((s) => s.cities)
   const removeCity = useCitiesStore((s) => s.removeCity)
@@ -139,7 +151,7 @@ export function ListScreen() {
   const renderItem = ({ item, index }: { item: SavedCity; index: number }) => {
     const city = getCityById(item.cityId)
     const time = getZonedTime(now, city?.zone ?? "UTC", prefs)
-    return (
+    const row = (
       <ReorderableCityRow
         city={item}
         time={time}
@@ -153,6 +165,16 @@ export function ListScreen() {
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
       />
+    )
+    if (index >= ENTRANCE_ROW_CAP) return row
+    return (
+      <EntranceView
+        play={shouldPlayEntrance}
+        delayMs={index * ENTRANCE_ROW_STAGGER_MS}
+        durationMs={ENTRANCE_ROW_DURATION_MS}
+      >
+        {row}
+      </EntranceView>
     )
   }
 
@@ -185,7 +207,9 @@ export function ListScreen() {
               onPress={() => setSearchOpen(true)}
             />
           </View>
-          <Text preset="screenTitle" tx="list:title" style={themed($title)} />
+          <EntranceView play={shouldPlayEntrance}>
+            <Text preset="screenTitle" tx="list:title" style={themed($title)} />
+          </EntranceView>
         </View>
 
         {orderedCities.length === 0 ? (

@@ -1,6 +1,7 @@
 import { TextStyle, View, ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { EntranceView } from "@/components/EntranceView"
 import { PressableIcon } from "@/components/Icon"
 import { Numeral } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
@@ -11,6 +12,7 @@ import { Text } from "@/components/Text"
 import { getCityById, getCityByZone } from "@/domain/cities/search"
 import { getDeviceZone, getZonedTime } from "@/domain/time/zone"
 import { useClock } from "@/hooks/useClock"
+import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
 import { useFocusStore } from "@/store/focus"
 import { usePrefsStore } from "@/store/prefs"
@@ -28,6 +30,7 @@ export function ClockScreen() {
   const insets = useSafeAreaInsets()
   const tabBarClearance = useTabBarClearance()
   const now = useClock()
+  const shouldPlayEntrance = useShouldPlayEntrance("clock")
 
   const focusedCityId = useFocusStore((s) => s.focusedCityId)
   const { prefs, setPrefs } = usePrefsStore()
@@ -86,30 +89,34 @@ export function ClockScreen() {
       </View>
 
       <View style={themed($body)}>
-        <View
-          style={$heroRow}
-          accessible
-          accessibilityLiveRegion="none"
-          accessibilityLabel={`${time.hours}:${time.minutes}:${time.seconds}${time.meridiem ? ` ${time.meridiem}` : ""}, ${time.dateLabel}`}
-        >
-          <View style={$heroLeft} importantForAccessibility="no-hide-descendants">
-            {/* docs/08-motion-spec.md §3: "Minutes roll on the same mechanism...
-             hours do not roll — an hour change is rare enough that a cut
-             reads as intentional and a roll reads as a glitch." */}
-            <Numeral value={time.hours} size="hero" />
-            <View style={themed($minuteRow)}>
-              <Numeral value={time.minutes} size="hero" animate="roll" />
-              <View style={themed($secondsBlock)}>
-                <Numeral value={time.seconds} size="displayXl" animate="roll" />
-                {time.meridiem && <Text preset="offset" text={time.meridiem} />}
+        {/* docs/08-motion-spec.md §7: "Hero clock / screen title | 0 |
+         opacity 0→1, translateY 8→0, 320ms ease.decelerate." */}
+        <EntranceView play={shouldPlayEntrance}>
+          <View
+            style={$heroRow}
+            accessible
+            accessibilityLiveRegion="none"
+            accessibilityLabel={`${time.hours}:${time.minutes}:${time.seconds}${time.meridiem ? ` ${time.meridiem}` : ""}, ${time.dateLabel}`}
+          >
+            <View style={$heroLeft} importantForAccessibility="no-hide-descendants">
+              {/* docs/08-motion-spec.md §3: "Minutes roll on the same mechanism...
+               hours do not roll — an hour change is rare enough that a cut
+               reads as intentional and a roll reads as a glitch." */}
+              <Numeral value={time.hours} size="hero" />
+              <View style={themed($minuteRow)}>
+                <Numeral value={time.minutes} size="hero" animate="roll" />
+                <View style={themed($secondsBlock)}>
+                  <Numeral value={time.seconds} size="displayXl" animate="roll" />
+                  {time.meridiem && <Text preset="offset" text={time.meridiem} />}
+                </View>
               </View>
             </View>
+            <View style={$dateBlock} importantForAccessibility="no-hide-descendants">
+              <Text size="xxl" text={`${weekdayPart},`} style={$dateRight} />
+              <Text size="xxl" text={dateLine2} style={$dateRight} />
+            </View>
           </View>
-          <View style={$dateBlock} importantForAccessibility="no-hide-descendants">
-            <Text size="xxl" text={`${weekdayPart},`} style={$dateRight} />
-            <Text size="xxl" text={dateLine2} style={$dateRight} />
-          </View>
-        </View>
+        </EntranceView>
 
         <View style={themed($cityRow)}>
           <Text size="display" text={locationText} style={themed($cityText)} />
