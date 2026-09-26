@@ -56,16 +56,21 @@ interface NumeralProps {
   size?: 'numeralMd' | 'numeralLg' | 'display' | 'displayXl' | 'hero'
   color?: keyof Theme['colors']
   animate?: 'none' | 'roll'          // odometer
+  scale?: number                     // multiplies the size token; default 1
   accessibilityLabel?: string
 }
 ```
+
+`scale` exists for the Clock screen's fit-to-space (`04-screen-specs.md` S2 *Fitting the type*): the size token stays the design size, the screen passes a computed multiplier, and the font size rounds to half-points. Every other caller leaves it at 1.
+
+The cell width is calibrated once per size as **width per point of font size** (tracking scales with the font), so a `<Numeral>` at any scale has its exact width on its first frame. `numeralCellWidth()` exposes it and `useNumeralCalibrated()` reports when a size is ready, so a layout can predict the numerals' width without rendering them. ~~One cache entry per rendered font size~~ — corrected 2026-09-26: every new scale mounted with a guessed width and corrected it a frame later.
 
 Guarantees, in priority order:
 
 1. **A measured fixed width per character cell**, derived from the size token, so a `1` occupies the same box as an `8` and nothing reflows on a tick. This is the primary mechanism and it does not depend on the font.
 2. `fontVariant: ['tabular-nums']` as a belt-and-braces enhancement.
 3. **Colons are glyphs, not layout** — no separate views, so kerning stays correct.
-4. `animate="roll"` renders a 3-cell vertical strip (prev / current / next) in an overflow-hidden box and translates it on change. See `08-motion-spec.md` §3.
+4. `animate="roll"` renders a static 20-cell strip (0–9, 0–9) in an overflow-hidden box and moves only its `translateY`, on the UI thread. ~~A 3-cell strip (prev / current / next)~~ — corrected 2026-09-26: rotating the cells' text after each roll jittered. See `08-motion-spec.md` §3.
 
 > If you find yourself writing `<Text>{time}</Text>`, that is a bug. Use `<Numeral>`.
 
@@ -173,9 +178,9 @@ Same data, 320 × 180 layout from `04-screen-specs.md`. Shares the row's view-mo
 Sunrise, sunset, day length, polar cases. Pure function of `(lat, lon, date, tz)`.
 
 ### `<MeridianMap>` ⭐ highest risk
-Composes `<WorldMap>` (static SVG), `<Terminator>` (per-minute path), `<MeridianLine>` (Reanimated shared value), `<UtcRuler>` and `<FloatingCityCard>`.
+Composes `<WorldMap>` (one SVG: land, night hatching clipped to land, borders, active country — the night layer recomputed per minute), the pointer (line + marker) and `<FloatingCityCard>`. `<UtcRuler>` sits below it on the screen.
 
-Contract: **the meridian's position is one shared value**; the ruler, the line and the card are all derived from it on the UI thread. JS is notified at most every 60 ms. Full gesture and performance spec in `08-motion-spec.md` §5.
+Contract: **the pointer's position is shared values** (`pointerX`, `pointerY`, `viewportX`) — the line, the marker, the card's position and the map's pan all derive from them on the UI thread. JS is told the city under the finger at most every 60 ms, and resolves the committed city on release. Props: `city`, `onSelectCity`, `onPreviewCity`. Full gesture and performance spec in `08-motion-spec.md` §5. ~~`<Terminator>`, `<MeridianLine>`, one offset shared value~~ — replaced 2026-09-25 by the point-anywhere design.
 
 ### `<SearchSheet>` · `<DifferenceStrip>` · `<OverlapBand>` · `<TabBar>`
 Specified in `04-screen-specs.md` S4, S5 and the cross-screen rules.
@@ -194,7 +199,7 @@ The line, decided once (`ADR-0003`) and enforced in review:
 | `TextInput` — keyboard, autofill, dictation, IME | `HeroClock`, `Numeral` |
 | `Picker` — theme, format selectors in Settings | `SegmentedPill` (brand-critical) |
 | `Switch` — Settings toggles | `TabBar` (brand-critical shape language) |
-| `List` / `FieldGroup` — Settings groups | `MeridianMap` |
+| `Picker` / `Switch` — Settings controls (~~`FieldGroup`~~, see `04` S7) | `MeridianMap` |
 | `ContextMenu` — long-press menus | `AvatarStrip` |
 
 Everything from `@expo/ui` is wrapped in a local adapter in `src/components/` so that a future swap touches one file. All `@expo/ui` content must sit inside a `<Host>` — wrap once at the adapter, never at the call site. The adapter is also the theme bridge: `@expo/ui` components do not read Ignite's theme, so read `useAppTheme()` there and pass explicit values down. See `14-ignite-integration.md` §6.

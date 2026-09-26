@@ -68,7 +68,7 @@ const { themed } = useAppTheme()
 
 ### 3. One clock
 
-`useClock()` owns the only interval in the app. Screens subscribe; components receive derived values as **props** and are `React.memo`'d.
+`useClock()` owns the only interval in the app. Screens subscribe; components receive derived values as **props** and are `React.memo`'d. Screens pass `active: useIsFocused()`, because tabs stay mounted and a hidden clock must not tick. A screen that shows no seconds passes `coalesceToMinute`. A memo is only as good as its props: hand rows stable callbacks that take the row's id, never `() => onX(item)` built per render. That pattern defeated every row memo on the list.
 
 ```tsx
 // ❌ N subscriptions, N re-renders per second
@@ -97,7 +97,7 @@ Ignite wires `i18next` and `Text` takes a `tx` prop. Use it from the first commi
 
 ## Stack
 
-**Ignite** (Expo Router conversion) · Expo SDK 57 · RN 0.86 · React 19.2 · `@expo/ui` · Ignite `ThemedStyle` theming · Reanimated 4 · Zustand 5 over Ignite's MMKV · `Intl` + `@date-fns/tz` · `suncalc` · `react-native-svg` · FlashList · Geist
+**Ignite** (Expo Router conversion) · Expo SDK 57 · RN 0.86 · React 19.2 · `@expo/ui` · Ignite `ThemedStyle` theming · Reanimated 4 · Zustand 5 over Ignite's MMKV · `Intl` + `@date-fns/tz` · `suncalc` · `react-native-svg` · FlashList · Space Grotesk
 
 **Already in Ignite — do not re-add:** MMKV, i18next, date-fns, expo-localization, Reanimated, Gesture Handler, Safe Area, Edge-to-Edge, Keyboard Controller, Reactotron.
 
@@ -144,7 +144,7 @@ Full table and rationale: `docs/14-ignite-integration.md` §5.
 
 | Use `@expo/ui` | Build custom |
 |---|---|
-| BottomSheet, TextInput, Picker, Switch, FieldGroup, ContextMenu | Card, CityRow, CityCard, Numeral, HeroClock, SegmentedPill, TabBar, MeridianMap, AvatarStrip |
+| BottomSheet, TextInput, Picker, Switch, MenuView (row menu) | Card, CityRow, CityCard, Numeral, HeroClock, SegmentedPill, TabBar, MeridianMap, AvatarStrip |
 
 **If the user would be annoyed by it not matching their OS → `@expo/ui`. If they'd be annoyed by it not matching the brand → build it.**
 
@@ -189,12 +189,15 @@ Project skills in `.claude/skills/` load automatically when relevant.
 - **Never change Ignite's nine spacing values.** Add semantic layout tokens alongside.
 - **`typography.primary` needs `light` and `bold` keys** even as aliases — Ignite's presets reference them, and a missing key silently falls back to the system font.
 - `react-native-keyboard-controller` is native-only — guard its provider with `Platform.OS !== 'web'`.
+- **No lazy `@expo/ui` list inside a sheet.** On Android `FieldGroup` / `List` are Compose `LazyColumn`s; inside the Compose bottom sheet one can be measured with unbounded height, which is a fatal crash (it crashed Settings, 2026-09-26). Lay groups out in React Native; use `@expo/ui` for leaf controls, each in a small `Host`.
+- **React Native content inside an `@expo/ui` sheet goes through `RNHostView`** (`Sheet` does it). The Android sheet is a Compose dialog in its own window with no React root; without `RNHostView` any `ScrollView`/`FlashList` in it crashes on the first drag (`AssertionError` in `RootViewUtil.getRootView`).
+- **`pointerEvents` is a style, not a prop** (the prop is deprecated). On web `"box-none"` only works through `StyleSheet.create` (`$styles.passThrough`) — an inline object, or any Reanimated `Animated.View` (it flattens styles inline), silently becomes `auto` and swallows clicks beneath it.
 - The SDK 55 → 57 upgrade is the riskiest step. Do it on the untouched baseline, before any product code. Pin `expo@>=57.0.17`.
 
 **Product-specific**
-- **`Intl` on low-end Android** may ignore `timeZone` *silently*. The boot probe in `domain/time/capability.ts` is not optional (`adr/0004`).
+- **`Intl` on low-end Android** may ignore `timeZone` *silently*. The boot probe in `domain/time/capability.ts` is not optional (`adr/0004`). On `degraded`, `zone.ts` reads offsets from the bundled `tz.offsets.json` instead. So **every display value must be arithmetic from `getOffsetMinutes`**: never add a zone-aware `Intl` formatter to `zone.ts`, because the fallback can't follow it. `@date-fns/tz` is not a fallback (it calls `Intl` too). Re-run `npx tsx scripts/build-tzdata.ts` before 2030 or when tz rules change.
 - **Android `includeFontPadding: false`** on every display preset, or 144 pt numerals sit ~8 % low.
-- **`runOnJS` during the meridian drag must be throttled to 60 ms.** Per-frame JS destroys the 60 fps budget.
+- **JS calls from a gesture (`scheduleOnRN`) must be throttled to 60 ms.** Per-frame JS destroys the 60 fps budget. `runOnJS` is deprecated in Reanimated 4 — use `scheduleOnRN` from `react-native-worklets`.
 - **Web hydration:** the static clock is stale by definition. `suppressHydrationWarning` + `useLayoutEffect`, never `useEffect`.
 - **Device clock jumps > 5 s** → cut, never animate a roll through 3 000 values.
 - **45-minute zones are real** — Kathmandu `+5:45`, Chatham `+12:45`, Eucla `+8:45`.

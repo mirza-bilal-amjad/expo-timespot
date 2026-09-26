@@ -28,11 +28,9 @@ const FLICK_PROJECTION_SECONDS = 0.15
 
 /**
  * Nearest real UTC offset to `offsetMinutes`, optionally projected forward
- * by a release velocity (in the same offset-minutes-per-second unit —
- * callers convert their own px/s via `pixelVelocityToOffsetVelocity`) so a
- * fast flick lands past where the finger let go rather than snapping back
- * to it. Pure and a worklet: runs inside `Gesture.Pan().onEnd()` on the UI
- * thread.
+ * by a release velocity in offset-minutes per second, so a fast flick lands
+ * past where it let go rather than snapping back to it. A worklet, so it
+ * can run on the UI thread.
  */
 export function snapToNearestOffset(offsetMinutes: number, velocityMinutesPerSecond = 0): number {
   "worklet"

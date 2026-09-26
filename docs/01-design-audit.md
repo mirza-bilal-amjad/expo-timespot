@@ -123,7 +123,7 @@ Measured cap/ascender heights, converted with each board's scale, then divided b
 | Offset label `UTC+9` | mobile | 15 | ~15.5 pt | `label` **15** |
 | `Current` | web | — | ~16 px | `label` **16** |
 
-**Typeface identification.** Single-storey `g`, flat-sided `0`, perfectly circular colon dots, closed `4`, near-monolinear strokes, tight apertures. This is a contemporary neo-grotesk in the *PP Neue Montreal / Suisse Int'l* family. Recommended free substitutes, in order: **Geist** (OFL, excellent tabular figures), **General Sans** (Fontshare), **Space Grotesk** (OFL, quirkier). See `02-design-system.md` §2 for the final call.
+**Typeface identification.** Single-storey `g`, flat-sided `0`, perfectly circular colon dots, closed `4`, near-monolinear strokes, tight apertures. ~~This is a contemporary neo-grotesk in the *PP Neue Montreal / Suisse Int'l* family. Recommended free substitutes, in order: **Geist**, **General Sans**, **Space Grotesk**.~~ — **corrected 2026-09-25**: the board's face *is* **Space Grotesk** (OFL). Rendered side by side against crops of the board, it is the only candidate that matches the straight-tailed `y` in "Sydney"/"Tokyo", the flat-topped `3` in "03:40", the flagged `1` in "01:40" and the stadium-shaped `0`. Geist, which Phase 0 shipped on the strength of the misidentification above, has a curved `y`, a round-topped `3` and an oval `0` — visibly a different typeface at every size. See `02-design-system.md` §2.
 
 **Numeral behaviour.** Every clock in both boards is horizontally stable — digits do not jitter as they change. The design *requires* **tabular (monospaced) figures**. This is non-negotiable and is the #1 thing that separates a professional clock UI from an amateur one.
 

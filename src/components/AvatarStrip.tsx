@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { memo, useEffect, useRef } from "react"
 import { ScrollView, TextStyle, View, ViewStyle } from "react-native"
 
 import { useAppTheme } from "@/theme/context"
@@ -28,7 +28,7 @@ export interface AvatarStripProps {
 const DEFAULT_MAX = 6
 const DEFAULT_AVATAR_SIZE = 44
 
-export function AvatarStrip(props: AvatarStripProps) {
+export const AvatarStrip = memo(function AvatarStrip(props: AvatarStripProps) {
   const {
     items,
     focusedId,
@@ -85,7 +85,7 @@ export function AvatarStrip(props: AvatarStripProps) {
       )}
     </ScrollView>
   )
-}
+})
 
 function $avatarDimensions(size: number) {
   return { width: size, height: size, borderRadius: size * 0.32 }

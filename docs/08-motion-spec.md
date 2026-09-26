@@ -63,20 +63,25 @@ The signature animation. Visible in the mobile board as the ghosted `14` above a
         height = 1 cell = fontSize × lineHeight
 ```
 
-A 3-cell vertical strip inside an `overflow: hidden` box exactly one cell tall. On each tick the strip translates **up** by one cell height, then the cell contents are rotated and `translateY` resets to 0 — so the strip never grows and the transform stays within one cell.
+A static strip of twenty cells (0–9, 0–9) inside an `overflow: hidden` box exactly one cell tall. **The cells' text never changes; only the strip's `translateY` moves, and only on the UI thread.** JS publishes the new digit to a shared value; a `useAnimatedReaction` plans the move (`src/utils/odometer.ts`) and animates the offset. A digit rests in the middle band of the strip, so 9 → 0 rolls *forward* into the second "0"; when a roll leaves the band it is shifted back by exactly ten cells on landing — an identical glyph, so the shift is invisible.
 
 ```ts
-// Reanimated 4
-const y = useSharedValue(0)
-useEffect(() => {
-  y.value = withSpring(-CELL, SPRING_NUMERAL, (finished) => {
-    if (finished) { runOnJS(rotate)(); y.value = 0 }
+// Reanimated 4 — src/components/Numeral.tsx
+useEffect(() => { shown.value = digit }, [digit])            // JS: publish only
+useAnimatedReaction(() => shown.value, (next, prev) => {     // UI thread from here on
+  const plan = planRoll(index.value, prev, next)             // roll, or cut on a clock jump
+  index.value = plan.target
+  y.value = withTiming(-plan.target * CELL, { duration: duration.slow, easing: ease.standard }, (done) => {
+    if (done) { const s = settleIndex(plan.target); if (s !== plan.target) { index.value = s; y.value = -s * CELL } }
   })
-}, [value])
+})
 ```
+
+> ~~A 3-cell strip whose contents rotate after each roll: `withSpring(-CELL, …, (finished) => { runOnJS(rotate)(); y.value = 0 })`~~ — **corrected 2026-09-25.** That design jittered on every tick. The text rotation needs a JS round-trip, and React's text commit and the UI-thread offset reset land in different frames: a one-frame flash of the wrong digit. The `spring.numeral` config is underdamped (ratio ≈ 0.78), so it overshot and bounced. And a tick arriving mid-roll cancelled the previous completion, so a digit skipped. `runOnJS` is also deprecated in Reanimated 4. Verified after the fix, frame by frame in a browser: the strip only ever moves forward, its text never changes, and the only discontinuity is the exact ten-cell re-seat.
 
 ### Rules
 
+- **No overshoot.** An eased `withTiming` (`duration.slow`, `ease.standard`), never an underdamped spring — a bounce past the target reads as a stutter on something that ticks every second.
 - **Blur** on the neighbour cells is what sells the effect. Native: `expo-blur` is too heavy per-digit — use opacity + a 0.94 scale instead, which reads as blur at this size and costs nothing. Web: a real `filter: blur(3px)`.
 - **Only the changing digit rolls.** When `15 → 16` only the units digit moves; when `19 → 20` both do. Diff per character position, never on the whole string.
 - **Direction is always up.** Counting down (if a future timer feature lands) reverses it.
@@ -104,25 +109,24 @@ Text colour is interpolated via the `Card`'s theme flip (see `03-component-libra
 
 ## 5. Meridian drag ⭐ — the performance-critical path
 
+Point anywhere (corrected 2026-09-25 — the meridian used to be dragged by its own strip and snapped by offset):
+
 ```
-Gesture.Pan()
-  .onBegin(()  => { pressed.value = true; runOnJS(haptic)('light') })
-  .onUpdate(e  => { x.value = clamp(startX.value + e.translationX, 0, mapWidth) })
-  .onEnd(e     => {
-      const target = snapToNearestZone(x.value, e.velocityX)
-      x.value = withSpring(target, SPRING_PRESS)
-      runOnJS(commitZone)(zoneAt(target))
-  })
+Gesture.Pan().minDistance(0)
+  .onBegin(e    => { pointer.value = e.xy − viewportX })      // jump under the finger
+  .onUpdate(e   => { pointer.value = e.xy − viewportX })      // follow, both axes
+  .onFinalize(() => scheduleOnRN(commit, pointer.value))     // JS: pickCityAt → spring onto it
+useFrameCallback: finger in the outer 40 pt → viewportX scrolls, pointer tracks the finger
 ```
 
 ### Non-negotiables
 
-1. `x` is a **shared value**. The meridian line, the ruler highlight and the floating card's position are all `useAnimatedStyle` derivations of it. No JS state during the drag.
-2. The zone **label** must be JS (it comes from the dataset), so it is pushed with `runOnJS` throttled to **60 ms** — about 16 updates/second, imperceptible as a delay, 4× cheaper than per-frame.
-3. Snap targets are every real UTC offset, including `+5:45`, `+8:45`, `+12:45`, `+14`. Velocity-aware: a fast flick can travel several zones.
-4. Haptic on snap (`selectionAsync`), not during the drag.
-5. The terminator overlay does **not** move with the meridian — it represents the real sun and stays put. Only the meridian and its card move.
-6. Web: the same gesture handler, plus `←`/`→` key steps of one hour (`Shift` → 15 min), each animated over `duration.base`.
+1. The pointer and the map's pan are **shared values**. The line, the marker and the floating card's position are all `useAnimatedStyle` derivations. No JS state per frame.
+2. The city **under the finger** must be JS (it comes from the dataset), so it is pushed with `scheduleOnRN` (from `react-native-worklets`; Reanimated 4 deprecates `runOnJS`) throttled to **60 ms** — about 16 updates/second, imperceptible as a delay, 4× cheaper than per-frame.
+3. Release lands on a **real city** (`pickCityAt`), so every real zone is reachable — including `+5:45` Kathmandu and `+12:45` Chatham — by pointing at it; the ruler reaches `+14`.
+4. Haptic on the committed selection (`selectionAsync`), not during the drag.
+5. The night hatching does **not** move with the pointer — it represents the real sun. It pans with the map, since it is part of it.
+6. Web: the same gesture handler with the mouse, plus `←`/`→` stepping to the adjacent real zone's city.
 
 ### Budget
 

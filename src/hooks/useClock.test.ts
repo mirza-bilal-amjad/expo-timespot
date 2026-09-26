@@ -128,4 +128,28 @@ describe("useClock", () => {
 
     expect(result.current).toBeGreaterThan(start)
   })
+
+  it("stops completely while inactive and catches up the moment it's active again", () => {
+    const { result, rerender } = renderHook(
+      ({ active }: { active: boolean }) => useClock({ active }),
+      {
+        initialProps: { active: false },
+      },
+    )
+    const start = result.current
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    expect(result.current).toBe(start) // no ticks, no re-renders
+
+    rerender({ active: true })
+    expect(result.current).toBeGreaterThanOrEqual(start + 5000)
+  })
+
+  it("schedules no timer at all while inactive", () => {
+    const setTimeoutSpy = jest.spyOn(global, "setTimeout")
+    renderHook(() => useClock({ active: false }))
+    expect(setTimeoutSpy).not.toHaveBeenCalled()
+    setTimeoutSpy.mockRestore()
+  })
 })

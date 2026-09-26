@@ -1,9 +1,9 @@
 import { create } from "zustand"
-import { createJSONStorage, persist } from "zustand/middleware"
+import { persist } from "zustand/middleware"
 
 import type { Prefs } from "@/domain/types"
 
-import { storageAdapter } from "./storage"
+import { guardedStorage, isRecord, type Sanitized } from "./persistence"
 
 interface PrefsState {
   prefs: Prefs
@@ -26,8 +26,34 @@ export const usePrefsStore = create<PrefsState>()(
     {
       name: "ts.prefs.v1",
       version: 1,
-      storage: createJSONStorage(() => storageAdapter),
+      storage: guardedStorage(1, sanitizePrefs),
       migrate: (persisted) => persisted as PrefsState,
     },
   ),
 )
+
+const ALLOWED: { [K in keyof Prefs]: readonly Prefs[K][] } = {
+  timeFormat: ["12h", "24h"],
+  theme: ["system", "light", "dark"],
+  showSecondsOnList: [true, false],
+  dayNightStyle: ["icon", "tint"],
+}
+
+/** Field by field: an unknown value falls back to its default (and counts as
+ * a repair); a field this build added since is simply defaulted. */
+export function sanitizePrefs(state: unknown): Sanitized<Pick<PrefsState, "prefs">> {
+  if (!isRecord(state) || !isRecord(state.prefs)) return null
+  const stored = state.prefs
+  let repaired = false
+  const prefs = { ...defaultPrefs }
+  for (const key of Object.keys(ALLOWED) as (keyof Prefs)[]) {
+    if (!(key in stored)) continue
+    const value = stored[key]
+    if ((ALLOWED[key] as readonly unknown[]).includes(value)) {
+      ;(prefs as Record<keyof Prefs, unknown>)[key] = value
+    } else {
+      repaired = true
+    }
+  }
+  return { state: { prefs }, repaired }
+}

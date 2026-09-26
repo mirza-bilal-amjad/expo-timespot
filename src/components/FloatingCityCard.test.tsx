@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react-native"
 import { useSharedValue } from "react-native-reanimated"
 
-import { getNearestRepresentativeCity } from "@/domain/cities/search"
+import { getCityByZone } from "@/domain/cities/search"
 import { getZonedTime } from "@/domain/time/zone"
 import type { Prefs } from "@/domain/types"
 import { ThemeProvider } from "@/theme/context"
@@ -16,69 +16,47 @@ const PREFS: Prefs = {
 }
 
 const NOON_UTC = Date.UTC(2026, 5, 15, 12, 0, 0)
+const ALGIERS = getCityByZone("Africa/Algiers")!
 
 /**
- * Two things aren't meaningfully testable under jest, both for the same
- * reason MeridianLine.test.tsx and UtcRuler.test.tsx already document: the
- * reanimated mock stubs `useAnimatedStyle` down to a plain factory call and
- * `useAnimatedReaction` to a no-op (test/setup.ts). That rules out (1) the
- * horizontal-tracking half (offsetMinutes -> translateX), and (2) the
- * throttled offsetMinutes -> resolved-city bridge ever firing at all — this
- * component's initial `useState(offsetMinutes.value)` is therefore the only
- * offset it will ever resolve against in a test. Both are fine to leave to
- * `domain/map/meridian.test.ts` (the position math) and
- * `domain/cities/search.test.ts` (getNearestRepresentativeCity itself) —
- * this only pins down that the right content renders from a given starting
- * offset, and that the zero-size guard holds.
+ * The UI-thread positioning isn't meaningfully testable under jest (the
+ * reanimated mock reduces useAnimatedStyle to a plain factory call; see
+ * test/setup.ts). What's pinned down: the card renders the city it's given
+ * with that city's real offset, and the zero-size guard holds.
  */
-function Wrapper(
-  props: Omit<FloatingCityCardProps, "offsetMinutes"> & { initialOffsetMinutes: number },
-) {
-  const { initialOffsetMinutes, ...rest } = props
-  const offsetMinutes = useSharedValue(initialOffsetMinutes)
-  return <FloatingCityCard {...rest} offsetMinutes={offsetMinutes} />
+function Wrapper(props: Omit<FloatingCityCardProps, "anchorX" | "anchorY">) {
+  const anchorX = useSharedValue(props.width / 2)
+  const anchorY = useSharedValue(props.height / 3)
+  return <FloatingCityCard {...props} anchorX={anchorX} anchorY={anchorY} />
 }
 
 describe("FloatingCityCard", () => {
-  it("renders the nearest real city's name and offset for the starting offset", () => {
-    const offsetMinutes = 60 // UTC+1
-    const expectedCity = getNearestRepresentativeCity(offsetMinutes, NOON_UTC)
-    const expectedTime = getZonedTime(NOON_UTC, expectedCity.zone, PREFS)
-
+  it("renders the given city's name and its real offset", () => {
     render(
       <ThemeProvider>
-        <Wrapper
-          width={360}
-          height={200}
-          now={NOON_UTC}
-          prefs={PREFS}
-          initialOffsetMinutes={offsetMinutes}
-        />
+        <Wrapper width={360} height={400} city={ALGIERS} now={NOON_UTC} prefs={PREFS} />
       </ThemeProvider>,
     )
-    // The whole card is accessibilityElementsHidden pending task 4.8's real
-    // slider contract (see the component's own doc comment) — RNTL excludes
-    // hidden-subtree content from queries by default, so these need the
-    // opt-in, same as querying inside any other decorative-for-now subtree.
-    // The time itself isn't asserted here: <Numeral> renders one digit per
-    // Text node (CLAUDE.md rule 4), so there's no single "13:00" node to
-    // query for — same reason CityRow.test.tsx doesn't check it either.
+    // Decorative (accessibilityElementsHidden), so queries need the opt-in.
+    // <Numeral> renders one digit per Text node, so the time isn't asserted.
     const options = { includeHiddenElements: true }
-    expect(screen.getByText(expectedCity.name, options)).toBeTruthy()
-    expect(screen.getByText(expectedTime.offsetLabel, options)).toBeTruthy()
+    expect(screen.getByText(ALGIERS.name, options)).toBeTruthy()
+    expect(
+      screen.getByText(getZonedTime(NOON_UTC, ALGIERS.zone, PREFS).offsetLabel, options),
+    ).toBeTruthy()
   })
 
   it("renders nothing at zero width or height rather than a broken empty card", () => {
     const { toJSON: zeroWidth } = render(
       <ThemeProvider>
-        <Wrapper width={0} height={200} now={NOON_UTC} prefs={PREFS} initialOffsetMinutes={0} />
+        <Wrapper width={0} height={200} city={ALGIERS} now={NOON_UTC} prefs={PREFS} />
       </ThemeProvider>,
     )
     expect(zeroWidth()).toBeNull()
 
     const { toJSON: zeroHeight } = render(
       <ThemeProvider>
-        <Wrapper width={360} height={0} now={NOON_UTC} prefs={PREFS} initialOffsetMinutes={0} />
+        <Wrapper width={360} height={0} city={ALGIERS} now={NOON_UTC} prefs={PREFS} />
       </ThemeProvider>,
     )
     expect(zeroHeight()).toBeNull()

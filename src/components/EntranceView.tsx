@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated"
 
 import { useAppTheme } from "@/theme/context"
+import { $styles } from "@/theme/styles"
 
 /**
  * docs/08-motion-spec.md §7 "Entrance choreography" — the shared mechanism
@@ -68,16 +69,9 @@ export function EntranceView(props: EntranceViewProps) {
   // on the tab bar's own small pill, anywhere in the app. `box-none` makes
   // the wrapper itself untouchable while leaving its children (here, the tab
   // bar) hit-testable exactly as before.
-  if (!active)
-    return (
-      <View style={style} pointerEvents="box-none">
-        {children}
-      </View>
-    )
+  if (!active) return <View style={[style, $styles.passThrough]}>{children}</View>
 
   return (
-    <Animated.View style={[style, $animatedStyle]} pointerEvents="box-none">
-      {children}
-    </Animated.View>
+    <Animated.View style={[style, $animatedStyle, $styles.passThrough]}>{children}</Animated.View>
   )
 }

@@ -1,9 +1,19 @@
 import { render, screen } from "@testing-library/react-native"
+import { useSharedValue } from "react-native-reanimated"
 
 import type { SavedCity, ZonedTime } from "@/domain/types"
 import { ThemeProvider } from "@/theme/context"
 
-import { ReorderableCityRow } from "./ReorderableCityRow"
+import { ReorderableCityRow, ReorderableCityRowProps } from "./ReorderableCityRow"
+
+type HarnessProps = Omit<ReorderableCityRowProps, "order" | "draggingId">
+
+/** Supplies the list-level shared values ListScreen normally owns. */
+function Harness(props: HarnessProps) {
+  const order = useSharedValue(["a", props.city.cityId, "b"].slice(0, props.itemCount))
+  const draggingId = useSharedValue<string | null>(null)
+  return <ReorderableCityRow {...props} order={order} draggingId={draggingId} />
+}
 
 /**
  * Gesture behaviour itself (drag, swipe) isn't meaningfully testable under
@@ -34,17 +44,17 @@ describe("ReorderableCityRow", () => {
   it("renders the wrapped CityRow", () => {
     render(
       <ThemeProvider>
-        <ReorderableCityRow
+        <Harness
           city={savedCity}
           time={time}
           selected={false}
           index={0}
           itemCount={3}
-          onPress={jest.fn()}
+          onFocus={jest.fn()}
           onDelete={jest.fn()}
-          onMoveUp={jest.fn()}
-          onMoveDown={jest.fn()}
-          onDragMove={jest.fn()}
+          onMove={jest.fn()}
+          onRename={jest.fn()}
+          onDragStart={jest.fn()}
           onDragEnd={jest.fn()}
         />
       </ThemeProvider>,
@@ -52,23 +62,22 @@ describe("ReorderableCityRow", () => {
     expect(screen.getByText("Tokyo")).toBeTruthy()
   })
 
-  it("wires accessibility delete/moveUp/moveDown to the row's own actions", () => {
+  it("wires accessibility delete/moveUp/moveDown to the row's own actions, with its identity", () => {
     const onDelete = jest.fn()
-    const onMoveUp = jest.fn()
-    const onMoveDown = jest.fn()
+    const onMove = jest.fn()
     render(
       <ThemeProvider>
-        <ReorderableCityRow
+        <Harness
           city={savedCity}
           time={time}
           selected={false}
           index={1}
           itemCount={3}
-          onPress={jest.fn()}
+          onFocus={jest.fn()}
           onDelete={onDelete}
-          onMoveUp={onMoveUp}
-          onMoveDown={onMoveDown}
-          onDragMove={jest.fn()}
+          onMove={onMove}
+          onRename={jest.fn()}
+          onDragStart={jest.fn()}
           onDragEnd={jest.fn()}
         />
       </ThemeProvider>,
@@ -77,8 +86,63 @@ describe("ReorderableCityRow", () => {
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveUp" } })
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveDown" } })
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "delete" } })
-    expect(onMoveUp).toHaveBeenCalledTimes(1)
-    expect(onMoveDown).toHaveBeenCalledTimes(1)
+    expect(onMove.mock.calls).toEqual([
+      [savedCity.cityId, -1],
+      [savedCity.cityId, 1],
+    ])
     expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it("doesn't re-render on a tick that doesn't change what it shows", () => {
+    const onFocus = jest.fn()
+    const props = {
+      city: savedCity,
+      selected: false,
+      index: 0,
+      itemCount: 3,
+      onFocus,
+      onDelete: jest.fn(),
+      onMove: jest.fn(),
+      onRename: jest.fn(),
+      onDragStart: jest.fn(),
+      onDragEnd: jest.fn(),
+    }
+    const order = { value: [savedCity.cityId] } as unknown as ReorderableCityRowProps["order"]
+    const draggingId = { value: null } as unknown as ReorderableCityRowProps["draggingId"]
+    const same = { ...props, order, draggingId }
+    const compare = (
+      ReorderableCityRow as unknown as { compare: (a: object, b: object) => boolean }
+    ).compare
+    // Same HH:MM, new object, new seconds — skip.
+    expect(compare({ ...same, time }, { ...same, time: { ...time, seconds: "05" } })).toBe(true)
+    // The minute moves — render.
+    expect(compare({ ...same, time }, { ...same, time: { ...time, display: "01:41" } })).toBe(false)
+  })
+
+  it("mounts absolutely placed at its slot — slot × (rowHeight + rowGap)", () => {
+    const { toJSON } = render(
+      <ThemeProvider>
+        <Harness
+          city={savedCity}
+          time={time}
+          selected={false}
+          index={2}
+          itemCount={3}
+          onFocus={jest.fn()}
+          onDelete={jest.fn()}
+          onMove={jest.fn()}
+          onRename={jest.fn()}
+          onDragStart={jest.fn()}
+          onDragEnd={jest.fn()}
+        />
+      </ThemeProvider>,
+    )
+    const root = toJSON() as unknown as { props: { style: unknown } }
+    const style = Object.assign({}, ...[root.props.style].flat(Infinity)) as {
+      position: string
+      transform: { translateY?: number }[]
+    }
+    expect(style.position).toBe("absolute")
+    expect(style.transform.find((t) => "translateY" in t)?.translateY).toBe(2 * (92 + 12))
   })
 })

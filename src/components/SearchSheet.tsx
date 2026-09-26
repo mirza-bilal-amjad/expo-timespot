@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react"
-import { TextStyle, View, ViewStyle } from "react-native"
+import { Keyboard, TextStyle, View, ViewStyle } from "react-native"
 import { FlashList } from "@shopify/flash-list"
 
 import {
@@ -18,9 +18,9 @@ import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
 import { Icon } from "./Icon"
+import { InlineField } from "./InlineField"
 import { Numeral } from "./Numeral"
 import { Pressable } from "./Pressable"
-import { SearchField } from "./SearchField"
 import { Sheet } from "./Sheet"
 import { Text } from "./Text"
 
@@ -87,7 +87,10 @@ export function SearchSheet(props: SearchSheetProps) {
     return getRepresentativeCity(offsetMinutes, now)
   }, [results, query, now])
 
+  // The keyboard is dismissed first, so the hosted text field is blurred
+  // before the sheet closes around it.
   const selectCity = (city: City) => {
+    Keyboard.dismiss()
     if (!savedIds.has(city.id)) addCity(city.id)
     setFocusedCityId(city.id)
     onOpenChange(false)
@@ -125,8 +128,8 @@ export function SearchSheet(props: SearchSheetProps) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={translate("search:title")}>
-      <SearchField
+    <Sheet open={open} onOpenChange={onOpenChange} title={translate("search:title")} fill>
+      <InlineField
         value={query}
         onChangeText={setQuery}
         onClose={() => onOpenChange(false)}

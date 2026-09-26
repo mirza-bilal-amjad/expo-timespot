@@ -1,12 +1,39 @@
+import tzOffsets from "../../assets/data/tz.offsets.json"
 import type { Prefs, ZonedTime } from "../types"
+import type { TimeCapability } from "./capability"
 
 /**
  * docs/06-data-model.md §4, §1 "The one rule". Every function here is pure: `now`
  * is always a parameter, never `Date.now()`, so the whole module is deterministic
  * and testable without mocking the clock.
+ *
+ * docs/adr/0004 — two engines, one answer. The only thing that differs is
+ * where a zone's UTC offset comes from: `Intl` (the OS tz database — the
+ * primary, and the only one that picks up rule changes without a release)
+ * or, when the boot probe finds `Intl` ignoring `timeZone`, the bundled
+ * table from `scripts/build-tzdata.ts`. Every displayed value — hours,
+ * minutes, seconds, AM/PM, the date label, day/night, the day offset — is
+ * plain arithmetic from that offset, so the engines agree by construction.
+ * ~~Each value read off its own zone-aware `Intl` formatter~~ — corrected
+ * 2026-09-26: that made every display value depend on the one capability
+ * the degraded path lacks, and cost four `formatToParts` per row per tick.
  */
 
 const MINUS = "−" // U+2212, never a hyphen, in every offset label.
+const MINUTE_MS = 60_000
+
+export type TimeEngine = "intl" | "table"
+
+let engine: TimeEngine = "intl"
+
+/** Chosen once at boot from the capability probe. */
+export function configureTimeEngine(capability: TimeCapability): void {
+  engine = capability === "full" ? "intl" : "table"
+}
+
+export function getTimeEngine(): TimeEngine {
+  return engine
+}
 
 const offsetFormatters = new Map<string, Intl.DateTimeFormat>()
 
@@ -19,14 +46,49 @@ function getOffsetFormatter(zone: string): Intl.DateTimeFormat {
   return formatter
 }
 
-/** UTC offset in minutes, positive east of UTC — e.g. 345 for Asia/Kathmandu. */
-export function getOffsetMinutes(now: number, zone: string): number {
+/** The primary engine: the offset as the OS tz database has it. */
+export function intlOffsetMinutes(now: number, zone: string): number {
   const parts = getOffsetFormatter(zone).formatToParts(now)
   const gmt = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT"
   const match = /GMT([+-])(\d{2}):(\d{2})/.exec(gmt)
   if (!match) return 0 // bare 'GMT' means UTC+0
   const sign = match[1] === "-" ? -1 : 1
   return sign * (Number(match[2]) * 60 + Number(match[3]))
+}
+
+interface OffsetTable {
+  from: number
+  to: number
+  zones: Record<string, number[]>
+}
+
+const table = tzOffsets as OffsetTable
+
+/** True when the bundled table covers `now` exactly (outside it, the nearest
+ * known offset is used — still right for any zone without DST). */
+export function isInTableWindow(now: number): boolean {
+  const minute = now / MINUTE_MS
+  return minute >= table.from && minute < table.to
+}
+
+/**
+ * The degraded engine: the offset from the bundled table —
+ * `[offset0, t1, offset1, t2, offset2, …]`, `tN` in epoch minutes. A zone
+ * missing from the table (an alias newer than the build) falls back to
+ * `Intl`, the only other source there is.
+ */
+export function tableOffsetMinutes(now: number, zone: string): number {
+  const entry = table.zones[zone]
+  if (!entry) return intlOffsetMinutes(now, zone)
+  const minute = now / MINUTE_MS
+  let offset = entry[0]
+  for (let i = 1; i < entry.length && entry[i] <= minute; i += 2) offset = entry[i + 1]
+  return offset
+}
+
+/** UTC offset in minutes, positive east of UTC — e.g. 345 for Asia/Kathmandu. */
+export function getOffsetMinutes(now: number, zone: string): number {
+  return engine === "table" ? tableOffsetMinutes(now, zone) : intlOffsetMinutes(now, zone)
 }
 
 /** '+9', '+5:45', '+0', '−3:30' — never a hyphen for the minus sign. Shared by
@@ -54,6 +116,7 @@ export function getDeviceZone(): string {
 }
 
 export function isValidZone(zone: string): boolean {
+  if (zone in table.zones) return true
   try {
     // eslint-disable-next-line no-new -- constructing is the validity check
     new Intl.DateTimeFormat("en-US", { timeZone: zone })
@@ -63,116 +126,48 @@ export function isValidZone(zone: string): boolean {
   }
 }
 
-interface DateParts {
-  year: number
-  month: number // 1-12
-  day: number
-}
-
-const dateFormatters = new Map<string, Intl.DateTimeFormat>()
-
-function getDateFormatter(zone: string): Intl.DateTimeFormat {
-  let formatter = dateFormatters.get(zone)
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: zone,
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-    })
-    dateFormatters.set(zone, formatter)
-  }
-  return formatter
-}
-
-function getDateParts(now: number, zone: string): DateParts {
-  const parts = getDateFormatter(zone).formatToParts(now)
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0)
-  return { year: get("year"), month: get("month"), day: get("day") }
-}
-
-/** Whole calendar days between the target zone's date and the device's own, at `now`. */
-function getDayOffset(now: number, zone: string): -1 | 0 | 1 {
-  const target = getDateParts(now, zone)
-  const device = {
-    year: new Date(now).getFullYear(),
-    month: new Date(now).getMonth() + 1,
-    day: new Date(now).getDate(),
-  }
-  const targetUtc = Date.UTC(target.year, target.month - 1, target.day)
-  const deviceUtc = Date.UTC(device.year, device.month - 1, device.day)
-  const days = Math.round((targetUtc - deviceUtc) / 86_400_000)
-  return days < 0 ? -1 : days > 0 ? 1 : 0
-}
-
-const timeFormatters = new Map<string, Intl.DateTimeFormat>()
-
-function getTimeFormatter(zone: string, timeFormat: Prefs["timeFormat"]): Intl.DateTimeFormat {
-  const key = `${zone}|${timeFormat}`
-  let formatter = timeFormatters.get(key)
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: zone,
-      hourCycle: timeFormat === "24h" ? "h23" : "h12",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-    timeFormatters.set(key, formatter)
-  }
-  return formatter
-}
-
-const dateLabelFormatters = new Map<string, Intl.DateTimeFormat>()
-
-function getDateLabelFormatter(zone: string): Intl.DateTimeFormat {
-  let formatter = dateLabelFormatters.get(zone)
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: zone,
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    })
-    dateLabelFormatters.set(zone, formatter)
-  }
-  return formatter
-}
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 const DAY_START_HOUR = 6
 const DAY_END_HOUR = 18
 
+const pad2 = (n: number) => String(n).padStart(2, "0")
+
+/** Whole calendar days between the zone's wall date and the device's own, at `now`. */
+function getDayOffset(now: number, wall: Date): -1 | 0 | 1 {
+  const device = new Date(now)
+  const targetUtc = Date.UTC(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate())
+  const deviceUtc = Date.UTC(device.getFullYear(), device.getMonth(), device.getDate())
+  const days = Math.round((targetUtc - deviceUtc) / 86_400_000)
+  return days < 0 ? -1 : days > 0 ? 1 : 0
+}
+
 export function getZonedTime(now: number, zone: string, prefs: Prefs): ZonedTime {
   const offsetMinutes = getOffsetMinutes(now, zone)
-  const parts = getTimeFormatter(zone, prefs.timeFormat).formatToParts(now)
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ""
-
-  const hours = get("hour").padStart(2, "0")
-  const minutes = get("minute").padStart(2, "0")
-  const seconds = get("second").padStart(2, "0")
-  const dayPeriod = get("dayPeriod").toUpperCase()
-  const meridiem = prefs.timeFormat === "12h" ? (dayPeriod === "PM" ? "PM" : "AM") : undefined
-
-  const hour24Parts = getTimeFormatter(zone, "24h").formatToParts(now)
-  const hour24 = Number(hour24Parts.find((p) => p.type === "hour")?.value ?? 0)
-  const isDay = hour24 >= DAY_START_HOUR && hour24 < DAY_END_HOUR
-
-  const { year, month, day } = getDateParts(now, zone)
-  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  // The zone's wall clock, read through the UTC getters — no zone-aware
+  // formatting anywhere below this line.
+  const wall = new Date(now + offsetMinutes * MINUTE_MS)
+  const hour24 = wall.getUTCHours()
+  const twelveHour = prefs.timeFormat === "12h"
+  const hours = pad2(twelveHour ? hour24 % 12 || 12 : hour24)
+  const minutes = pad2(wall.getUTCMinutes())
+  const seconds = pad2(wall.getUTCSeconds())
+  const weekday = wall.getUTCDay()
 
   return {
     iso: new Date(now).toISOString(),
     hours,
     minutes,
     seconds,
-    meridiem,
+    meridiem: twelveHour ? (hour24 >= 12 ? "PM" : "AM") : undefined,
     display: `${hours}:${minutes}`,
     offsetMinutes,
     offsetLabel: formatOffset(offsetMinutes),
-    dateLabel: getDateLabelFormatter(zone).format(now),
+    dateLabel: `${WEEKDAYS[weekday]}, ${MONTHS[wall.getUTCMonth()]} ${wall.getUTCDate()}`,
     weekday,
-    isDay,
-    dayOffset: getDayOffset(now, zone),
+    isDay: hour24 >= DAY_START_HOUR && hour24 < DAY_END_HOUR,
+    dayOffset: getDayOffset(now, wall),
   }
 }
 

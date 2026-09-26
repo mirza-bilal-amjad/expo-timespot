@@ -2,6 +2,7 @@ import { Platform, View, ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { useAppTheme } from "@/theme/context"
+import { boxShadow } from "@/theme/shadow"
 import type { ThemedStyle } from "@/theme/types"
 
 import { Icon, IconTypes } from "./Icon"
@@ -89,7 +90,6 @@ export function TabBar(props: TabBarProps) {
 const FLOAT_SHADOW_OPACITY = 0.12
 const FLOAT_SHADOW_RADIUS = 24
 const FLOAT_SHADOW_OFFSET_Y = 8
-const FLOAT_ANDROID_ELEVATION = 6
 
 const $bar: ThemedStyle<ViewStyle> = (theme) => ({
   position: "absolute",
@@ -99,11 +99,12 @@ const $bar: ThemedStyle<ViewStyle> = (theme) => ({
   backgroundColor: theme.colors.controlBackground,
   borderRadius: theme.radius.pill,
   padding: theme.spacing.xxs,
-  shadowColor: theme.colors.text,
-  shadowOpacity: FLOAT_SHADOW_OPACITY,
-  shadowRadius: FLOAT_SHADOW_RADIUS,
-  shadowOffset: { width: 0, height: FLOAT_SHADOW_OFFSET_Y },
-  elevation: FLOAT_ANDROID_ELEVATION,
+  boxShadow: boxShadow(
+    theme.colors.text,
+    FLOAT_SHADOW_OPACITY,
+    FLOAT_SHADOW_OFFSET_Y,
+    FLOAT_SHADOW_RADIUS,
+  ),
   ...(Platform.OS === "web" ? { position: "fixed" as ViewStyle["position"] } : null),
 })
 

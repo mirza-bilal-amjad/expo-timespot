@@ -59,7 +59,7 @@ neutral.600  #7A7A7A      orange.700   #A93B18
 | `state.meridian` | `#D9433B` | map meridian rule |
 | `map.land` | `#828282` | landmass fill |
 | `map.landActive` | `#000000` | country of the focused city |
-| `map.night` | `rgba(0,0,0,0.10)` | terminator hatch overlay |
+| `map.night` | `rgba(0,0,0,0.10)` | night wash on the low-end raster map only — the vector map hatches night with `bg.canvas` hairlines clipped to land |
 
 ### 1.3 Semantic — dark theme (designed from first principles; absent from the boards)
 
@@ -110,12 +110,10 @@ Regenerate with `pnpm tokens:contrast` — the check runs in CI and fails the bu
 
 | Role | Family | Licence | Why |
 |---|---|---|---|
-| **Primary** | **Geist** | OFL | Closest free match to the board's neo-grotesk. Crucially ships **tabular figures** and a variable weight axis. |
-| Fallback stack | `Geist, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif` | — | Web |
-| Alternate | General Sans (Fontshare) | Free | If Geist's `1` reads too plain at hero size |
-| Paid match | PP Neue Montreal | Commercial | The board's actual face, if budget allows — swap is a one-token change |
+| **Primary** | **Space Grotesk** | OFL | The board's actual face (audit §6, corrected 2026-09-25). Ships **tabular figures** (`tnum`). |
+| Fallback stack | `'Space Grotesk', -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif` | — | Web |
 
-Ship **Geist Variable** (`wght 100–900`) as one woff2 for web and one `.ttf` per used weight for native via `expo-font`. Subset to Latin + punctuation + digits → ~28 KB woff2.
+Ship four weights via `@expo-google-fonts/space-grotesk` + `expo-font`: **300** (light), **400** (regular — titles, city names and every numeral, matching the board), **500** (medium — buttons, monograms), **600** (semibold; also the `bold` alias). ~~Geist Variable~~ — **corrected 2026-09-25**, see audit §6.
 
 > **Non-negotiable:** every clock, offset, and countdown uses `fontVariantNumeric: ['tabular-nums']` (native) / `font-variant-numeric: tabular-nums` (web). Proportional figures make the clock twitch on every tick. See `03-component-library.md` → `<Numeral>`.
 

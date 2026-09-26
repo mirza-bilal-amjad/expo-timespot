@@ -108,7 +108,36 @@ The home screen. Reference: mobile board, phone 1.
 | long-press | enter reorder mode (haptic `impactMedium`) |
 | drag | reorder, persisted on release |
 | swipe left | delete with 5 s undo |
+| tap `⋯` | open the row menu (below) |
 | pull down | no refresh (nothing to refresh) — disabled deliberately |
+
+### Row menu
+
+Added 2026-09-26. A `⋯` glyph left of the day/night icon, `ink.secondary` (`textOnInverseDim` on the selected row), with a 44 pt target. Tapping it opens the platform's own menu — SwiftUI `Menu` on iOS, Material `DropdownMenu` on Android (`@expo/ui/community/menu`, wrapped by `RowMenu`), a themed popover on web:
+
+- **Rename** — a sheet with the name field; saving an empty name or the dataset's own clears the label. "Use “{original}”" appears once a label is set.
+- **Move up / Move down** — disabled at the list's ends.
+- **Remove** — destructive; the same path as swipe, with the 5 s undo toast.
+
+Long-press stays drag-to-reorder. The `⋯` and the day/night icon are laid **over** the row, as a sibling of its pressable — never inside it (a button inside a button is invalid on web). Screen readers reach all four operations through the row's own accessibility actions, since the row is one accessible node.
+
+### System notices
+
+Things the app recovered from on its own, told once, below the title, as a hairline card with the message and an **OK** pill (`<SystemNotice>`, task 5.7). The oldest pending notice shows first; dismissing reveals the next.
+
+| Notice | When | Recovery already done |
+|---|---|---|
+| `citiesReset` / `prefsReset` / `storageReset` | a saved store was unreadable | defaults restored, raw copy kept under `<key>.corrupt` |
+| `storageRepaired` | a saved store had bad entries | bad entries dropped, the rest kept |
+| `timeEngineDegraded` | the boot probe found `Intl` ignoring `timeZone` | running on the bundled offset tables (ADR-0004); this dismissal is remembered |
+
+The card is an `alert`/polite live region, so a screen reader announces it once. It renders nothing when there's no notice.
+
+### Error screen
+
+Anything thrown in the tab layout or a tab screen lands on `ErrorScreen`, which the tabs layout exports as Expo Router's `ErrorBoundary`. It shows a title and one message: a specific one when the bundled city data is unusable (`DatasetError`), a general one otherwise. Two actions: **Try again** (the router's `retry`), and **Reset saved data**, which clears storage and the in-memory stores and then retries. That covers a failure that saved state keeps re-triggering.
+
+The dataset is a static JSON import, so it can't fail to load independently of the bundle. What can go wrong is its content. Malformed rows are dropped at load, since a throw while building the search index would happen before any boundary exists. Zero usable rows raises `DatasetError` at render time.
 
 ### Empty state (zero cities)
 
@@ -122,7 +151,13 @@ Centred block, replaces the list:
 ### Overflow states
 
 - **1 city:** list renders normally; the avatar strip hides (a strip of one is noise).
-- **40 cities:** `FlashList`. ~~`estimatedItemSize={104}`~~ — **corrected 2026-09-24**: `@shopify/flash-list@2.0.2` (what's actually installed) dropped manual size estimation entirely; v2's recycler measures automatically and the prop no longer exists on `FlashListProps`. Nothing to pass. The strip caps at 6 + overflow tile.
+- **40 cities:** ~~`FlashList`~~ — **corrected 2026-09-26**: rows are absolutely placed at `slot × (rowHeight + rowGap)` inside a gesture-handler `ScrollView`, all mounted (no virtualisation — fine at realistic list sizes; the 40-city state is tested). Each row positions itself from a shared *visual order* on the UI thread, which is what makes reordering smooth — see "Reorder" below. The strip caps at 6 + overflow tile.
+
+### Reorder
+
+Long-press 500 ms lifts the row (`scale 1.03`, `elev.overlay`, both fading in over `duration.fast` and out over 260 ms, drawn above every other row). While dragging, the row stays glued to the finger; each time it crosses a slot, only the shared visual order changes, and the neighbours glide to their new slots over 260 ms `ease.standard`. On release the row settles into its slot from exactly where the finger left it, and the order is committed to the store — which moves nothing on screen, because positions never came from render order. Deletions, undos and the menu's Move up / Move down glide the same way.
+
+~~Reorder the data mid-drag and compensate the dragged row's offset~~ — replaced 2026-09-26: the compensation landed on the UI thread frames before the list re-laid out, so the row jumped a slot at every crossing, neighbours snapped, and the lifted row passed under the rows below it. Verified after the fix, per animation frame in a browser: the dragged row never moves more than the pointer does, and each neighbour glides over ~16 frames.
 - **Long name:** `"Ho Chi Minh City"` at `title` 20 in a 334-pt row with a 48-pt time — measured to fit at 16 chars; 17+ truncates. Verified in visual tests.
 
 ### Web adaptation
@@ -167,6 +202,18 @@ Reference: mobile board, phone 2. The showpiece.
  └───────────────────────────────────────────┘
 ```
 
+### Fitting the type
+
+The type sizes in the diagram are the **design size** (scale 1 on a 393 × 852 phone), not fixed sizes. ~~The hero pinned to the top and the city block to the bottom (`justifyContent: space-between`, scrollable `Screen`)~~ — corrected 2026-09-26: on a tall Android phone that left a screen-high empty band between the seconds and the sun row, and a short phone scrolled. The board has no dead space; the type fills it. So the screen is `Screen preset="fixed"` and the composition (hero, sun row, city) is one centred column whose type scales to the space:
+
+- **Hero** scales by width: hours, minutes, seconds and the date all take one scale, growing until the hero (hours + date, or minutes + seconds) fills the content width, capped so the hero takes at most **62 %** of the body height. Bounds `0.6 – 1.6`.
+- **City** takes the largest scale (bounds `0.75 – 2`) at which its lines fit in the height left below the hero and the sun row, and no single word has to break.
+- If the city doesn't fit even at its minimum scale, the hero gives up height until it does — a 320 × 568 phone fits without scrolling.
+- **One shot, no loop.** A hidden reference copy of the composition's type is laid out once at scale 1 (hero height, the date's width, each word of the city name, one space). Type grows in proportion to its font size, and a line break depends only on the width available in scale-1 units, so every scale's layout is predicted in pure arithmetic (`src/utils/fitType.ts`, a greedy wrap and a binary search) and the visible composition renders once, at the answer. Digit cells come from `<Numeral>`'s per-point calibration, so they're exact at any scale. ~~Measure → next scale → re-render, up to 12 passes~~ — corrected 2026-09-26: each pass was a visible resize, each resize made `<Numeral>` guess and then correct its cell width a frame later, and that re-opened the loop — the clock jittered on Android.
+- The reference re-measures only when the content changes (city, day, time format) — never on a tick. The composition is hidden until its fit is ready: about 85 ms on first mount, one frame on a city switch; a **300 ms** timeout reveals it regardless.
+- The city wraps within 96 % of the width, with Android's `textBreakStrategy="simple"` (the greedy wrap the fit models). If a platform still needs more lines than predicted, `numberOfLines` + `adjustsFontSizeToFit` shrink it slightly rather than overflow.
+- Known limit: line wraps are discrete, so a name that just misses a break leaves up to one line of air. Desktop keeps the column left-aligned until the Phase 6 breakpoints land (see *Web adaptation*).
+
 ### The hero clock
 
 Three stacked numeral blocks:
@@ -178,7 +225,7 @@ Three stacked numeral blocks:
 | seconds | `display.xl` 72 | `15` | sits on the minutes' baseline, `space.4` to its right |
 
 - Baseline grid: hour block and minute block are stacked with `lineHeight 0.86` so the two blocks nearly touch. Measured from the board: the `08` cap-bottom to `40` cap-top gap is ≈ 8 pt.
-- `Thu,` / `20 Mar` is a two-line right-aligned block, top-aligned to the hour block's cap height, `display.md` 36.
+- `Thu,` / `20 Mar` is a two-line **left-aligned** block beside the hour block only (not the whole hours+minutes stack), `display.md` 36. ~~right-aligned~~ — corrected 2026-09-25: the board left-aligns both lines, and sharing a row with the whole stack pushed the date off-screen.
 - **Odometer:** the seconds block shows the previous and next values above and below, blurred and at `ink.tertiary`, sliding on each tick. Precise spec in `08-motion-spec.md` §3. In 12-h mode the `AM`/`PM` marker sits below the seconds at `label` 15, `ink.secondary`.
 
 ### City block
@@ -187,7 +234,7 @@ Three stacked numeral blocks:
 
 ### Sun block
 
-Right-aligned beside the city block, `label` 15:
+Right-aligned **above** the city block, `label` 15. ~~Beside the city block~~ — corrected 2026-09-25: React Native can't flow text around a box the way the board's first line does, and a side-by-side row squeezed the city to one word per line. The city now gets the full width:
 
 ```
 Sun ☀ : 10h 05m
@@ -244,34 +291,40 @@ Reference: mobile board, phone 3. The most novel screen and the highest implemen
 
 ### Map
 
-- **Source:** Natural Earth 1:110 m admin-0 countries → TopoJSON → simplified to ≈ 30 KB → SVG paths, rendered with `react-native-svg`. Equirectangular projection (plate carrée) — mandatory, because it makes longitude linear, which is what makes the meridian and the ruler agree.
-- Land `map.land`, no borders except at the country of the focused city, which fills `map.landActive`.
-- **Terminator:** the night hemisphere as a `map.night` overlay. Computed from the solar declination and the Greenwich hour angle for the current instant, as a path with a sinusoidal boundary. Recomputed once per minute, not per second.
-- Low-end devices (`expo-device` tier check or `> 16 ms` first paint): swap to a pre-rendered raster at 2×.
+> **Corrected 2026-09-25.** The first build followed the earlier text here (110 m data cut to 30 KB, equirectangular, no borders, a flat night wash, a meridian dragged by its own 44 pt strip) and read as low quality next to the board. What's below is what's built.
 
-### Meridian
+- **Source:** Natural Earth 1:50 m admin-0 countries → one TopoJSON holding both `countries` and `land` (merged with `mergeArcs`, so they share arcs and can never misalign) → ~210 KB → SVG paths via `react-native-svg`. Antarctica dropped.
+- **Projection:** Web Mercator clipped to 58°S–84°N — the board's own projection (big Greenland, tall Europe). Any cylindrical projection keeps longitude linear; ~~equirectangular — mandatory~~ was stronger than needed.
+- **Framing:** the world is zoomed so its height fills the map area (the board's framing, roughly 160° of longitude visible on a phone) and pans horizontally. Full-bleed, edge to edge; only the title keeps the gutter.
+- Land `map.land`; **country borders** as `bg.canvas` hairlines (0.75 pt), as on the board. The pointed-at city's country fills `map.landActive`.
+- **Night:** diagonal hatching (`bg.canvas` hairlines, 4 pt apart, 45°) over the night hemisphere, **clipped to land** so the sea stays clean — the board's treatment. Terminator computed from suncalc's subsolar point for the current instant; recomputed once per minute. Paths that cross ±180° (Russia, Fiji) are unwrapped and drawn twice, one world-width apart, so each half closes on its own side.
+- Low-end devices (`expo-device` tier check or `> 16 ms` first paint): swap the land layer to a pre-rendered raster (borders knocked out); night becomes a flat `map.night` wash there.
 
-- 1-pt vertical rule in `state.meridian`, full map height, with a 10 ⌀ ring marker at the focused city's latitude.
-- **Drag:** `Gesture.Pan()` from `react-native-gesture-handler`, driven on the **UI thread** with Reanimated. `translateX` is a shared value; the derived zone label is computed in a `useDerivedValue` and written back to JS with `runOnJS` **throttled to 60 ms** — never per frame.
-- Snapping: releases snap to the nearest whole UTC offset with `spring.press`, plus `Haptics.selectionAsync()`. Half- and quarter-hour zones are snap targets too.
-- Tapping a ruler tick animates the meridian to it over `duration.base`.
+### Meridian — point anywhere
+
+- 1-pt vertical rule in `state.meridian`, full map height, with small triangular caps top and bottom, and a ring-and-dot marker (14 ⌀ ring, 6 ⌀ dot) — the board's pointer.
+- **Touch or drag anywhere on the map.** The line and marker jump under the finger and follow it in both axes, on the **UI thread** (`Gesture.Pan().minDistance(0)`; shared values, no JS per frame). The card and the active-country fill preview the city under the finger, bridged with `scheduleOnRN` **throttled to 60 ms**.
+- **Release** resolves the nearest real city (`domain/map/pick.ts`: screen distance − 6 × log₁₀ population, so a tap near London means London) — the marker springs onto it with `spring.press`, the map pans to centre it, `Haptics.selectionAsync()` fires. The zone is the **city's real zone**: pointing at Madrid gives Madrid's, not London's as its longitude would imply.
+- **Drag into the outer 40 pt** of either side and the world scrolls under the finger (up to 700 pt/s), so every place is reachable in one gesture.
+- The selection opens on the focused city (else the device's zone) and is local to this screen — pointing doesn't change the app-wide focus.
 
 ### Ruler
 
 - Horizontal `ScrollView`, ticks every 1 h from UTC−12 to UTC+14 (**+14 is real** — Kiritimati).
 - Tick label `caption` 13 `ink.secondary`; active tick `ink.primary` weight 600 with a `radius.xs` `bg.card` chip behind it.
 - Hit area 44 pt tall via `hitSlop` even though the visual is 13 pt.
-- The ruler and the meridian are two views of one shared value — moving either moves the other, with no JS round-trip.
+- The active tick is centred under the screen's middle, as on the board. It follows the pointed-at city's offset (live during a drag).
+- Scrolling the ruler or tapping a tick selects that offset's best-known city (after 180 ms of scroll idle); the pointer then flies to it. ~~One shared value, no JS round-trip~~ — corrected 2026-09-25: the map now selects a place, not an offset, so the ruler is a view of the selection.
 
 ### Floating card
 
-Identical anatomy to the S1 row (offset / city / time / day-night) but `elev.float`, `bg.inverse`, positioned at the map's lower third, horizontally centred on the meridian and **clamped** to the gutter so it never leaves the screen.
+Identical anatomy to the S1 row (offset / city / time / day-night) but `elev.float`, `bg.inverse`, positioned at the map's lower third, horizontally centred on the meridian and **clamped** to the gutter so it never leaves the screen. When the marker is itself in the lower half, the card flips to the top so it never covers the city being pointed at.
 
 If the meridian's offset matches **no saved city**, the card shows the representative city for that zone from the dataset, with a `plus` affordance — "Add Algiers".
 
 ### Web adaptation
 
-Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Meridian drag works with the mouse and with **← / →** keys (1 h per press, `Shift` for 15 min). The ruler is always visible; the floating card docks to the right at `≥ 1200 px`.
+Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Pointing works with the mouse; **← / →** step to the adjacent real zone's city. The ruler is always visible; the floating card docks to the right at `≥ 1200 px`.
 
 ---
 
@@ -288,6 +341,8 @@ Native: `@expo/ui` `BottomSheet` at 92 % height. Web: centred modal, 560 × 640,
 | Empty query | "Popular cities" — top 12 by population, plus the device zone pinned first |
 | No results | "No city called '{q}'." + "Search by UTC offset instead" → filters the dataset by zone |
 | Already added | row is dimmed with a `check`; tapping focuses it and dismisses |
+
+Selecting a row dismisses the keyboard, adds/focuses the city and closes the sheet. ~~Commit the selection only after the sheet has closed~~ — withdrawn 2026-09-26: that was a wrong diagnosis of the Android crash. The real cause was the results list's scroll view finding no React root inside the Compose sheet's window; see `Sheet` and `14-ignite-integration.md` §6 rule 1.
 | a11y | `role="searchbox"`, `aria-controls` the listbox, `aria-activedescendant` follows arrow keys; ↑/↓/Enter/Escape all work on web |
 
 ---
@@ -313,13 +368,14 @@ Statically generated at build time for the top 1 000 cities. `/time/tokyo`, `/ti
 
 ## S7 · Settings (sheet)
 
-`@expo/ui` `FieldGroup` — this is exactly the case where native-feeling system controls beat custom ones.
+Native controls (`@expo/ui` `Picker`, `Switch`) in TimeSpot-drawn groups — hairline cards, `caption` section titles, dividers. ~~`@expo/ui` `FieldGroup`~~ — **corrected 2026-09-26**: on Android `FieldGroup` is a Compose `LazyColumn`, and inside the Compose bottom sheet it could be measured before it had a bounded height, which Compose treats as fatal — opening Settings crashed the app. The groups are now React Native layout; only the leaf controls are native, each in its own small `Host`.
 
-- Theme: System / Light / Dark (`Picker`)
-- Time format: 12 h / 24 h (`Switch`)
-- Show seconds on the list (`Switch`, default off — saves a per-second re-render across N rows)
-- Temperature-style day/night: by icon / by card tint (`Picker`)
-- About, licences (GeoNames CC-BY attribution), privacy, version + build number.
+Built 2026-09-25 — opened from the S2 app mark; `SettingsForm` is the @expo/ui adapter, `SettingsSheet` the feature component.
+
+- Theme: System / Light / Dark (`Picker`) — writes Ignite's own `ignite.themeScheme` override, the value the ThemeProvider actually reads. (`prefs.theme` was never wired to it and stays unused.)
+- Time format: "24-hour time" (`Switch`) — the same `prefs.timeFormat` the S2 pill writes; the two stay in sync.
+- About: version, GeoNames CC BY 4.0, Natural Earth (public domain), Space Grotesk (OFL).
+- **Not yet shipped** — each needs its feature first, and a switch that does nothing is worse than none: show seconds on the list (`Switch`), temperature-style day/night by icon / by card tint (`Picker`), privacy link.
 
 ---
 

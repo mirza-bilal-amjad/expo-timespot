@@ -111,7 +111,7 @@ The last row is a release gate, not a metric. A DST bug ships as a hotfix within
 | `@expo/ui` universal components fight the custom brand | Medium — rework | Boundary is drawn up front: `@expo/ui` for *inputs and system affordances*, custom primitives for branded surfaces (`ADR-0003`) |
 | Hero type at `clamp(96px, 22vw, 320px)` causing layout shift on web | Medium — CLS | `font-display: block` on the clock face + reserved aspect box; measured in Lighthouse CI |
 | City dataset licensing (GeoNames CC-BY) | Low — legal | attribution in About; dataset build script records provenance |
-| SVG world map cost on low-end Android | Medium — jank | topology simplified to ~30 KB; rasterised fallback under a device-tier check |
+| SVG world map cost on low-end Android | Medium — jank | 50 m topology (~210 KB), decoded once per process; rasterised fallback under a device-tier check (~~~30 KB~~, corrected 2026-09-25) |
 | Solo-dev scope creep | High — schedule | v1 feature list above is frozen; `10-implementation-plan.md` is the contract |
 
 ## 9. Release plan

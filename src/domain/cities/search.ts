@@ -18,7 +18,49 @@ import type { City } from "../types"
  * file to keep in sync with cities.min.json.
  */
 
-const typed = cities as City[]
+/** A row the rest of the app can rely on — checked once at load, so one
+ * malformed row can't throw while the index below is built (a module-load
+ * throw happens before any error boundary exists to catch it). */
+function isCity(row: unknown): row is City {
+  if (typeof row !== "object" || row === null) return false
+  const c = row as Record<string, unknown>
+  return (
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    typeof c.asciiName === "string" &&
+    typeof c.country === "string" &&
+    typeof c.zone === "string" &&
+    typeof c.lat === "number" &&
+    typeof c.lon === "number" &&
+    Array.isArray(c.altNames)
+  )
+}
+
+const rows: unknown[] = Array.isArray(cities) ? (cities as unknown[]) : []
+const typed: City[] = rows.filter(isCity)
+
+/** Every valid dataset row, population-sorted — the one typed view of
+ * cities.min.json the rest of the domain should read. */
+export function getAllCities(): readonly City[] {
+  return typed
+}
+
+/** docs/10-implementation-plan.md task 5.7 "dataset load failure". */
+export class DatasetError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "DatasetError"
+  }
+}
+
+/** Throws a DatasetError when the bundled city data is unusable — called at
+ * render time, where the route's error boundary turns it into a real
+ * message and a retry. A few malformed rows only shrink the dataset. */
+export function assertDatasetLoaded(): void {
+  if (typed.length === 0) {
+    throw new DatasetError(`City dataset unusable: 0 of ${rows.length} rows are valid`)
+  }
+}
 
 function normalize(s: string): string {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()

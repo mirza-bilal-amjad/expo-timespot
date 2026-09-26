@@ -73,7 +73,7 @@ Then:
    ```
 2. **Create `src/app/`** for routes. The `@/` alias already points at the moved folder — check `tsconfig.json` and `babel.config.js` and update the path if it says `./app/*`.
 3. **`package.json`** → `"main": "expo-router/entry"`.
-4. **`src/app/_layout.tsx`** replaces `App.tsx` — carries the providers and renders `<Slot />`.
+4. **`src/app/_layout.tsx`** replaces `App.tsx` — carries the providers and renders `<Slot />`. The tab group (`src/app/(tabs)/_layout.tsx`) uses Expo Router's `Tabs` with TimeSpot's own `tabBar`. ~~A second `<Slot>`~~ — corrected 2026-09-26: a Slot remounts the whole screen on every tab switch.
 5. Delete `src/navigators/`; the file tree is the navigator now.
 6. `ListItem` needs `React.forwardRef()` to work as an Expo Router `<Link asChild>` target. Ignite's `Text` already forwards refs; `ListItem` may not.
 7. The `ignite-cli generate screen` template no longer applies — screens now live under `src/screens/` and are re-exported by route files.
@@ -107,9 +107,9 @@ npx expo-doctor
 ```bash
 npx expo install @expo/ui @date-fns/tz react-native-svg @shopify/flash-list expo-image expo-haptics
 npm i zustand suncalc @uiw/react-use-fuzzy   # or uFuzzy
-npx expo install @expo-google-fonts/geist
-npm uninstall @expo-google-fonts/space-grotesk
 ```
+
+Keep Ignite's `@expo-google-fonts/space-grotesk` — it is the board's actual face (audit §6, corrected 2026-09-25).
 
 Always `npx expo install`, never `npm i`, for anything with a native side — it resolves the SDK-compatible version.
 
@@ -207,36 +207,39 @@ export const spacing = {
 
 `spacingDark.ts` re-exports the same object — TimeSpot does not vary spacing by theme.
 
-### 3.3 `src/theme/typography.ts` — Space Grotesk → Geist
+### 3.3 `src/theme/typography.ts` — keep Space Grotesk
+
+~~Space Grotesk → Geist~~ — **corrected 2026-09-25**: Space Grotesk is the board's actual face (audit §6).
 
 ```ts
 import {
-  Geist_400Regular as geistRegular,
-  Geist_500Medium  as geistMedium,
-  Geist_600SemiBold as geistSemiBold,
-} from "@expo-google-fonts/geist"
+  SpaceGrotesk_300Light as spaceGroteskLight,
+  SpaceGrotesk_400Regular as spaceGroteskRegular,
+  SpaceGrotesk_500Medium as spaceGroteskMedium,
+  SpaceGrotesk_600SemiBold as spaceGroteskSemiBold,
+} from "@expo-google-fonts/space-grotesk"
 
-export const customFontsToLoad = { geistRegular, geistMedium, geistSemiBold }
+export const customFontsToLoad = { spaceGroteskLight, spaceGroteskRegular, spaceGroteskMedium, spaceGroteskSemiBold }
 
 const fonts = {
-  geist: { normal: "geistRegular", medium: "geistMedium", semiBold: "geistSemiBold",
-           light: "geistRegular", bold: "geistSemiBold" },   // aliases so Ignite presets still resolve
+  spaceGrotesk: { light: "spaceGroteskLight", normal: "spaceGroteskRegular", medium: "spaceGroteskMedium",
+                  semiBold: "spaceGroteskSemiBold", bold: "spaceGroteskSemiBold" },   // bold is an alias
   // …keep Ignite's platform fonts for fallbacks
 }
 
 export const typography = {
   fonts,
-  primary: fonts.geist,
-  secondary: fonts.geist,
+  primary: fonts.spaceGrotesk,
+  secondary: fonts.spaceGrotesk,
   code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
 }
 ```
 
 Keep the `light` and `bold` aliases: Ignite's own presets reference `typography.primary.bold`, and a missing key silently falls back to the system font.
 
-Load only three weights. Every extra weight is a font file on the critical path, and the design uses exactly three.
+Load only four weights. Every extra weight is a font file on the critical path.
 
-> **Tabular figures.** Geist has them; enable with `fontVariant: ['tabular-nums']`. But `<Numeral>` does **not** rely on that — it also pins a measured per-digit width, so the clock stays stable even if a font or platform ignores the feature. See §4.2.
+> **Tabular figures.** Space Grotesk has them; enable with `fontVariant: ['tabular-nums']`. But `<Numeral>` does **not** rely on that — it also pins a measured per-digit width, so the clock stays stable even if a font or platform ignores the feature. See §4.2.
 
 ### 3.4 `src/theme/timing.ts`
 
@@ -346,7 +349,7 @@ Guarantees, in priority order:
 1. **A measured fixed width per character cell**, derived from the size token. A `1` occupies the same box as an `8`. This is the primary mechanism and it does not depend on the font.
 2. `fontVariant: ['tabular-nums']` as a belt-and-braces enhancement.
 3. Colons are rendered as glyphs inside the string, not as separate views, so kerning survives.
-4. `animate="roll"` renders the 3-cell odometer strip per `08-motion-spec.md` §3.
+4. `animate="roll"` renders the static 20-cell odometer strip per `08-motion-spec.md` §3 (~~3-cell~~ — corrected 2026-09-26).
 
 > Writing `<Text>{time}</Text>` anywhere is a bug. The clock will twitch on every tick, and once you have seen it you cannot unsee it.
 
@@ -380,9 +383,8 @@ The boundary is unchanged from `ADR-0003` — `@expo/ui` owns system affordances
 
 ```tsx
 // src/components/Sheet.tsx — the ONLY file that imports @expo/ui for sheets
-import { Host, BottomSheet } from "@expo/ui"
+import { BottomSheet, RNHostView } from "@expo/ui"
 import { useAppTheme } from "@/theme/context"
-import type { ThemedStyle } from "@/theme/types"
 
 export interface SheetProps {
   open: boolean
@@ -391,22 +393,26 @@ export interface SheetProps {
 }
 
 export function Sheet({ open, onOpenChange, children }: SheetProps) {
-  const { themed } = useAppTheme()
+  const { theme } = useAppTheme()
   return (
-    <Host style={themed($host)}>          {/* Host lives HERE, once, never at call sites */}
-      <BottomSheet isOpened={open} onIsOpenedChange={onOpenChange}>
-        {children}
-      </BottomSheet>
-    </Host>
+    // No <Host> here: the universal BottomSheet mounts its own on iOS/Android.
+    <BottomSheet
+      isPresented={open}
+      onDismiss={() => onOpenChange(false)}
+      containerColor={theme.colors.cardBackground}
+    >
+      <RNHostView matchContents>{/* React Native content → a native tree */}
+        <View style={$frame}>{children}</View>
+      </RNHostView>
+    </BottomSheet>
   )
 }
-
-const $host: ThemedStyle<ViewStyle> = () => ({ position: "absolute" })
 ```
 
 Four rules:
 
-1. **One `<Host>` per adapter**, mounted inside the adapter. Never nest `Host`, never put one in a screen.
+1. **One `<Host>` per adapter**, mounted inside the adapter. Never nest `Host`, never put one in a screen. The universal presenting components (`BottomSheet`) mount their own `Host` — don't wrap them in another. ~~`Sheet` wraps `BottomSheet` in a `Host`~~ — corrected 2026-09-26: that nested two native hosts.
+   - **React Native content inside an `@expo/ui` container goes through `RNHostView`.** On Android the sheet is a Compose dialog in its own window with no React root above it; `RNHostView` supplies the root that dispatches touches and that a scroll view looks up when a drag starts. Without it, the first drag on the search results crashed the app (`AssertionError` in `RootViewUtil.getRootView`, 2026-09-26). ~~Commit a sheet's action only after it has closed~~ — withdrawn the same day: a wrong diagnosis of that crash.
 2. **Feature code never imports `@expo/ui`.** It imports `@/components/Sheet`. A future swap touches one file.
 3. **`@expo/ui` components do not read Ignite's theme.** They take their own style props. The adapter is the bridge: read `useAppTheme()` there and pass explicit values down. This is the one place where two styling models meet, and it is contained on purpose.
 4. **Do not put `@expo/ui` content inside Ignite's `Screen`'s scroll view.** On iOS a SwiftUI host inside a RN `ScrollView` fights for gestures. Sheets and overlays are siblings of `Screen`, not children.
@@ -415,11 +421,11 @@ Approved `@expo/ui` surface for v1:
 
 ```
 BottomSheet   → Sheet          (search, settings)
-TextInput     → SearchField    (keyboard, autofill, dictation, IME)
-Picker        → Settings: theme, day/night style
-Switch        → Settings: 12/24h, show seconds
-FieldGroup    → Settings groups
-ContextMenu   → long-press city menu
+TextInput     → InlineField    (search + rename; keyboard, autofill, dictation, IME)
+Picker        → SettingsForm (theme; day/night style later)
+Switch        → SettingsForm (24-hour time; show seconds later)
+~~FieldGroup~~   (removed 2026-09-26 — a lazy Compose list inside a sheet crashed on Android; SettingsForm draws its own groups)
+MenuView      → RowMenu        (the "⋯" city-row menu — @expo/ui/community/menu; SwiftUI Menu on iOS, Compose DropdownMenu on Android, own popover on web)
 ```
 
 Anything else needs an update to `ADR-0003`.
@@ -536,7 +542,7 @@ Replaces Phase 0 in `10-implementation-plan.md`. ~1.5 days.
 | 0.3 | **SDK 55 → 57 upgrade** (§2.3); pin `expo@>=57.0.17` | `expo-doctor` clean; boots on iOS, Android **and web** |
 | 0.4 | ~~`storage.web.ts` localStorage adapter~~ — not needed, MMKV 3.3.3 has a real web build (§7) | `ThemeProvider` and MMKV-backed persistence both work on web, verified across a reload |
 | 0.5 | Replace the 5 theme files + add `radius.ts`, wire into `Theme` | a sample screen renders in TimeSpot colours, both themes |
-| 0.6 | Geist swap in `typography.ts` | fonts load on all three platforms |
+| 0.6 | Font setup in `typography.ts` (Space Grotesk, corrected 2026-09-25) | fonts load on all three platforms |
 | 0.7 | Extend `Text` sizes + presets; add `includeFontPadding: false` | `preset="hero"` renders at 144 and is vertically centred on Android |
 | 0.8 | Build `<Numeral>` (no roll yet) | `08:40 → 08:41` causes zero layout shift, measured |
 | 0.9 | Add `@expo/ui`; build the `Sheet` adapter | sheet opens on iOS, Android and web |

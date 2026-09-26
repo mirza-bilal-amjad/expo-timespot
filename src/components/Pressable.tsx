@@ -91,7 +91,7 @@ export const Pressable = forwardRef<View, PressableProps>(function Pressable(pro
 
   const handleFocus = useCallback(
     (e: NativeSyntheticEvent<TargetedEvent>) => {
-      setFocused(true)
+      setFocused(isFocusVisible(e))
       onFocus?.(e)
     },
     [onFocus],
@@ -133,10 +133,7 @@ export const Pressable = forwardRef<View, PressableProps>(function Pressable(pro
       style={[
         $animatedStyle,
         disabled && $disabledStyle,
-        // A simplified :focus-visible — RN's style prop can't express the
-        // keyboard-vs-pointer distinction CSS :focus-visible does, so this
-        // shows on any web focus. Reasonable in practice; revisit if it reads
-        // as noisy on mouse click.
+        // docs/04-screen-specs.md "focus-visible (web)": keyboard focus only.
         Platform.OS === "web" && focused && ($focusRingStyle(theme.colors.focusRing) as ViewStyle),
         style,
       ]}
@@ -146,6 +143,24 @@ export const Pressable = forwardRef<View, PressableProps>(function Pressable(pro
 })
 
 const $disabledStyle: ViewStyle = { opacity: 0.4 }
+
+/**
+ * Whether a focus should show the ring — the browser's own `:focus-visible`
+ * verdict (keyboard focus yes, a mouse or touch press no). On web the focus
+ * event's target is the DOM element itself. ~~Ring on any web focus~~ —
+ * corrected 2026-09-26: pressing a row showed the ring, and while dragging
+ * it read as two stray lines beside the lifted card. Browsers without
+ * `:focus-visible` keep showing it (the accessible default).
+ */
+function isFocusVisible(e: NativeSyntheticEvent<TargetedEvent>): boolean {
+  if (Platform.OS !== "web") return false
+  const target = (e as unknown as { target?: { matches?: (selector: string) => boolean } }).target
+  try {
+    return target?.matches?.(":focus-visible") ?? true
+  } catch {
+    return true
+  }
+}
 
 const $focusRingStyle = (color: string) =>
   ({

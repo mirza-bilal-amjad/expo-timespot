@@ -29,7 +29,7 @@ Verified against the Expo changelog and docs on 2026-09-23. **Do not pin from me
 | Time | `Intl` + **`@date-fns/tz`** + `date-fns` v4 | latest | see §4 |
 | Sun | `suncalc` | latest | 4 KB, MIT, deterministic, offline |
 | Search | prebuilt inverted index + `uFuzzy` | latest | < 30 ms over 5 000 cities |
-| Fonts | `expo-font` (Geist Variable) | via SDK | |
+| Fonts | `expo-font` (Space Grotesk, 4 weights) | via SDK | |
 | i18n | `i18next` + `expo-localization` | latest | strings externalised from day one |
 | Testing | Jest + RNTL, Playwright, Maestro | latest | `11-testing-strategy.md` |
 | CI/CD | EAS Build + EAS Workflows + EAS Hosting | — | `12-release-ops.md` |
@@ -72,11 +72,11 @@ timespot/
 │   ├─ theme/                   colors colorsDark spacing radius typography timing context
 │   ├─ i18n/                    Ignite's — every string lives here
 │   ├─ utils/                   Ignite's — storage/ (MMKV, works on every platform)
-│   ├─ assets/                  fonts/  map/world.topo.json  data/cities.min.json
+│   ├─ assets/                  fonts/  map/world.map.topo.json  data/cities.min.json
 │   └─ stories/                 one file per component, all states × both themes
 ├─ design/                      tokens.json + ignite-theme/ (drop-in theme files)
 ├─ docs/                        this documentation set
-├─ scripts/                     build-cities.ts  build-map.ts  og-images.ts
+├─ scripts/                     build-cities.ts  build-map.ts  build-tzdata.ts  og-images.ts
 ├─ .claude/                     skills/  commands/
 ├─ CLAUDE.md  AGENTS.md
 ├─ app.config.ts  eas.json  tsconfig.json
@@ -157,9 +157,9 @@ export function probeIntl(): 'full' | 'degraded' {
 }
 ```
 
-Two distinct zones, one of them mid-DST. If the probe returns `degraded`, the app switches to `@date-fns/tz`'s `TZDate` backed by a **bundled tzdata slice** (only the ~420 canonical zones, current + next 2 years of transitions, ≈ 60 KB) and reports a non-PII telemetry event so the fallback rate is visible.
+Two distinct zones, one of them mid-DST. If the probe returns `degraded`, `configureTimeEngine` switches `zone.ts`'s offset source to the bundled table `tz.offsets.json` (`scripts/build-tzdata.ts`: 432 zones, every transition 2024–2030, 5.6 KB gz). Every display value is arithmetic from the offset, so the engines agree by construction — see ADR-0004. ~~`@date-fns/tz`'s `TZDate` backed by a bundled tzdata slice~~ — corrected 2026-09-26: `@date-fns/tz` bundles no tz data and asks `Intl` itself, so it breaks on the same devices.
 
-The probe result is exposed as `useTimeEngine()` and is asserted in tests on every device tier in the matrix.
+The probe runs at module scope in `src/app/_layout.tsx`, before first render. The engine in use is `getTimeEngine()` (`'intl'` | `'table'`), shown in Settings → About. ~~`useTimeEngine()`~~ — it never changes after boot, so a hook would add nothing.
 
 ### 4.4 Formatting
 
@@ -187,7 +187,8 @@ function schedule(cb) {
 - Aligns to the wall-clock second boundary rather than drifting by the interval's own latency.
 - Re-syncs on `AppState → 'active'` and on web `visibilitychange`; a backgrounded tab may not have fired for hours.
 - Stops entirely when the app is not active — no battery cost, no wake locks.
-- If `showSeconds` is off on the list, the tick coalesces to the **minute** boundary, so an idle list re-renders once a minute instead of 60 times.
+- If `showSeconds` is off on the list, the tick coalesces to the **minute** boundary, so an idle list re-renders once a minute instead of 60 times. ~~(`ListScreen` called plain `useClock()`)~~ — corrected 2026-09-26. The list never shows seconds, so it always coalesces (`useClock({ coalesceToMinute: true })`). It had been redrawing ~1,050 components every second.
+- **Pauses off screen.** `useClock({ active: useIsFocused() })` in every screen. The tab navigator keeps visited screens mounted, and an inactive clock schedules no timer and renders nothing, then catches up the moment its screen is focused again. `freezeOnBlur` is also set, but on web it didn't stop a hidden screen's ticks (measured), so the clock can't rely on it.
 - Guards against a wrong device clock: if `Date.now()` jumps by more than 5 s between ticks, treat it as a system clock change and recompute everything rather than animating a roll through 3 000 values.
 
 ---
@@ -208,11 +209,12 @@ function schedule(cb) {
 | Item | Budget | How it is met |
 |---|---|---|
 | Cold start → readable clock | < 900 ms p75 | fonts preloaded; city dataset lazily loaded *after* first paint; map code-split off the initial route |
-| List re-render | 1 component per tick | `useClock` at the screen, memo'd rows, `showSeconds` off by default |
-| Meridian drag | 60 fps | shared value on the UI thread; `runOnJS` throttled to 60 ms |
-| Map first paint | < 120 ms | 30 KB simplified topology; raster fallback below a device tier |
+| List re-render | 1 component per tick | `useClock` at the screen, coalesced to the minute; memo'd rows whose comparators compare what they *show* (HH:MM, offset, day/night), with callbacks that take the row's id so they're stable. **Measured 2026-09-26 (web dev build, 8 rows):** idle list 0 renders between minutes, down from ~1,050 every second. |
+| Tab switch | no remount | Expo Router `Tabs` with a custom `tabBar` keeps visited screens mounted; ~~`<Slot>`~~ remounted the whole screen on every switch. **Returning to the list: ~30 ms render, down from ~140 ms.** |
+| Meridian drag | 60 fps | shared value on the UI thread; `scheduleOnRN` throttled to 60 ms |
+| Map first paint | < 120 ms | ~210 KB 50 m topology, decoded once per process; raster fallback below a device tier |
 | Web initial route | < 180 KB gz | map and search chunks lazy; dataset fetched, not bundled |
-| Memory, 40 cities | < 120 MB | FlashList recycling, `expo-image` `recyclingKey` |
+| Memory, 40 cities | < 120 MB | memo'd rows (all mounted — see `04` S1 "Reorder"), `expo-image` `recyclingKey` |
 
 ---
 

@@ -80,10 +80,7 @@ export function Avatar(props: AvatarProps) {
             recyclingKey={uri}
             style={[dimensions, $image]}
           />
-          <Animated.View
-            pointerEvents="none"
-            style={[dimensions, themed($grayscaleOverlay), $overlayStyle]}
-          />
+          <Animated.View style={[dimensions, themed($grayscaleOverlay), $overlayStyle]} />
         </>
       ) : (
         <Text text={monogram(label)} style={themed($monogramText)} />
@@ -102,6 +99,7 @@ const $tile: ThemedStyle<ViewStyle> = (theme) => ({
 const $image: ImageStyle = { position: "absolute" }
 
 const $grayscaleOverlay: ThemedStyle<ViewStyle> = (theme) => ({
+  pointerEvents: "none",
   position: "absolute",
   backgroundColor: theme.colors.palette.neutral600,
   mixBlendMode: "saturation",

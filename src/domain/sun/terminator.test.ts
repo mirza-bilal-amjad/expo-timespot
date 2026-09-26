@@ -1,9 +1,10 @@
 import { getPosition } from "suncalc"
 
 import { getNightRegionPath, getTerminatorPath } from "./terminator"
+import { LAT_MAX, LAT_MIN, MAP_ASPECT, projectLonLat, unprojectPoint } from "../map/projection"
 
 const WIDTH = 800
-const HEIGHT = 400
+const HEIGHT = Math.round(WIDTH * MAP_ASPECT)
 
 /** Reverses the projection in getTerminatorPath to recover (lat, lon) from an "M"/"L" command. */
 function parsePathPoints(d: string): { lon: number; lat: number }[] {
@@ -12,7 +13,7 @@ function parsePathPoints(d: string): { lon: number; lat: number }[] {
     .split(" ")
     .map((command) => {
       const [x, y] = command.slice(1).split(",").map(Number)
-      return { lon: (x / WIDTH) * 360 - 180, lat: 90 - (y / HEIGHT) * 180 }
+      return unprojectPoint(x, y, WIDTH, HEIGHT)
     })
 }
 
@@ -33,9 +34,9 @@ function pixelIsInsidePath(d: string, x: number, y: number): boolean {
   return inside
 }
 
-/** Matches terminator.ts's own lon/lat -> pixel convention. */
 function project(lon: number, lat: number): [number, number] {
-  return [((lon + 180) / 360) * WIDTH, ((90 - lat) / 180) * HEIGHT]
+  const { x, y } = projectLonLat(lon, lat, WIDTH, HEIGHT)
+  return [x, y]
 }
 
 describe("getNightRegionPath", () => {
@@ -86,7 +87,8 @@ describe("getNightRegionPath", () => {
       // ray-casting. The pole opposite the sun's hemisphere, well inside the
       // map (away from x=0/width), is unambiguously deep in night instead.
       const antiLon = subLon > 0 ? subLon - 90 : subLon + 90
-      const farPoleLat = subLat >= 0 ? -85 : 85
+      // Inside the Mercator clip (58°S..84°N), still deep in night.
+      const farPoleLat = subLat >= 0 ? -50 : 75
       const [ax, ay] = project(antiLon, farPoleLat)
       expect(pixelIsInsidePath(d, ax, ay)).toBe(true)
     },
@@ -106,7 +108,12 @@ describe("getTerminatorPath", () => {
     // Not exactly 0 — suncalc's altitude is refraction-corrected, so the true
     // geometric horizon sits a fraction of a degree below apparent altitude 0.
     const at = Date.UTC(2026, 5, 21, 12) // near summer solstice
-    const points = parsePathPoints(getTerminatorPath(at, WIDTH, HEIGHT))
+    // Points past the clip are pinned to its edge by the projection, so only
+    // the ones strictly inside it are still exact terminator points.
+    const points = parsePathPoints(getTerminatorPath(at, WIDTH, HEIGHT)).filter(
+      (p) => p.lat > LAT_MIN + 0.01 && p.lat < LAT_MAX - 0.01,
+    )
+    expect(points.length).toBeGreaterThan(20)
     for (const { lat, lon } of points) {
       const altitude = getPosition(new Date(at), lat, lon).altitude
       expect(Math.abs(altitude)).toBeLessThan(1)
@@ -126,8 +133,8 @@ describe("getTerminatorPath", () => {
     expect(Math.min(...points.map((p) => p.lon))).toBeCloseTo(-180, 0)
     expect(Math.max(...points.map((p) => p.lon))).toBeCloseTo(180, 0)
     for (const { lat } of points) {
-      expect(lat).toBeGreaterThanOrEqual(-90)
-      expect(lat).toBeLessThanOrEqual(90)
+      expect(lat).toBeGreaterThanOrEqual(LAT_MIN)
+      expect(lat).toBeLessThanOrEqual(LAT_MAX)
     }
   })
 })

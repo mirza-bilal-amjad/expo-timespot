@@ -72,11 +72,10 @@ Then wire `radius` into `src/theme/theme.ts` (both themes), `src/theme/types.ts`
 ### 6 — Fonts
 
 ```bash
-npx expo install @expo-google-fonts/geist
-npm uninstall @expo-google-fonts/space-grotesk
+# Keep Ignite's @expo-google-fonts/space-grotesk — it is the board's face (docs/01 §6)
 ```
 
-✅ Geist loads on all three platforms. Confirm `typography.primary` still has `light` and `bold` keys — Ignite's presets reference them.
+✅ Space Grotesk loads on all three platforms. Confirm `typography.primary` still has `light` and `bold` keys — Ignite's presets reference them.
 
 ### 7 — Extend `Text`
 

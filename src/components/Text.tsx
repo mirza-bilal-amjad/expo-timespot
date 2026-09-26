@@ -97,7 +97,9 @@ export const Text = forwardRef(function Text(props: TextProps, ref: ForwardedRef
   )
 })
 
-const $sizeStyles = {
+/** The type scale — exported for layouts that fit type to the space available
+ * (S2), which scale a named size rather than invent a font size. */
+export const $sizeStyles = {
   // Ignite's original scale
   xxl: { fontSize: 36, lineHeight: 44 } satisfies TextStyle,
   xl: { fontSize: 24, lineHeight: 34 } satisfies TextStyle,
@@ -142,10 +144,10 @@ const $presets: Record<Presets, ThemedStyleArray<TextStyle>> = {
   // TimeSpot's presets
   screenTitle: [
     $baseStyle,
-    { ...$sizeStyles.xxl, ...$fontWeightStyles.medium, letterSpacing: -0.7 },
+    { ...$sizeStyles.xxl, ...$fontWeightStyles.normal, letterSpacing: -0.7 },
   ],
-  cityName: [$baseStyle, { ...$sizeStyles.display, ...$fontWeightStyles.medium }],
-  cityTitle: [$baseStyle, { ...$sizeStyles.lg, ...$fontWeightStyles.medium }],
+  cityName: [$baseStyle, { ...$sizeStyles.display, ...$fontWeightStyles.normal }],
+  cityTitle: [$baseStyle, { ...$sizeStyles.lg, ...$fontWeightStyles.normal }],
   offset: [$baseStyle, (theme) => ({ ...$sizeStyles.xs, color: theme.colors.textDim })],
   caption: [$baseStyle, (theme) => ({ ...$sizeStyles.xxs, color: theme.colors.textDim })],
 }

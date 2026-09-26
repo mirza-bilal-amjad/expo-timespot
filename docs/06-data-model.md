@@ -108,6 +108,12 @@ export interface StorageAdapter {
 
 Every store declares `migrate(persisted, fromVersion)`. Never mutate a persisted shape in place; bump the version and write a migration, even in v1 development. Unknown/future versions reset to defaults rather than crashing, and the reset is logged.
 
+**Reading is guarded** (`src/store/persistence.ts`, task 5.7). Each store reads through `guardedStorage(version, sanitize)` rather than zustand's bare `createJSONStorage`, which throws on unreadable JSON (then silently overwrites the blob) and hands a wrong-shaped one straight to the screens.
+
+- Unreadable JSON, no envelope, a future version, or a state its sanitizer rejects → the raw blob is kept under `<key>.corrupt`, the key is cleared, the store starts from defaults, and the user sees a `storageReset` notice.
+- A mostly-right state is **repaired**, not reset. The sanitizer drops a city row that isn't a dataset city, is a duplicate or has no id; defaults an unknown pref value; clears a focus on a missing city. The user sees `storageRepaired`. One bad row never costs the list.
+- ~~"the reset is logged"~~ — there is no logger yet (task 7.6). The user-facing notice is the record for now.
+
 ### First launch
 
 1. Resolve the device zone: `Intl.DateTimeFormat().resolvedOptions().timeZone`, falling back to `expo-localization`'s `getCalendars()[0].timeZone`, falling back to `'UTC'`.

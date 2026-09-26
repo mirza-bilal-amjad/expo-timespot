@@ -1,9 +1,10 @@
 import { create } from "zustand"
-import { createJSONStorage, persist } from "zustand/middleware"
+import { persist } from "zustand/middleware"
 
+import { getCityById } from "@/domain/cities/search"
 import type { SavedCity } from "@/domain/types"
 
-import { storageAdapter } from "./storage"
+import { guardedStorage, isRecord, type Sanitized } from "./persistence"
 
 interface CitiesState {
   cities: SavedCity[]
@@ -61,7 +62,7 @@ export const useCitiesStore = create<CitiesState>()(
     {
       name: "ts.cities.v1",
       version: 2,
-      storage: createJSONStorage(() => storageAdapter),
+      storage: guardedStorage(2, sanitizeCities),
       // v1 had no seeding concept. Existing non-empty state predates it and
       // must not be reseeded on top; existing empty state (a fresh v1
       // install that hadn't added anything yet) should still get seeded.
@@ -72,3 +73,41 @@ export const useCitiesStore = create<CitiesState>()(
     },
   ),
 )
+
+type PersistedCities = Pick<CitiesState, "cities" | "hasSeeded">
+
+/**
+ * Keeps every well-formed row and drops the rest (not a dataset city, a
+ * duplicate, no id) — one bad row never costs the whole list. `null`, and
+ * so a reset, only when there is no list at all.
+ */
+export function sanitizeCities(state: unknown): Sanitized<PersistedCities> {
+  if (!isRecord(state) || !Array.isArray(state.cities)) return null
+  let repaired = false
+  const seen = new Set<string>()
+  const cities: SavedCity[] = []
+  for (const item of state.cities) {
+    if (
+      !isRecord(item) ||
+      typeof item.cityId !== "string" ||
+      seen.has(item.cityId) ||
+      !getCityById(item.cityId)
+    ) {
+      repaired = true
+      continue
+    }
+    seen.add(item.cityId)
+    const orderOk = typeof item.order === "number" && Number.isFinite(item.order)
+    const addedAtOk = typeof item.addedAt === "number" && Number.isFinite(item.addedAt)
+    const labelOk = item.label === undefined || typeof item.label === "string"
+    if (!orderOk || !addedAtOk || !labelOk) repaired = true
+    cities.push({
+      cityId: item.cityId,
+      order: orderOk ? (item.order as number) : cities.length,
+      addedAt: addedAtOk ? (item.addedAt as number) : 0,
+      label: labelOk ? (item.label as string | undefined) : undefined,
+    })
+  }
+  const hasSeeded = typeof state.hasSeeded === "boolean" ? state.hasSeeded : cities.length > 0
+  return { state: { cities, hasSeeded }, repaired }
+}

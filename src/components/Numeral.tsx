@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
 import {
   LayoutChangeEvent,
   // eslint-disable-next-line no-restricted-imports
@@ -9,19 +9,21 @@ import {
   ViewStyle,
 } from "react-native"
 import Animated, {
+  Easing,
   Extrapolation,
   interpolate,
   interpolateColor,
-  runOnJS,
   SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from "react-native-reanimated"
 
 import { useAppTheme } from "@/theme/context"
 import type { Theme } from "@/theme/types"
+import { planRoll, restIndex, settleIndex, STRIP_CELLS } from "@/utils/odometer"
 
 export type NumeralSize = "numeralMd" | "numeralLg" | "display" | "displayXl" | "hero"
 
@@ -35,6 +37,9 @@ export interface NumeralProps {
    * positions and separators never animate. 'none' (default) is always a
    * plain cut. */
   animate?: "none" | "roll"
+  /** Multiplies the size's font, line height and tracking — for layouts that
+   * fit type to the space available (S2's hero). Rounded to half-points. */
+  scale?: number
   accessibilityLabel?: string
   style?: StyleProp<ViewStyle>
 }
@@ -49,30 +54,59 @@ const $sizeStyles: Record<NumeralSize, TextStyle> = {
 
 const DIGIT_RE = /[0-9]/
 
+// A tabular digit's advance in Space Grotesk, as a share of the font size —
+// only the first frame's placeholder, before the real "0" is measured.
+const UNCALIBRATED_CELL_RATIO = 0.62
+
 /**
- * Cell width is measured once per (font, size) from a hidden "0" glyph and
- * cached module-wide, so every <Numeral> after the first of that size mounts
- * with the exact width already known — no per-tick layout shift.
+ * A digit cell's width is measured once per (font, size) from a hidden "0"
+ * glyph and cached module-wide as width *per point of font size*, so every
+ * <Numeral> of that size — at any `scale` — mounts with its exact width
+ * already known: no per-tick layout shift, and no guessed-then-corrected
+ * width when a layout rescales the type (~~one cache entry per rendered
+ * font size~~ — corrected 2026-09-26: each new scale re-measured, and the
+ * one-frame guess made S2's fitted clock jitter on Android).
  */
-const cellWidthCache = new Map<string, number>()
+const cellRatioCache = new Map<string, number>()
+const calibrationListeners = new Set<() => void>()
+
+const ratioKey = (fontFamily: string, size: NumeralSize) => `${fontFamily}-${size}`
+
+function subscribeCalibration(listener: () => void) {
+  calibrationListeners.add(listener)
+  return () => {
+    calibrationListeners.delete(listener)
+  }
+}
+
+const halfPoint = (n: number) => Math.round(n * 2) / 2
+
+/** The font size a <Numeral> of `size` renders at `scale` — half-point rounded. */
+export function numeralFontSize(size: NumeralSize, scale = 1): number {
+  return halfPoint(($sizeStyles[size].fontSize as number) * scale)
+}
+
+/** The width of one digit cell, or `undefined` until that size has been
+ * calibrated on this device (any mounted <Numeral> of the size does it). */
+export function numeralCellWidth(
+  fontFamily: string,
+  size: NumeralSize,
+  scale = 1,
+): number | undefined {
+  const ratio = cellRatioCache.get(ratioKey(fontFamily, size))
+  return ratio === undefined ? undefined : Math.ceil(ratio * numeralFontSize(size, scale))
+}
+
+/** True once every listed size has a calibrated cell width. */
+export function useNumeralCalibrated(fontFamily: string, sizes: NumeralSize[]): boolean {
+  return useSyncExternalStore(subscribeCalibration, () =>
+    sizes.every((size) => cellRatioCache.has(ratioKey(fontFamily, size))),
+  )
+}
 
 const $hidden = {
   accessibilityElementsHidden: true,
   importantForAccessibility: "no-hide-descendants" as const,
-}
-
-// docs/08-motion-spec.md §3: "Clock-jump guard: if the value changes by
-// more than 2, cut instead of rolling." A single digit position wraps
-// mod 10 (9 -> 0 is a normal tick, not a jump), so the distance that
-// threshold applies to is the *circular* one — a routine 59 -> 00 minute
-// rollover then rolls its units digit (9->0, circular distance 1) but cuts
-// its tens digit (5->0, circular distance 5), which is exactly the right
-// visual: only the digit that's genuinely just "one more" rolls.
-const JUMP_GUARD_THRESHOLD = 2
-
-function circularDigitDistance(a: number, b: number): number {
-  const diff = Math.abs(a - b)
-  return Math.min(diff, 10 - diff)
 }
 
 // "Native: opacity + a 0.94 scale instead [of expo-blur], which reads as
@@ -80,26 +114,28 @@ function circularDigitDistance(a: number, b: number): number {
 const GHOST_OPACITY = 0.18
 const GHOST_SCALE = 0.94
 
+const CELL_INDICES = Array.from({ length: STRIP_CELLS }, (_, i) => i)
+
+interface DigitCellProps {
+  index: number
+  y: SharedValue<number>
+  cellWidth: number
+  cellHeight: number
+  textStyle: TextStyle
+  ghostColor: string
+}
+
 /**
- * One cell's opacity/scale/colour, all driven by the same `y` shared value
- * the strip's own translateY uses — `distance` is how far *this* cell
- * currently sits from the visible window's centre (its rest offset plus
- * the in-flight scroll), so as the strip moves every cell fades and scales
- * continuously between "live" and "ghost" together, rather than each cell
- * having a fixed, discontinuous look that only swaps at the moment the
- * strip's contents rotate. `baseOffset` is that cell's rest position:
- * `-cellHeight` for the previous digit, `0` for the live one, `cellHeight`
- * for the next — the same three positions `RollingDigit` always renders.
+ * One fixed cell of the strip. Its text never changes; its look follows
+ * how far it sits from the window's centre (`index * cellHeight + y`), so
+ * a digit fades and scales continuously from ghost to live as it rolls in.
  */
-function useCellStyle(
-  y: SharedValue<number>,
-  cellHeight: number,
-  baseOffset: number,
-  liveColor: string,
-  ghostColor: string,
-) {
-  return useAnimatedStyle(() => {
-    const distance = Math.abs(baseOffset + y.value)
+const DigitCell = memo(function DigitCell(props: DigitCellProps) {
+  const { index, y, cellWidth, cellHeight, textStyle, ghostColor } = props
+  const liveColor = textStyle.color as string
+
+  const $look = useAnimatedStyle(() => {
+    const distance = Math.abs(index * cellHeight + y.value)
     const progress = interpolate(distance, [0, cellHeight], [0, 1], Extrapolation.CLAMP)
     return {
       opacity: interpolate(progress, [0, 1], [1, GHOST_OPACITY]),
@@ -107,7 +143,17 @@ function useCellStyle(
       color: interpolateColor(progress, [0, 1], [liveColor, ghostColor]),
     }
   })
-}
+
+  return (
+    <Animated.Text
+      style={[textStyle, { width: cellWidth, height: cellHeight }, $look]}
+      maxFontSizeMultiplier={1.3}
+      {...$hidden}
+    >
+      {String(index % 10)}
+    </Animated.Text>
+  )
+})
 
 interface RollingDigitProps {
   digit: string
@@ -117,156 +163,151 @@ interface RollingDigitProps {
 }
 
 /**
- * docs/08-motion-spec.md §3's odometer: a 3-cell strip (previous digit /
- * live digit / next digit) in a 1-cell `overflow: hidden` window. At rest
- * the strip sits at `translateY: -cellHeight` so the middle cell shows;
- * on a change it animates one more `-cellHeight` (revealing the "next"
- * cell rising from below, rule 2's "time moves up"), then the displayed
- * digit is rotated and the offset reset to `-cellHeight` — the same
- * `y.value = withSpring(...); if (finished) { rotate(); y.value = 0 }`
- * shape the doc's own pseudocode shows, just with the constant `-cellHeight`
- * base folded into the container's transform instead of the animated value.
+ * docs/08-motion-spec.md §3's odometer. A static strip of STRIP_CELLS
+ * cells (0-9, 0-9) behind a one-cell `overflow: hidden` window; only the
+ * strip's `translateY` ever moves, and only on the UI thread.
+ *
+ * ~~Three cells whose text rotates after each roll~~ — replaced
+ * 2026-09-25. Rotating text needed a JS round-trip (`runOnJS` → setState)
+ * at the end of every roll, and React's text commit and the offset reset
+ * could land in different frames: a one-frame flash of the wrong digit on
+ * every tick. The underdamped spring also overshot and bounced, and a tick
+ * arriving mid-roll cancelled the previous completion so a digit skipped.
+ * Now: the JS side only publishes the digit; `useAnimatedReaction` plans
+ * the move (`utils/odometer.ts`) and animates the offset with an easing
+ * curve that cannot overshoot. 9 → 0 rolls forward into the second "0" and
+ * the index is shifted back ten cells on landing — an identical glyph, so
+ * the shift is invisible.
  */
-function RollingDigit(props: RollingDigitProps) {
+const RollingDigit = memo(function RollingDigit(props: RollingDigitProps) {
   const { digit, cellWidth, cellHeight, textStyle } = props
   const { theme } = useAppTheme()
   const reducedMotion = useReducedMotion()
+  const value = Number(digit)
 
-  const [displayDigit, setDisplayDigit] = useState(digit)
-  const prevDigitRef = useRef(digit)
-  const y = useSharedValue(0)
+  const shown = useSharedValue(value)
+  const index = useSharedValue(restIndex(value))
+  const y = useSharedValue(-restIndex(value) * cellHeight)
+
+  const duration = theme.timing.slow
+  const easing = useMemo(() => Easing.bezier(...theme.timing.ease.standard), [theme.timing])
 
   useEffect(() => {
-    const prev = prevDigitRef.current
-    prevDigitRef.current = digit
-    if (prev === digit) return
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value, read by the UI-thread reaction below
+    shown.value = value
+  }, [value, shown])
 
-    // This effect's job is exactly "synchronize local display state with a
-    // changed prop, using an external system (Reanimated's UI thread) when
-    // motion is warranted" — real effect territory, not the "you might not
-    // need an effect" case: which of the three branches below runs can only
-    // be known once `digit` has actually changed, and the animate branch
-    // must start a UI-thread animation, which render-phase code must not do.
-    //
-    // Reduced motion: hard cut, no strip, no neighbours — the digit still
-    // updates, per the doc's own rule. Reanimated's own `reduceMotion:
-    // ReduceMotion.System` default (every `withSpring` call, unconfigured)
-    // already makes the animation itself instant; this skips rendering the
-    // ghost neighbours at all, which the OS setting doesn't do on its own.
-    if (reducedMotion) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDisplayDigit(digit)
-      return
-    }
-
-    const jump = circularDigitDistance(Number(digit), Number(prev))
-    if (jump > JUMP_GUARD_THRESHOLD) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDisplayDigit(digit)
-      return
-    }
-
-    y.value = withSpring(-cellHeight, theme.timing.spring.numeral, (finished) => {
-      if (finished) {
-        runOnJS(setDisplayDigit)(digit)
+  useAnimatedReaction(
+    () => shown.value,
+    (next, prev) => {
+      if (prev === null || next === prev) return
+      const plan = reducedMotion
+        ? { animate: false, target: restIndex(next) }
+        : planRoll(index.value, prev, next)
+      index.value = plan.target
+      if (!plan.animate) {
+        y.value = -plan.target * cellHeight
+        return
       }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- y/cellHeight/theme.timing.spring.numeral are stable refs/constants for this component's lifetime; only `digit` and `reducedMotion` should retrigger the effect.
-  }, [digit, reducedMotion])
+      y.value = withTiming(-plan.target * cellHeight, { duration, easing }, (finished) => {
+        if (!finished) return
+        const settled = settleIndex(plan.target)
+        if (settled === plan.target) return
+        index.value = settled
+        y.value = -settled * cellHeight
+      })
+    },
+    [reducedMotion, cellHeight, duration, easing],
+  )
 
-  // The roll's completion callback above runs on the UI thread and can only
-  // *ask* the JS thread to update `displayDigit` (`runOnJS`) — it can't do
-  // that update itself. Resetting `y` back to 0 inside that same callback
-  // used to apply instantly on the UI thread, one or more frames before the
-  // JS thread actually committed the new `displayDigit` — so the strip
-  // rendered its *old* content (the digit that just rolled away) at the
-  // reset offset for a frame: a visible jitter back to the previous digit
-  // right after the roll lands. Doing the reset here instead — keyed on
-  // `displayDigit`, in a *layout* effect so it lands before paint rather
-  // than after — puts the offset reset in the exact same commit as the
-  // content it has to match, whichever path got `displayDigit` there (a
-  // roll, the reduced-motion cut, or the jump guard).
-  useLayoutEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability -- `y` is a Reanimated shared value (a stable, intentionally mutable ref outside React's render model), not React state — same false positive documented elsewhere in this codebase (e.g. ReorderableCityRow.tsx).
-    y.value = 0
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- y is a stable Reanimated shared value ref; only displayDigit should retrigger this.
-  }, [displayDigit])
+  // A size change re-seats the strip on the same cell, without animating.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value
+    y.value = -index.value * cellHeight
+  }, [cellHeight, index, y])
 
-  const $animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -cellHeight + y.value }],
-  }))
-
-  const liveColor = textStyle.color as string
-  const ghostColor = theme.colors.textFaint
-  const $prevStyle = useCellStyle(y, cellHeight, -cellHeight, liveColor, ghostColor)
-  const $currentStyle = useCellStyle(y, cellHeight, 0, liveColor, ghostColor)
-  const $nextStyle = useCellStyle(y, cellHeight, cellHeight, liveColor, ghostColor)
+  const $stripMotion = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }))
 
   if (reducedMotion) {
+    // "Reduced motion: hard cut, no strip, no neighbours."
     return (
       <View style={$cellWidthOnly(cellWidth)}>
         <RNText style={textStyle} maxFontSizeMultiplier={1.3} {...$hidden}>
-          {displayDigit}
+          {digit}
         </RNText>
       </View>
     )
   }
 
-  // "the next value rises from below, like an odometer" — the cell below
-  // is what the wheel is turning toward, not a value that has occurred yet.
-  const prevChar = String((Number(displayDigit) + 9) % 10)
-  const nextChar = String((Number(displayDigit) + 1) % 10)
-
-  const $cell: TextStyle = { ...textStyle, width: cellWidth, height: cellHeight }
-
   return (
-    <View style={$strip(cellWidth, cellHeight)}>
-      <Animated.View style={$animatedStyle}>
-        <Animated.Text style={[$cell, $prevStyle]} {...$hidden}>
-          {prevChar}
-        </Animated.Text>
-        <Animated.Text style={[$cell, $currentStyle]} maxFontSizeMultiplier={1.3} {...$hidden}>
-          {displayDigit}
-        </Animated.Text>
-        <Animated.Text style={[$cell, $nextStyle]} {...$hidden}>
-          {nextChar}
-        </Animated.Text>
+    <View style={$window(cellWidth, cellHeight)}>
+      <Animated.View style={$stripMotion}>
+        {CELL_INDICES.map((i) => (
+          <DigitCell
+            key={i}
+            index={i}
+            y={y}
+            cellWidth={cellWidth}
+            cellHeight={cellHeight}
+            textStyle={textStyle}
+            ghostColor={theme.colors.textFaint}
+          />
+        ))}
       </Animated.View>
     </View>
   )
-}
+})
 
 export const Numeral = memo(function Numeral(props: NumeralProps) {
-  const { value, size = "numeralLg", color, animate = "none", accessibilityLabel, style } = props
+  const {
+    value,
+    size = "numeralLg",
+    color,
+    animate = "none",
+    scale = 1,
+    accessibilityLabel,
+    style,
+  } = props
   const { theme } = useAppTheme()
 
-  const fontFamily = theme.typography.primary.medium
-  const fontSize = $sizeStyles[size].fontSize as number
-  const cellHeight = $sizeStyles[size].lineHeight as number
-  const cacheKey = `${fontFamily}-${fontSize}`
+  const fontFamily = theme.typography.primary.normal
+  const base = $sizeStyles[size]
+  const fontSize = numeralFontSize(size, scale)
+  const cellHeight = halfPoint((base.lineHeight as number) * scale)
+  // Tracking follows the rounded font size exactly, so the cell's width per
+  // point stays constant across scales.
+  const letterSpacing = ((base.letterSpacing as number) * fontSize) / (base.fontSize as number)
+  const key = ratioKey(fontFamily, size)
 
-  const [cellWidth, setCellWidth] = useState(
-    () => cellWidthCache.get(cacheKey) ?? Math.round(fontSize * 0.62),
-  )
+  const calibrated = useSyncExternalStore(subscribeCalibration, () => cellRatioCache.has(key))
+  const cellWidth =
+    numeralCellWidth(fontFamily, size, scale) ?? Math.round(fontSize * UNCALIBRATED_CELL_RATIO)
 
   const onMeasureCell = useCallback(
     (e: LayoutChangeEvent) => {
-      if (cellWidthCache.has(cacheKey)) return
-      const width = Math.ceil(e.nativeEvent.layout.width)
-      cellWidthCache.set(cacheKey, width)
-      setCellWidth(width)
+      if (cellRatioCache.has(key)) return
+      cellRatioCache.set(key, e.nativeEvent.layout.width / fontSize)
+      calibrationListeners.forEach((listener) => listener())
     },
-    [cacheKey],
+    [key, fontSize],
   )
 
-  const $digitText: TextStyle = {
-    ...$sizeStyles[size],
-    fontFamily,
-    color: color ? (theme.colors[color] as string) : theme.colors.text,
-    includeFontPadding: false,
-    fontVariant: ["tabular-nums"],
-    textAlign: "center",
-  }
+  const textColor = color ? (theme.colors[color] as string) : theme.colors.text
+  // Stable across ticks, so memo'd digits and cells that didn't change skip
+  // re-rendering entirely.
+  const $digitText: TextStyle = useMemo(
+    () => ({
+      fontSize,
+      lineHeight: cellHeight,
+      letterSpacing,
+      fontFamily,
+      color: textColor,
+      includeFontPadding: false,
+      fontVariant: ["tabular-nums"],
+      textAlign: "center",
+    }),
+    [fontSize, cellHeight, letterSpacing, fontFamily, textColor],
+  )
 
   return (
     <View
@@ -297,7 +338,7 @@ export const Numeral = memo(function Numeral(props: NumeralProps) {
           </RNText>
         ),
       )}
-      {!cellWidthCache.has(cacheKey) && (
+      {!calibrated && (
         <RNText style={[$digitText, $calibration]} onLayout={onMeasureCell} {...$hidden}>
           0
         </RNText>
@@ -318,4 +359,8 @@ const $calibration: TextStyle = {
 
 const $cellWidthOnly = (width: number): ViewStyle => ({ width })
 
-const $strip = (width: number, height: number): ViewStyle => ({ width, height, overflow: "hidden" })
+const $window = (width: number, height: number): ViewStyle => ({
+  width,
+  height,
+  overflow: "hidden",
+})

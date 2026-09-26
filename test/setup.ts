@@ -47,13 +47,15 @@ jest.mock("react-native-reanimated", () => {
     useAnimatedStyle: (factory: () => unknown) => factory(),
     useAnimatedRef: () => React.useRef(null),
     useAnimatedReaction: () => {},
+    // <MeridianMap>'s derived anchors and edge auto-scroll: a derived value
+    // is just its factory's current result here, and a frame callback never
+    // fires (there are no frames under jest).
+    useDerivedValue: (factory: () => unknown) => ({ value: factory() }),
+    useFrameCallback: () => ({ setActive: () => {}, isActive: false }),
+    cancelAnimation: () => {},
     useAnimatedScrollHandler: (handlers: unknown) => handlers,
     scrollTo: () => {},
     useEvent: () => undefined,
-    runOnJS:
-      (fn: (...args: unknown[]) => void) =>
-      (...args: unknown[]) =>
-        fn(...args),
     // The optional 3rd-arg completion callback is invoked synchronously
     // with `true` (finished) — Numeral's roll animation (task 5.1) relies
     // on it firing to settle the digit after the strip's translateY
@@ -111,6 +113,31 @@ jest.mock("react-native-worklets", () => ({
   __esModule: true,
   scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
 }))
+
+// react-native-keyboard-controller's native module isn't linked under jest
+// (no real device/simulator) — its own bindings.native.ts throws just from
+// being required. <Screen>'s native (non-web) branch is the only caller
+// (src/components/Screen.tsx), and it only needs a scrollable container, so
+// KeyboardAwareScrollView stands in as a plain ScrollView here.
+jest.mock("react-native-keyboard-controller", () => {
+  const { ScrollView } = require("react-native")
+  return {
+    __esModule: true,
+    KeyboardAwareScrollView: ScrollView,
+    KeyboardProvider: ({ children }: { children: React.ReactNode }) => children,
+  }
+})
+
+// Same "not linked under jest" problem as keyboard-controller above, one
+// layer earlier: useSafeAreaInsets() throws without a real
+// <SafeAreaProvider> ancestor measuring a native view. The library ships
+// its own jest mock (fixed 0-inset metrics) for exactly this; every screen
+// pulls in useSafeAreaInsets somewhere (directly or via <Screen>/<TabBar>),
+// so it's registered globally rather than per test file.
+jest.mock(
+  "react-native-safe-area-context",
+  () => require("react-native-safe-area-context/jest/mock").default,
+)
 
 jest.mock("i18next", () => ({
   currentLocale: "en",

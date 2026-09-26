@@ -17,17 +17,9 @@ Full choreography: `docs/08-motion-spec.md`. Tokens: `duration.*`, `ease.*`, `sp
 
 ## The odometer — the signature animation
 
-A 3-cell vertical strip in a 1-cell-tall clipped box. On each tick it translates **up** by one cell, then the contents rotate and `translateY` resets — so the strip never grows.
+A static 20-cell strip (0–9, 0–9) in a 1-cell-tall clipped box. **The cells' text never changes** — only `translateY` moves, on the UI thread. JS publishes the digit to a shared value; `useAnimatedReaction` plans the move with `src/utils/odometer.ts` (`planRoll` / `settleIndex`) and animates with an eased `withTiming`. See `src/components/Numeral.tsx`.
 
-```ts
-const y = useSharedValue(0)
-useEffect(() => {
-  y.value = withSpring(-CELL, spring.numeral, (finished) => {
-    'worklet'
-    if (finished) { runOnJS(rotateCells)(); y.value = 0 }
-  })
-}, [value])
-```
+Never rotate cell text after a roll (the old design): React's text commit and the offset reset land in different frames and the wrong digit flashes for a frame. Never use an underdamped spring on a ticking value: it overshoots and reads as a stutter.
 
 Rules:
 - **Only the digit that changed rolls.** Diff per character position. `15 → 16` moves one digit; `19 → 20` moves two.
@@ -55,17 +47,13 @@ Text colour comes from the `Card` theme flip — no leaf implements this.
 ```ts
 Gesture.Pan()
   .onUpdate(e => { x.value = clamp(startX.value + e.translationX, 0, mapWidth) })
-  .onEnd(e => {
-    const target = snapToNearestZone(x.value, e.velocityX)
-    x.value = withSpring(target, spring.press)
-    runOnJS(commitZone)(zoneAt(target))
-  })
+  .onFinalize(() => scheduleOnRN(commit, pointerX.value, pointerY.value))  // react-native-worklets
 ```
 
 Non-negotiables:
 
 1. `x` is a **shared value**. The line, the ruler highlight and the card position are all `useAnimatedStyle` derivations. **No JS state during the drag.**
-2. The zone *label* comes from the dataset, so it is JS — push it with `runOnJS` **throttled to 60 ms**. Per-frame `runOnJS` destroys the budget.
+2. The city *under the finger* comes from the dataset, so it is JS — push it with `scheduleOnRN` **throttled to 60 ms**. Per-frame JS destroys the budget. (`runOnJS` is deprecated in Reanimated 4.)
 3. Snap targets include `+5:45`, `+8:45`, `+12:45` and `+14`. Velocity-aware.
 4. Haptic on snap only, never during the drag.
 5. The terminator does **not** move with the meridian — it represents the real sun.
@@ -85,7 +73,8 @@ Every animation degrades gracefully and **every value still updates**. The two d
 ## Review checklist
 
 - [ ] Runs on the UI thread (Reanimated worklet / CSS), not `setState` per frame
-- [ ] `runOnJS` throttled if it is in a gesture
+- [ ] `scheduleOnRN` (never the deprecated `runOnJS`) throttled if it is in a gesture
+- [ ] Nothing that ticks uses an underdamped spring, or swaps text at the end of a UI-thread animation
 - [ ] Duration and easing from tokens, never literals
 - [ ] Reduced-motion variant implemented and tested
 - [ ] Profiled at 60 fps on a mid-range Android
