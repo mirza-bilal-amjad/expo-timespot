@@ -44,6 +44,7 @@ describe("ReorderableCityRow", () => {
           onDelete={jest.fn()}
           onMoveUp={jest.fn()}
           onMoveDown={jest.fn()}
+          onRename={jest.fn()}
           onDragMove={jest.fn()}
           onDragEnd={jest.fn()}
         />
@@ -68,6 +69,7 @@ describe("ReorderableCityRow", () => {
           onDelete={onDelete}
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
+          onRename={jest.fn()}
           onDragMove={jest.fn()}
           onDragEnd={jest.fn()}
         />

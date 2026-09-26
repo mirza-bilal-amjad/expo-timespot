@@ -108,7 +108,18 @@ The home screen. Reference: mobile board, phone 1.
 | long-press | enter reorder mode (haptic `impactMedium`) |
 | drag | reorder, persisted on release |
 | swipe left | delete with 5 s undo |
+| tap `⋯` | open the row menu (below) |
 | pull down | no refresh (nothing to refresh) — disabled deliberately |
+
+### Row menu
+
+Added 2026-09-26. A `⋯` glyph left of the day/night icon, `ink.secondary` (`textOnInverseDim` on the selected row), with a 44 pt target. Tapping it opens the platform's own menu — SwiftUI `Menu` on iOS, Material `DropdownMenu` on Android (`@expo/ui/community/menu`, wrapped by `RowMenu`), a themed popover on web:
+
+- **Rename** — a sheet with the name field; saving an empty name or the dataset's own clears the label. "Use “{original}”" appears once a label is set.
+- **Move up / Move down** — disabled at the list's ends.
+- **Remove** — destructive; the same path as swipe, with the 5 s undo toast.
+
+Long-press stays drag-to-reorder. The `⋯` and the day/night icon are laid **over** the row, as a sibling of its pressable — never inside it (a button inside a button is invalid on web). Screen readers reach all four operations through the row's own accessibility actions, since the row is one accessible node.
 
 ### Empty state (zero cities)
 

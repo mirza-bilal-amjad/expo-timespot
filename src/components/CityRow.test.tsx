@@ -77,10 +77,11 @@ describe("CityRow", () => {
     ).toBeTruthy()
   })
 
-  it("exposes moveUp/moveDown/delete accessibility actions wired to the matching props", () => {
+  it("exposes moveUp/moveDown/delete/rename accessibility actions wired to the matching props", () => {
     const onMoveUp = jest.fn()
     const onMoveDown = jest.fn()
     const onDelete = jest.fn()
+    const onRename = jest.fn()
     renderRow(
       <CityRow
         city={savedCity}
@@ -90,11 +91,14 @@ describe("CityRow", () => {
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
         onDelete={onDelete}
+        onRename={onRename}
       />,
     )
     const node = screen.getByLabelText("Tokyo, 1:40, night-time, 9 hours ahead of UTC")
     const actionNames = node.props.accessibilityActions.map((a: { name: string }) => a.name)
-    expect(actionNames).toEqual(["activate", "magicTap", "delete", "moveUp", "moveDown"])
+    // The same four operations the "⋯" menu offers — screen readers reach
+    // them here, since the row is one accessible node.
+    expect(actionNames).toEqual(["activate", "magicTap", "delete", "moveUp", "moveDown", "rename"])
 
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveUp" } })
     expect(onMoveUp).toHaveBeenCalledTimes(1)
@@ -104,6 +108,9 @@ describe("CityRow", () => {
 
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "delete" } })
     expect(onDelete).toHaveBeenCalledTimes(1)
+
+    node.props.onAccessibilityAction({ nativeEvent: { actionName: "rename" } })
+    expect(onRename).toHaveBeenCalledTimes(1)
   })
 
   it("is memoized: an unrelated prop identity change with the same memo-key values does not remount", () => {

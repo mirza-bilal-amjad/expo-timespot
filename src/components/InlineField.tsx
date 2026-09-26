@@ -4,25 +4,31 @@ import { Host, TextInput } from "@expo/ui"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
-import { Icon, PressableIcon } from "./Icon"
+import { Icon, IconTypes, PressableIcon } from "./Icon"
 
 /**
- * docs/04-screen-specs.md S4's field: "`@expo/ui` `TextInput`, `headline`
- * 24, `search` icon leading, `close` trailing, autofocus,
- * `returnKeyType="search"`." The only file that imports @expo/ui's
- * `TextInput` (docs/14-ignite-integration.md §6) — feature code (SearchSheet)
- * never touches @expo/ui directly. One `<Host>`, mounted here.
+ * A one-line `@expo/ui` `TextInput` with a leading icon and a trailing close
+ * button — docs/04-screen-specs.md S4's search field ("`headline` 24,
+ * `search` icon leading, `close` trailing, autofocus") and the rename
+ * sheet's name field. The only file that imports @expo/ui's `TextInput`
+ * (docs/14-ignite-integration.md §6); feature code never touches @expo/ui
+ * directly. One `<Host>`, mounted here.
  */
-export interface SearchFieldProps {
+export interface InlineFieldProps {
   value: string
   onChangeText: (text: string) => void
   onClose: () => void
   placeholder?: string
   autoFocus?: boolean
   closeAccessibilityLabel: string
+  /** Leading glyph; `null` for none. */
+  icon?: IconTypes | null
+  returnKeyType?: "search" | "done"
+  onSubmitEditing?: (text: string) => void
+  selectTextOnFocus?: boolean
 }
 
-export function SearchField(props: SearchFieldProps) {
+export function InlineField(props: InlineFieldProps) {
   const {
     value,
     onChangeText,
@@ -30,19 +36,25 @@ export function SearchField(props: SearchFieldProps) {
     placeholder,
     autoFocus = true,
     closeAccessibilityLabel,
+    icon = "search",
+    returnKeyType = "search",
+    onSubmitEditing,
+    selectTextOnFocus,
   } = props
   const { theme, themed } = useAppTheme()
 
   return (
     <View style={themed($row)}>
-      <Icon icon="search" size="md" color={theme.colors.textDim} />
+      {icon && <Icon icon={icon} size="md" color={theme.colors.textDim} />}
       <Host style={$host} matchContents>
         <TextInput
           defaultValue={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          returnKeyType="search"
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          selectTextOnFocus={selectTextOnFocus}
           textStyle={themed($textStyle)}
           style={$fieldStyle}
         />

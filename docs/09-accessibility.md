@@ -100,7 +100,7 @@ Full shortcut table in `07-responsive-strategy.md` §4. The requirements:
 
 - **Targets ≥ 44 × 44** (iOS) / **48 × 48** (Android) / **24 × 24 minimum** on web (2.5.8). Achieved with `hitSlop`, never by inflating the visual — the ruler ticks look 13 pt and hit 44 pt.
 - **No path-based gestures** required (2.5.1). Everything reachable by tap.
-- **Drag has a non-drag alternative** (2.5.7): reorder via accessibility actions, delete via a long-press menu as well as swipe.
+- **Drag has a non-drag alternative** (2.5.7): reorder and delete via accessibility actions (`moveUp` / `moveDown` / `delete` / `rename`) and via the row's `⋯` menu, as well as drag and swipe.
 - **Undo for every destructive action** (3.3.4). Delete shows a 5 s undo toast; nothing is unrecoverable without confirmation.
 - Long-press threshold 500 ms, adjustable via the OS setting — do not hardcode a custom timing.
 

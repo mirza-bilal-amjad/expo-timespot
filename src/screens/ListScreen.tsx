@@ -7,6 +7,7 @@ import { AvatarStrip, AvatarStripItem } from "@/components/AvatarStrip"
 import { Button } from "@/components/Button"
 import { EntranceView } from "@/components/EntranceView"
 import { Icon, PressableIcon } from "@/components/Icon"
+import { RenameSheet } from "@/components/RenameSheet"
 import { ReorderableCityRow } from "@/components/ReorderableCityRow"
 import { Screen } from "@/components/Screen"
 import { SearchSheet } from "@/components/SearchSheet"
@@ -138,6 +139,7 @@ export function ListScreen() {
   }, [])
 
   const [searchOpen, setSearchOpen] = useState(false)
+  const [renaming, setRenaming] = useState<SavedCity | null>(null)
 
   const avatarItems: AvatarStripItem[] = useMemo(
     () =>
@@ -162,6 +164,7 @@ export function ListScreen() {
         onDelete={handleDelete}
         onMoveUp={() => moveCity(item.cityId, -1)}
         onMoveDown={() => moveCity(item.cityId, 1)}
+        onRename={setRenaming}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
       />
@@ -234,6 +237,7 @@ export function ListScreen() {
       />
 
       <SearchSheet open={searchOpen} onOpenChange={setSearchOpen} />
+      <RenameSheet city={renaming} onClose={() => setRenaming(null)} />
     </View>
   )
 }

@@ -13,6 +13,7 @@ import { scheduleOnRN } from "react-native-worklets"
 
 import type { SavedCity, ZonedTime } from "@/domain/types"
 import { useAppTheme } from "@/theme/context"
+import { boxShadow } from "@/theme/shadow"
 import type { ThemedStyle } from "@/theme/types"
 
 import { CityRow } from "./CityRow"
@@ -36,6 +37,7 @@ export interface ReorderableCityRowProps {
   onDelete: (city: SavedCity) => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onRename: (city: SavedCity) => void
   /** Called mid-drag whenever the dragged row crosses into a neighbour's slot. */
   onDragMove: (cityId: string, toIndex: number) => void
   onDragEnd: () => void
@@ -52,7 +54,10 @@ function clamp(value: number, min: number, max: number) {
 const REORDER_SETTLE_MS = 260
 // Row-states table (docs/04-screen-specs.md): "dragging: scale 1.03, elev.overlay".
 const DRAG_SCALE = 1.03
+// elev.overlay — the same tokens Toast uses.
 const DRAG_SHADOW_OPACITY = 0.18
+const DRAG_SHADOW_OFFSET_Y = 8
+const DRAG_SHADOW_BLUR = 24
 
 export function ReorderableCityRow(props: ReorderableCityRowProps) {
   const {
@@ -65,6 +70,7 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
     onDelete,
     onMoveUp,
     onMoveDown,
+    onRename,
     onDragMove,
     onDragEnd,
   } = props
@@ -122,10 +128,16 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
     [ROW_STEP, itemCount, city.cityId, handleDragStart, onDragMove, onDragEnd],
   )
 
+  const dragShadow = boxShadow(
+    theme.colors.text,
+    DRAG_SHADOW_OPACITY,
+    DRAG_SHADOW_OFFSET_Y,
+    DRAG_SHADOW_BLUR,
+  )
   const $animatedRowStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: isDragging.value ? DRAG_SCALE : 1 }],
     zIndex: isDragging.value ? 1 : 0,
-    shadowOpacity: isDragging.value ? DRAG_SHADOW_OPACITY : 0,
+    boxShadow: isDragging.value ? dragShadow : "none",
   }))
 
   const handleSwipeOpen = useCallback(() => onDelete(city), [onDelete, city])
@@ -155,6 +167,9 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
             onDelete={() => onDelete(city)}
             onMoveUp={onMoveUp}
             onMoveDown={onMoveDown}
+            onRename={() => onRename(city)}
+            canMoveUp={index > 0}
+            canMoveDown={index < itemCount - 1}
           />
         </Animated.View>
       </GestureDetector>

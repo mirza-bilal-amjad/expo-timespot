@@ -418,11 +418,11 @@ Approved `@expo/ui` surface for v1:
 
 ```
 BottomSheet   → Sheet          (search, settings)
-TextInput     → SearchField    (keyboard, autofill, dictation, IME)
+TextInput     → InlineField    (search + rename; keyboard, autofill, dictation, IME)
 Picker        → SettingsForm (theme; day/night style later)
 Switch        → SettingsForm (24-hour time; show seconds later)
 FieldGroup    → SettingsForm groups
-ContextMenu   → long-press city menu
+MenuView      → RowMenu        (the "⋯" city-row menu — @expo/ui/community/menu; SwiftUI Menu on iOS, Compose DropdownMenu on Android, own popover on web)
 ```
 
 Anything else needs an update to `ADR-0003`.

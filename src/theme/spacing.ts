@@ -43,5 +43,8 @@ export const spacing = {
 
   /** avatar diameter and the overlap between adjacent avatars in the strip */
   avatar: 44,
+  /** minimum touch target (docs/09-accessibility.md: 44 × 44 iOS) — for a
+   * control whose hit area can't come from `hitSlop` */
+  hitTarget: 44,
   avatarOverlap: -8,
 } as const
