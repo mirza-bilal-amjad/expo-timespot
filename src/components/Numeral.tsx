@@ -37,6 +37,10 @@ export interface NumeralProps {
    * positions and separators never animate. 'none' (default) is always a
    * plain cut. */
   animate?: "none" | "roll"
+  /** Multiplies the size's font, line height and tracking — for layouts that
+   * fit type to the space available (S2's hero). Rounded to half-points so
+   * the per-size width calibration cache stays small. */
+  scale?: number
   accessibilityLabel?: string
   style?: StyleProp<ViewStyle>
 }
@@ -213,12 +217,23 @@ const RollingDigit = memo(function RollingDigit(props: RollingDigitProps) {
 })
 
 export const Numeral = memo(function Numeral(props: NumeralProps) {
-  const { value, size = "numeralLg", color, animate = "none", accessibilityLabel, style } = props
+  const {
+    value,
+    size = "numeralLg",
+    color,
+    animate = "none",
+    scale = 1,
+    accessibilityLabel,
+    style,
+  } = props
   const { theme } = useAppTheme()
 
   const fontFamily = theme.typography.primary.normal
-  const fontSize = $sizeStyles[size].fontSize as number
-  const cellHeight = $sizeStyles[size].lineHeight as number
+  const base = $sizeStyles[size]
+  const halfPoint = (n: number) => Math.round(n * 2) / 2
+  const fontSize = halfPoint((base.fontSize as number) * scale)
+  const cellHeight = halfPoint((base.lineHeight as number) * scale)
+  const letterSpacing = (base.letterSpacing as number) * scale
   const cacheKey = `${fontFamily}-${fontSize}`
 
   const [cellWidth, setCellWidth] = useState(
@@ -240,14 +255,16 @@ export const Numeral = memo(function Numeral(props: NumeralProps) {
   // re-rendering entirely.
   const $digitText: TextStyle = useMemo(
     () => ({
-      ...$sizeStyles[size],
+      fontSize,
+      lineHeight: cellHeight,
+      letterSpacing,
       fontFamily,
       color: textColor,
       includeFontPadding: false,
       fontVariant: ["tabular-nums"],
       textAlign: "center",
     }),
-    [size, fontFamily, textColor],
+    [fontSize, cellHeight, letterSpacing, fontFamily, textColor],
   )
 
   return (

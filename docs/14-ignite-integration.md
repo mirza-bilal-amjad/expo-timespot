@@ -349,7 +349,7 @@ Guarantees, in priority order:
 1. **A measured fixed width per character cell**, derived from the size token. A `1` occupies the same box as an `8`. This is the primary mechanism and it does not depend on the font.
 2. `fontVariant: ['tabular-nums']` as a belt-and-braces enhancement.
 3. Colons are rendered as glyphs inside the string, not as separate views, so kerning survives.
-4. `animate="roll"` renders the 3-cell odometer strip per `08-motion-spec.md` §3.
+4. `animate="roll"` renders the static 20-cell odometer strip per `08-motion-spec.md` §3 (~~3-cell~~ — corrected 2026-09-26).
 
 > Writing `<Text>{time}</Text>` anywhere is a bug. The clock will twitch on every tick, and once you have seen it you cannot unsee it.
 

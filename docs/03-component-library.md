@@ -56,16 +56,19 @@ interface NumeralProps {
   size?: 'numeralMd' | 'numeralLg' | 'display' | 'displayXl' | 'hero'
   color?: keyof Theme['colors']
   animate?: 'none' | 'roll'          // odometer
+  scale?: number                     // multiplies the size token; default 1
   accessibilityLabel?: string
 }
 ```
+
+`scale` exists for the Clock screen's fit-to-space (`04-screen-specs.md` S2 *Fitting the type*): the size token stays the design size, the screen passes a measured multiplier, and the font size and cell width round to half-points so a re-fit can't jitter by sub-pixels. Every other caller leaves it at 1.
 
 Guarantees, in priority order:
 
 1. **A measured fixed width per character cell**, derived from the size token, so a `1` occupies the same box as an `8` and nothing reflows on a tick. This is the primary mechanism and it does not depend on the font.
 2. `fontVariant: ['tabular-nums']` as a belt-and-braces enhancement.
 3. **Colons are glyphs, not layout** — no separate views, so kerning stays correct.
-4. `animate="roll"` renders a 3-cell vertical strip (prev / current / next) in an overflow-hidden box and translates it on change. See `08-motion-spec.md` §3.
+4. `animate="roll"` renders a static 20-cell strip (0–9, 0–9) in an overflow-hidden box and moves only its `translateY`, on the UI thread. ~~A 3-cell strip (prev / current / next)~~ — corrected 2026-09-26: rotating the cells' text after each roll jittered. See `08-motion-spec.md` §3.
 
 > If you find yourself writing `<Text>{time}</Text>`, that is a bug. Use `<Numeral>`.
 

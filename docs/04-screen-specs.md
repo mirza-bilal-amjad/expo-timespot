@@ -184,6 +184,17 @@ Reference: mobile board, phone 2. The showpiece.
  └───────────────────────────────────────────┘
 ```
 
+### Fitting the type
+
+The type sizes in the diagram are the **design size** (scale 1 on a 393 × 852 phone), not fixed sizes. ~~The hero pinned to the top and the city block to the bottom (`justifyContent: space-between`, scrollable `Screen`)~~ — corrected 2026-09-26: on a tall Android phone that left a screen-high empty band between the seconds and the sun row, and a short phone scrolled. The board has no dead space; the type fills it. So the screen is `Screen preset="fixed"` and the composition (hero, sun row, city) is one centred column whose type scales to the space:
+
+- **Hero** scales by width: hours, minutes, seconds and the date all take one scale, growing until the hero (hours + date) fills the content width, capped so the hero takes at most **62 %** of the body height. Bounds `0.6 – 1.6`.
+- **City** scales to the height that remains below the hero and the sun row (bounds `0.75 – 2`). It grows in square-root steps (a wrap break can move the height a whole line at once) and shrinks by the full overshoot ratio.
+- If the city overflows even at its minimum scale, the hero steps down (× 0.92) to make room — a 320 × 568 phone fits without scrolling.
+- Measure → next scale → re-render, at most 12 passes. Each measurement is tagged with the scale it was taken at, and only measurements at the current scale are judged (a stale layout paired with a new scale was the cause of a 44 pt, gap-leaving settle). The pure step functions live in `src/utils/fitType.ts`.
+- The composition is hidden until the fit settles, with a **300 ms** timeout so a pathological layout still shows. Sizes round to half-points so a settle can't jitter by sub-pixels.
+- Known limit: line wraps are discrete, so the city can settle just below a break and leave up to one line of air. Desktop keeps the column left-aligned until the Phase 6 breakpoints land (see *Web adaptation*).
+
 ### The hero clock
 
 Three stacked numeral blocks:
