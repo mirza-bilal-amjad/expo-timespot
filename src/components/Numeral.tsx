@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
 import {
   LayoutChangeEvent,
   // eslint-disable-next-line no-restricted-imports
@@ -38,8 +38,7 @@ export interface NumeralProps {
    * plain cut. */
   animate?: "none" | "roll"
   /** Multiplies the size's font, line height and tracking — for layouts that
-   * fit type to the space available (S2's hero). Rounded to half-points so
-   * the per-size width calibration cache stays small. */
+   * fit type to the space available (S2's hero). Rounded to half-points. */
   scale?: number
   accessibilityLabel?: string
   style?: StyleProp<ViewStyle>
@@ -55,12 +54,55 @@ const $sizeStyles: Record<NumeralSize, TextStyle> = {
 
 const DIGIT_RE = /[0-9]/
 
+// A tabular digit's advance in Space Grotesk, as a share of the font size —
+// only the first frame's placeholder, before the real "0" is measured.
+const UNCALIBRATED_CELL_RATIO = 0.62
+
 /**
- * Cell width is measured once per (font, size) from a hidden "0" glyph and
- * cached module-wide, so every <Numeral> after the first of that size mounts
- * with the exact width already known — no per-tick layout shift.
+ * A digit cell's width is measured once per (font, size) from a hidden "0"
+ * glyph and cached module-wide as width *per point of font size*, so every
+ * <Numeral> of that size — at any `scale` — mounts with its exact width
+ * already known: no per-tick layout shift, and no guessed-then-corrected
+ * width when a layout rescales the type (~~one cache entry per rendered
+ * font size~~ — corrected 2026-09-26: each new scale re-measured, and the
+ * one-frame guess made S2's fitted clock jitter on Android).
  */
-const cellWidthCache = new Map<string, number>()
+const cellRatioCache = new Map<string, number>()
+const calibrationListeners = new Set<() => void>()
+
+const ratioKey = (fontFamily: string, size: NumeralSize) => `${fontFamily}-${size}`
+
+function subscribeCalibration(listener: () => void) {
+  calibrationListeners.add(listener)
+  return () => {
+    calibrationListeners.delete(listener)
+  }
+}
+
+const halfPoint = (n: number) => Math.round(n * 2) / 2
+
+/** The font size a <Numeral> of `size` renders at `scale` — half-point rounded. */
+export function numeralFontSize(size: NumeralSize, scale = 1): number {
+  return halfPoint(($sizeStyles[size].fontSize as number) * scale)
+}
+
+/** The width of one digit cell, or `undefined` until that size has been
+ * calibrated on this device (any mounted <Numeral> of the size does it). */
+export function numeralCellWidth(
+  fontFamily: string,
+  size: NumeralSize,
+  scale = 1,
+): number | undefined {
+  const ratio = cellRatioCache.get(ratioKey(fontFamily, size))
+  return ratio === undefined ? undefined : Math.ceil(ratio * numeralFontSize(size, scale))
+}
+
+/** True once every listed size has a calibrated cell width. */
+export function useNumeralCalibrated(fontFamily: string, sizes: NumeralSize[]): boolean {
+  return useSyncExternalStore(subscribeCalibration, () =>
+    sizes.every((size) => cellRatioCache.has(ratioKey(fontFamily, size))),
+  )
+}
 
 const $hidden = {
   accessibilityElementsHidden: true,
@@ -230,24 +272,24 @@ export const Numeral = memo(function Numeral(props: NumeralProps) {
 
   const fontFamily = theme.typography.primary.normal
   const base = $sizeStyles[size]
-  const halfPoint = (n: number) => Math.round(n * 2) / 2
-  const fontSize = halfPoint((base.fontSize as number) * scale)
+  const fontSize = numeralFontSize(size, scale)
   const cellHeight = halfPoint((base.lineHeight as number) * scale)
-  const letterSpacing = (base.letterSpacing as number) * scale
-  const cacheKey = `${fontFamily}-${fontSize}`
+  // Tracking follows the rounded font size exactly, so the cell's width per
+  // point stays constant across scales.
+  const letterSpacing = ((base.letterSpacing as number) * fontSize) / (base.fontSize as number)
+  const key = ratioKey(fontFamily, size)
 
-  const [cellWidth, setCellWidth] = useState(
-    () => cellWidthCache.get(cacheKey) ?? Math.round(fontSize * 0.62),
-  )
+  const calibrated = useSyncExternalStore(subscribeCalibration, () => cellRatioCache.has(key))
+  const cellWidth =
+    numeralCellWidth(fontFamily, size, scale) ?? Math.round(fontSize * UNCALIBRATED_CELL_RATIO)
 
   const onMeasureCell = useCallback(
     (e: LayoutChangeEvent) => {
-      if (cellWidthCache.has(cacheKey)) return
-      const width = Math.ceil(e.nativeEvent.layout.width)
-      cellWidthCache.set(cacheKey, width)
-      setCellWidth(width)
+      if (cellRatioCache.has(key)) return
+      cellRatioCache.set(key, e.nativeEvent.layout.width / fontSize)
+      calibrationListeners.forEach((listener) => listener())
     },
-    [cacheKey],
+    [key, fontSize],
   )
 
   const textColor = color ? (theme.colors[color] as string) : theme.colors.text
@@ -296,7 +338,7 @@ export const Numeral = memo(function Numeral(props: NumeralProps) {
           </RNText>
         ),
       )}
-      {!cellWidthCache.has(cacheKey) && (
+      {!calibrated && (
         <RNText style={[$digitText, $calibration]} onLayout={onMeasureCell} {...$hidden}>
           0
         </RNText>

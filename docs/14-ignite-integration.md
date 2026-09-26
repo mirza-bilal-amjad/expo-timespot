@@ -383,33 +383,35 @@ The boundary is unchanged from `ADR-0003` — `@expo/ui` owns system affordances
 
 ```tsx
 // src/components/Sheet.tsx — the ONLY file that imports @expo/ui for sheets
-import { Host, BottomSheet } from "@expo/ui"
+import { BottomSheet } from "@expo/ui"
 import { useAppTheme } from "@/theme/context"
-import type { ThemedStyle } from "@/theme/types"
 
 export interface SheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onClosed?: () => void                  // after the dismiss animation; see below
   children: React.ReactNode
 }
 
 export function Sheet({ open, onOpenChange, children }: SheetProps) {
-  const { themed } = useAppTheme()
+  const { theme } = useAppTheme()
   return (
-    <Host style={themed($host)}>          {/* Host lives HERE, once, never at call sites */}
-      <BottomSheet isOpened={open} onIsOpenedChange={onOpenChange}>
-        {children}
-      </BottomSheet>
-    </Host>
+    // No <Host> here: the universal BottomSheet mounts its own on iOS/Android.
+    <BottomSheet
+      isPresented={open}
+      onDismiss={() => onOpenChange(false)}
+      containerColor={theme.colors.cardBackground}
+    >
+      {children}
+    </BottomSheet>
   )
 }
-
-const $host: ThemedStyle<ViewStyle> = () => ({ position: "absolute" })
 ```
 
 Four rules:
 
-1. **One `<Host>` per adapter**, mounted inside the adapter. Never nest `Host`, never put one in a screen.
+1. **One `<Host>` per adapter**, mounted inside the adapter. Never nest `Host`, never put one in a screen. The universal presenting components (`BottomSheet`) mount their own `Host` — don't wrap them in another. ~~`Sheet` wraps `BottomSheet` in a `Host`~~ — corrected 2026-09-26: that nested two native hosts.
+   - **Don't change the app behind a closing sheet.** A sheet whose action changes what's behind it (search adds a city) closes first and does the work in `Sheet`'s `onClosed`, which fires once the content has unmounted. Changing the list and the tabs while Android's Compose sheet was still animating out crashed the app (2026-09-26).
 2. **Feature code never imports `@expo/ui`.** It imports `@/components/Sheet`. A future swap touches one file.
 3. **`@expo/ui` components do not read Ignite's theme.** They take their own style props. The adapter is the bridge: read `useAppTheme()` there and pass explicit values down. This is the one place where two styling models meet, and it is contained on purpose.
 4. **Do not put `@expo/ui` content inside Ignite's `Screen`'s scroll view.** On iOS a SwiftUI host inside a RN `ScrollView` fights for gestures. Sheets and overlays are siblings of `Screen`, not children.

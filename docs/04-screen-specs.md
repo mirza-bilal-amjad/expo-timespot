@@ -188,12 +188,13 @@ Reference: mobile board, phone 2. The showpiece.
 
 The type sizes in the diagram are the **design size** (scale 1 on a 393 × 852 phone), not fixed sizes. ~~The hero pinned to the top and the city block to the bottom (`justifyContent: space-between`, scrollable `Screen`)~~ — corrected 2026-09-26: on a tall Android phone that left a screen-high empty band between the seconds and the sun row, and a short phone scrolled. The board has no dead space; the type fills it. So the screen is `Screen preset="fixed"` and the composition (hero, sun row, city) is one centred column whose type scales to the space:
 
-- **Hero** scales by width: hours, minutes, seconds and the date all take one scale, growing until the hero (hours + date) fills the content width, capped so the hero takes at most **62 %** of the body height. Bounds `0.6 – 1.6`.
-- **City** scales to the height that remains below the hero and the sun row (bounds `0.75 – 2`). It grows in square-root steps (a wrap break can move the height a whole line at once) and shrinks by the full overshoot ratio.
-- If the city overflows even at its minimum scale, the hero steps down (× 0.92) to make room — a 320 × 568 phone fits without scrolling.
-- Measure → next scale → re-render, at most 12 passes. Each measurement is tagged with the scale it was taken at, and only measurements at the current scale are judged (a stale layout paired with a new scale was the cause of a 44 pt, gap-leaving settle). The pure step functions live in `src/utils/fitType.ts`.
-- The composition is hidden until the fit settles, with a **300 ms** timeout so a pathological layout still shows. Sizes round to half-points so a settle can't jitter by sub-pixels.
-- Known limit: line wraps are discrete, so the city can settle just below a break and leave up to one line of air. Desktop keeps the column left-aligned until the Phase 6 breakpoints land (see *Web adaptation*).
+- **Hero** scales by width: hours, minutes, seconds and the date all take one scale, growing until the hero (hours + date, or minutes + seconds) fills the content width, capped so the hero takes at most **62 %** of the body height. Bounds `0.6 – 1.6`.
+- **City** takes the largest scale (bounds `0.75 – 2`) at which its lines fit in the height left below the hero and the sun row, and no single word has to break.
+- If the city doesn't fit even at its minimum scale, the hero gives up height until it does — a 320 × 568 phone fits without scrolling.
+- **One shot, no loop.** A hidden reference copy of the composition's type is laid out once at scale 1 (hero height, the date's width, each word of the city name, one space). Type grows in proportion to its font size, and a line break depends only on the width available in scale-1 units, so every scale's layout is predicted in pure arithmetic (`src/utils/fitType.ts`, a greedy wrap and a binary search) and the visible composition renders once, at the answer. Digit cells come from `<Numeral>`'s per-point calibration, so they're exact at any scale. ~~Measure → next scale → re-render, up to 12 passes~~ — corrected 2026-09-26: each pass was a visible resize, each resize made `<Numeral>` guess and then correct its cell width a frame later, and that re-opened the loop — the clock jittered on Android.
+- The reference re-measures only when the content changes (city, day, time format) — never on a tick. The composition is hidden until its fit is ready: about 85 ms on first mount, one frame on a city switch; a **300 ms** timeout reveals it regardless.
+- The city wraps within 96 % of the width, with Android's `textBreakStrategy="simple"` (the greedy wrap the fit models). If a platform still needs more lines than predicted, `numberOfLines` + `adjustsFontSizeToFit` shrink it slightly rather than overflow.
+- Known limit: line wraps are discrete, so a name that just misses a break leaves up to one line of air. Desktop keeps the column left-aligned until the Phase 6 breakpoints land (see *Web adaptation*).
 
 ### The hero clock
 
@@ -322,6 +323,8 @@ Native: `@expo/ui` `BottomSheet` at 92 % height. Web: centred modal, 560 × 640,
 | Empty query | "Popular cities" — top 12 by population, plus the device zone pinned first |
 | No results | "No city called '{q}'." + "Search by UTC offset instead" → filters the dataset by zone |
 | Already added | row is dimmed with a `check`; tapping focuses it and dismisses |
+
+Selecting a row dismisses the keyboard and closes the sheet; the city is added and focused only once the sheet has finished closing (`Sheet`'s `onClosed`). ~~Add, focus and close in one handler~~ — corrected 2026-09-26: that re-rendered the tapped row, the list and every mounted tab while Android's Compose sheet was still animating out with its text field focused, and the app crashed.
 | a11y | `role="searchbox"`, `aria-controls` the listbox, `aria-activedescendant` follows arrow keys; ↑/↓/Enter/Escape all work on web |
 
 ---

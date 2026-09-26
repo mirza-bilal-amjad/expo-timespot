@@ -61,7 +61,9 @@ interface NumeralProps {
 }
 ```
 
-`scale` exists for the Clock screen's fit-to-space (`04-screen-specs.md` S2 *Fitting the type*): the size token stays the design size, the screen passes a measured multiplier, and the font size and cell width round to half-points so a re-fit can't jitter by sub-pixels. Every other caller leaves it at 1.
+`scale` exists for the Clock screen's fit-to-space (`04-screen-specs.md` S2 *Fitting the type*): the size token stays the design size, the screen passes a computed multiplier, and the font size rounds to half-points. Every other caller leaves it at 1.
+
+The cell width is calibrated once per size as **width per point of font size** (tracking scales with the font), so a `<Numeral>` at any scale has its exact width on its first frame. `numeralCellWidth()` exposes it and `useNumeralCalibrated()` reports when a size is ready, so a layout can predict the numerals' width without rendering them. ~~One cache entry per rendered font size~~ — corrected 2026-09-26: every new scale mounted with a guessed width and corrected it a frame later.
 
 Guarantees, in priority order:
 
