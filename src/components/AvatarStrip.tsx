@@ -67,7 +67,7 @@ export const AvatarStrip = memo(function AvatarStrip(props: AvatarStripProps) {
           accessibilityRole="tab"
           accessibilityLabel={item.label}
           accessibilityState={{ selected: item.id === focusedId }}
-          style={index > 0 && themed($overlap)}
+          style={[themed($ring($avatarDimensions(avatarSize))), index > 0 && themed($overlap)]}
         >
           <Avatar
             uri={item.uri}
@@ -79,8 +79,10 @@ export const AvatarStrip = memo(function AvatarStrip(props: AvatarStripProps) {
         </Pressable>
       ))}
       {overflowCount > 0 && (
-        <View style={[themed($overlap), themed($overflowTile($avatarDimensions(avatarSize)))]}>
-          <Text text={`+${overflowCount}`} style={themed($overflowText)} />
+        <View style={[themed($ring($avatarDimensions(avatarSize))), themed($overlap)]}>
+          <View style={themed($overflowTile($avatarDimensions(avatarSize)))}>
+            <Text text={`+${overflowCount}`} style={themed($overflowText)} />
+          </View>
         </View>
       )}
     </ScrollView>
@@ -97,7 +99,25 @@ const $content: ThemedStyle<ViewStyle> = (theme) => ({
   paddingHorizontal: theme.spacing.md,
 })
 
-const $overlap: ThemedStyle<ViewStyle> = (theme) => ({ marginLeft: -theme.spacing.xs })
+/**
+ * A ring in the page colour around each tile, so overlapping squircles read
+ * as a stack of separate cities rather than one merged shape (reported
+ * 2026-09-26). A wrapper, not a border on the avatar: a photo is laid over
+ * its own box and would paint over a border.
+ */
+const $ring =
+  (dimensions: { borderRadius: number }): ThemedStyle<ViewStyle> =>
+  (theme) => ({
+    padding: theme.spacing.xxxs,
+    borderRadius: dimensions.borderRadius + theme.spacing.xxxs,
+    backgroundColor: theme.colors.background,
+  })
+
+// The documented −8 overlap between the *squircles*: each ring adds its
+// width on both sides, so the wrappers overlap by that much more.
+const $overlap: ThemedStyle<ViewStyle> = (theme) => ({
+  marginLeft: -(theme.spacing.xs + 2 * theme.spacing.xxxs),
+})
 
 const $overflowTile =
   (dimensions: ViewStyle): ThemedStyle<ViewStyle> =>
@@ -106,8 +126,6 @@ const $overflowTile =
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.controlBackground,
-    borderWidth: 1,
-    borderColor: theme.colors.background,
   })
 
 const $overflowText: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.textDim })

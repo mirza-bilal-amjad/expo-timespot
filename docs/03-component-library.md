@@ -122,7 +122,7 @@ The `12h / 24h` control.
 44 ⌀ squircle city image. `expo-image`, `blurhash` placeholder, `recyclingKey`, `contentFit="cover"`. Grayscale unless `focused`, animating to colour over `duration.base`. Falls back to a monogram tile.
 
 ### `<AvatarStrip>`
-Horizontal, overlapping (−8), max 6 + `+N`. `role="tablist"`. Keeps its scroll offset in sync with the focused index.
+Horizontal, overlapping (−8), max 6 + `+N`. `role="tablist"`. Keeps its scroll offset in sync with the focused index. Each tile sits in a 2 pt ring of the page colour (`spacing.xxxs`, a wrapper so a photo can't paint over it), so overlapping squircles read as separate cities. Added 2026-09-26: with identical fills and no ring they merged into one shape. The −8 overlap is between the squircles, not the rings.
 
 ### `<Sheet>`
 Native: `@expo/ui` `BottomSheet` (real platform sheet — detents, rubber-banding, dismiss gesture, all free). Web: a `radius.lg` modal with a focus trap, `Escape` to close, scroll lock, and focus restored to the trigger on close.
