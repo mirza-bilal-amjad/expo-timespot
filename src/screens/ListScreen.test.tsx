@@ -6,6 +6,12 @@ import { useCitiesStore } from "@/store/cities"
 import { useFocusStore } from "@/store/focus"
 import { ThemeProvider } from "@/theme/context"
 
+// Rendered on its own, outside a navigator: it's the focused screen.
+jest.mock("expo-router", () => ({
+  ...jest.requireActual("expo-router"),
+  useIsFocused: () => true,
+}))
+
 /**
  * docs/10-implementation-plan.md task 3.10's four states — "all four
  * screenshot-tested." This repo has no real screenshot/visual-regression

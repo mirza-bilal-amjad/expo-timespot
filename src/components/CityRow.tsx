@@ -262,7 +262,10 @@ export const CityRow = memo(
   },
   (prev, next) =>
     prev.time.display === next.time.display &&
+    prev.time.offsetLabel === next.time.offsetLabel &&
+    prev.time.isDay === next.time.isDay &&
     prev.selected === next.selected &&
+    prev.onPress === next.onPress &&
     prev.city.cityId === next.city.cityId &&
     prev.city.label === next.city.label &&
     prev.onDelete === next.onDelete &&

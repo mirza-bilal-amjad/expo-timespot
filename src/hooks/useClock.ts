@@ -15,6 +15,11 @@ interface UseClockOptions {
    * screens that don't display seconds. Still ticks on a 1s cadence
    * internally so a coalesced screen catches a minute boundary promptly. */
   coalesceToMinute?: boolean
+  /** When false the clock stops entirely — no timer, no re-render — and
+   * catches up the moment it's true again. Screens pass whether they're
+   * focused: the tabs keep visited screens mounted, and a hidden clock
+   * ticking every second behind the one on screen was pure waste. */
+  active?: boolean
 }
 
 function nextTickDelay(): number {
@@ -24,14 +29,18 @@ function nextTickDelay(): number {
 }
 
 export function useClock(options: UseClockOptions = {}): number {
-  const { coalesceToMinute = false } = options
+  const { coalesceToMinute = false, active = true } = options
   const [now, setNow] = useState(() => Date.now())
   const lastTickRef = useRef<number | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastMinuteRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (!active) return
     let cancelled = false
+    // Coming back from inactive: show the current time straight away.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- catching up after a pause is the point
+    setNow(Date.now())
     lastTickRef.current = Date.now()
     lastMinuteRef.current = Math.floor(Date.now() / 60_000)
 
@@ -85,7 +94,7 @@ export function useClock(options: UseClockOptions = {}): number {
       appStateSub.remove()
       if (visibilityHandler) document.removeEventListener("visibilitychange", visibilityHandler)
     }
-  }, [coalesceToMinute])
+  }, [coalesceToMinute, active])
 
   return now
 }

@@ -68,7 +68,7 @@ const { themed } = useAppTheme()
 
 ### 3. One clock
 
-`useClock()` owns the only interval in the app. Screens subscribe; components receive derived values as **props** and are `React.memo`'d.
+`useClock()` owns the only interval in the app. Screens subscribe; components receive derived values as **props** and are `React.memo`'d. Screens pass `active: useIsFocused()`, because tabs stay mounted and a hidden clock must not tick. A screen that shows no seconds passes `coalesceToMinute`. A memo is only as good as its props: hand rows stable callbacks that take the row's id, never `() => onX(item)` built per render. That pattern defeated every row memo on the list.
 
 ```tsx
 // ❌ N subscriptions, N re-renders per second

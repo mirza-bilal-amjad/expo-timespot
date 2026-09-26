@@ -187,7 +187,8 @@ function schedule(cb) {
 - Aligns to the wall-clock second boundary rather than drifting by the interval's own latency.
 - Re-syncs on `AppState → 'active'` and on web `visibilitychange`; a backgrounded tab may not have fired for hours.
 - Stops entirely when the app is not active — no battery cost, no wake locks.
-- If `showSeconds` is off on the list, the tick coalesces to the **minute** boundary, so an idle list re-renders once a minute instead of 60 times.
+- If `showSeconds` is off on the list, the tick coalesces to the **minute** boundary, so an idle list re-renders once a minute instead of 60 times. ~~(`ListScreen` called plain `useClock()`)~~ — corrected 2026-09-26. The list never shows seconds, so it always coalesces (`useClock({ coalesceToMinute: true })`). It had been redrawing ~1,050 components every second.
+- **Pauses off screen.** `useClock({ active: useIsFocused() })` in every screen. The tab navigator keeps visited screens mounted, and an inactive clock schedules no timer and renders nothing, then catches up the moment its screen is focused again. `freezeOnBlur` is also set, but on web it didn't stop a hidden screen's ticks (measured), so the clock can't rely on it.
 - Guards against a wrong device clock: if `Date.now()` jumps by more than 5 s between ticks, treat it as a system clock change and recompute everything rather than animating a roll through 3 000 values.
 
 ---
@@ -208,7 +209,8 @@ function schedule(cb) {
 | Item | Budget | How it is met |
 |---|---|---|
 | Cold start → readable clock | < 900 ms p75 | fonts preloaded; city dataset lazily loaded *after* first paint; map code-split off the initial route |
-| List re-render | 1 component per tick | `useClock` at the screen, memo'd rows, `showSeconds` off by default |
+| List re-render | 1 component per tick | `useClock` at the screen, coalesced to the minute; memo'd rows whose comparators compare what they *show* (HH:MM, offset, day/night), with callbacks that take the row's id so they're stable. **Measured 2026-09-26 (web dev build, 8 rows):** idle list 0 renders between minutes, down from ~1,050 every second. |
+| Tab switch | no remount | Expo Router `Tabs` with a custom `tabBar` keeps visited screens mounted; ~~`<Slot>`~~ remounted the whole screen on every switch. **Returning to the list: ~30 ms render, down from ~140 ms.** |
 | Meridian drag | 60 fps | shared value on the UI thread; `scheduleOnRN` throttled to 60 ms |
 | Map first paint | < 120 ms | ~210 KB 50 m topology, decoded once per process; raster fallback below a device tier |
 | Web initial route | < 180 KB gz | map and search chunks lazy; dataset fetched, not bundled |

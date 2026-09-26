@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
+import { useIsFocused } from "expo-router"
 import { ScrollView } from "react-native-gesture-handler"
 import { useSharedValue } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -53,7 +54,9 @@ export function ListScreen() {
   const { theme, themed } = useAppTheme()
   const insets = useSafeAreaInsets()
   const tabBarClearance = useTabBarClearance()
-  const now = useClock()
+  // The rows show HH:MM, never seconds — re-rendering the list every second
+  // redrew ~1,000 components per tick for nothing (measured 2026-09-26).
+  const now = useClock({ coalesceToMinute: true, active: useIsFocused() })
   const shouldPlayEntrance = useShouldPlayEntrance("list")
 
   const cities = useCitiesStore((s) => s.cities)
@@ -91,9 +94,14 @@ export function ListScreen() {
     [reorderCities],
   )
 
+  // Reads the current order from the store rather than closing over it, so
+  // its identity never changes and the memo'd rows don't re-render on every
+  // reorder just because their callback did.
   const moveCity = useCallback(
     (cityId: string, delta: -1 | 1) => {
-      const ids = storedOrder.map((c) => c.cityId)
+      const ids = [...useCitiesStore.getState().cities]
+        .sort((a, b) => a.order - b.order)
+        .map((c) => c.cityId)
       const from = ids.indexOf(cityId)
       const to = from + delta
       if (from === -1 || to < 0 || to >= ids.length) return
@@ -101,7 +109,7 @@ export function ListScreen() {
       ;[next[from], next[to]] = [next[to], next[from]]
       reorderCities(next)
     },
-    [storedOrder, reorderCities],
+    [reorderCities],
   )
 
   // Task 3.6 acceptance: "undo restores position, not just the city" —
@@ -166,10 +174,9 @@ export function ListScreen() {
               }
             : undefined
         }
-        onPress={() => setFocusedCityId(item.cityId)}
+        onFocus={setFocusedCityId}
         onDelete={handleDelete}
-        onMoveUp={() => moveCity(item.cityId, -1)}
-        onMoveDown={() => moveCity(item.cityId, 1)}
+        onMove={moveCity}
         onRename={setRenaming}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}

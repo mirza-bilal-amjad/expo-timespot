@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { LayoutChangeEvent, StyleSheet, TextStyle, View, ViewStyle } from "react-native"
+import { useIsFocused } from "expo-router"
 import { useSharedValue, withTiming } from "react-native-reanimated"
 
 import { MeridianMap } from "@/components/MeridianMap"
@@ -32,7 +33,7 @@ import type { ThemedStyle } from "@/theme/types"
  */
 export function MapScreen() {
   const { theme, themed } = useAppTheme()
-  const now = useClock()
+  const now = useClock({ active: useIsFocused() })
   const tabBarClearance = useTabBarClearance()
   const { prefs } = usePrefsStore()
   const focusedCityId = useFocusStore((s) => s.focusedCityId)

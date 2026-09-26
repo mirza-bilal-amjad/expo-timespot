@@ -50,10 +50,9 @@ describe("ReorderableCityRow", () => {
           selected={false}
           index={0}
           itemCount={3}
-          onPress={jest.fn()}
+          onFocus={jest.fn()}
           onDelete={jest.fn()}
-          onMoveUp={jest.fn()}
-          onMoveDown={jest.fn()}
+          onMove={jest.fn()}
           onRename={jest.fn()}
           onDragStart={jest.fn()}
           onDragEnd={jest.fn()}
@@ -63,10 +62,9 @@ describe("ReorderableCityRow", () => {
     expect(screen.getByText("Tokyo")).toBeTruthy()
   })
 
-  it("wires accessibility delete/moveUp/moveDown to the row's own actions", () => {
+  it("wires accessibility delete/moveUp/moveDown to the row's own actions, with its identity", () => {
     const onDelete = jest.fn()
-    const onMoveUp = jest.fn()
-    const onMoveDown = jest.fn()
+    const onMove = jest.fn()
     render(
       <ThemeProvider>
         <Harness
@@ -75,10 +73,9 @@ describe("ReorderableCityRow", () => {
           selected={false}
           index={1}
           itemCount={3}
-          onPress={jest.fn()}
+          onFocus={jest.fn()}
           onDelete={onDelete}
-          onMoveUp={onMoveUp}
-          onMoveDown={onMoveDown}
+          onMove={onMove}
           onRename={jest.fn()}
           onDragStart={jest.fn()}
           onDragEnd={jest.fn()}
@@ -89,9 +86,37 @@ describe("ReorderableCityRow", () => {
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveUp" } })
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "moveDown" } })
     node.props.onAccessibilityAction({ nativeEvent: { actionName: "delete" } })
-    expect(onMoveUp).toHaveBeenCalledTimes(1)
-    expect(onMoveDown).toHaveBeenCalledTimes(1)
+    expect(onMove.mock.calls).toEqual([
+      [savedCity.cityId, -1],
+      [savedCity.cityId, 1],
+    ])
     expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it("doesn't re-render on a tick that doesn't change what it shows", () => {
+    const onFocus = jest.fn()
+    const props = {
+      city: savedCity,
+      selected: false,
+      index: 0,
+      itemCount: 3,
+      onFocus,
+      onDelete: jest.fn(),
+      onMove: jest.fn(),
+      onRename: jest.fn(),
+      onDragStart: jest.fn(),
+      onDragEnd: jest.fn(),
+    }
+    const order = { value: [savedCity.cityId] } as unknown as ReorderableCityRowProps["order"]
+    const draggingId = { value: null } as unknown as ReorderableCityRowProps["draggingId"]
+    const same = { ...props, order, draggingId }
+    const compare = (
+      ReorderableCityRow as unknown as { compare: (a: object, b: object) => boolean }
+    ).compare
+    // Same HH:MM, new object, new seconds — skip.
+    expect(compare({ ...same, time }, { ...same, time: { ...time, seconds: "05" } })).toBe(true)
+    // The minute moves — render.
+    expect(compare({ ...same, time }, { ...same, time: { ...time, display: "01:41" } })).toBe(false)
   })
 
   it("mounts absolutely placed at its slot — slot × (rowHeight + rowGap)", () => {
@@ -103,10 +128,9 @@ describe("ReorderableCityRow", () => {
           selected={false}
           index={2}
           itemCount={3}
-          onPress={jest.fn()}
+          onFocus={jest.fn()}
           onDelete={jest.fn()}
-          onMoveUp={jest.fn()}
-          onMoveDown={jest.fn()}
+          onMove={jest.fn()}
           onRename={jest.fn()}
           onDragStart={jest.fn()}
           onDragEnd={jest.fn()}

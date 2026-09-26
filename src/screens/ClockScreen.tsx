@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { LayoutChangeEvent, TextStyle, View, ViewStyle } from "react-native"
+import { useIsFocused } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { EntranceView } from "@/components/EntranceView"
@@ -82,7 +83,7 @@ export function ClockScreen() {
   const { theme, themed } = useAppTheme()
   const insets = useSafeAreaInsets()
   const tabBarClearance = useTabBarClearance()
-  const now = useClock()
+  const now = useClock({ active: useIsFocused() })
   const shouldPlayEntrance = useShouldPlayEntrance("clock")
 
   const focusedCityId = useFocusStore((s) => s.focusedCityId)

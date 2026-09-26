@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { View, ViewStyle } from "react-native"
 import * as Haptics from "expo-haptics"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
@@ -54,10 +54,12 @@ export interface ReorderableCityRowProps {
   order: SharedValue<string[]>
   /** The cityId being dragged, if any — shared by every row. */
   draggingId: SharedValue<string | null>
-  onPress: () => void
+  /** All callbacks take the row's identity rather than being bound per row
+   * by the list, so they're stable and this memo'd row re-renders only when
+   * what it shows changes. */
+  onFocus: (cityId: string) => void
   onDelete: (city: SavedCity) => void
-  onMoveUp: () => void
-  onMoveDown: () => void
+  onMove: (cityId: string, delta: -1 | 1) => void
   onRename: (city: SavedCity) => void
   onDragStart: () => void
   /** The final visual order, once the dragged row is released. */
@@ -86,7 +88,7 @@ const DRAG_SHADOW_OFFSET_Y = 8
 const DRAG_SHADOW_BLUR = 24
 const LONG_PRESS_MS = 500
 
-export function ReorderableCityRow(props: ReorderableCityRowProps) {
+export const ReorderableCityRow = memo(function ReorderableCityRow(props: ReorderableCityRowProps) {
   const {
     city,
     time,
@@ -95,10 +97,9 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
     itemCount,
     order,
     draggingId,
-    onPress,
+    onFocus,
     onDelete,
-    onMoveUp,
-    onMoveDown,
+    onMove,
     onRename,
     onDragStart,
     onDragEnd,
@@ -199,6 +200,11 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
   })
 
   const handleSwipeOpen = useCallback(() => onDelete(city), [onDelete, city])
+  const handlePress = useCallback(() => onFocus(id), [onFocus, id])
+  const handleDelete = handleSwipeOpen
+  const handleMoveUp = useCallback(() => onMove(id, -1), [onMove, id])
+  const handleMoveDown = useCallback(() => onMove(id, 1), [onMove, id])
+  const handleRename = useCallback(() => onRename(city), [onRename, city])
 
   const renderRightActions = useCallback(
     (progress: SharedValue<number>) => (
@@ -228,11 +234,11 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
                 city={city}
                 time={time}
                 selected={selected}
-                onPress={onPress}
-                onDelete={() => onDelete(city)}
-                onMoveUp={onMoveUp}
-                onMoveDown={onMoveDown}
-                onRename={() => onRename(city)}
+                onPress={handlePress}
+                onDelete={handleDelete}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                onRename={handleRename}
                 canMoveUp={index > 0}
                 canMoveDown={index < itemCount - 1}
               />
@@ -241,6 +247,33 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
         </GestureDetector>
       </Swipeable>
     </Animated.View>
+  )
+}, sameRow)
+
+/**
+ * The time object is new every tick; what the row *shows* of it (HH:MM, the
+ * offset label, day/night) is what decides a re-render. The entrance config
+ * is a fresh literal per list render, so only whether it plays counts.
+ * Everything else is compared by identity: the list passes stable values.
+ */
+function sameRow(prev: ReorderableCityRowProps, next: ReorderableCityRowProps): boolean {
+  return (
+    prev.city === next.city &&
+    prev.time.display === next.time.display &&
+    prev.time.offsetLabel === next.time.offsetLabel &&
+    prev.time.isDay === next.time.isDay &&
+    prev.selected === next.selected &&
+    prev.index === next.index &&
+    prev.itemCount === next.itemCount &&
+    prev.order === next.order &&
+    prev.draggingId === next.draggingId &&
+    prev.entrance?.play === next.entrance?.play &&
+    prev.onFocus === next.onFocus &&
+    prev.onDelete === next.onDelete &&
+    prev.onMove === next.onMove &&
+    prev.onRename === next.onRename &&
+    prev.onDragStart === next.onDragStart &&
+    prev.onDragEnd === next.onDragEnd
   )
 }
 

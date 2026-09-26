@@ -73,7 +73,7 @@ Then:
    ```
 2. **Create `src/app/`** for routes. The `@/` alias already points at the moved folder — check `tsconfig.json` and `babel.config.js` and update the path if it says `./app/*`.
 3. **`package.json`** → `"main": "expo-router/entry"`.
-4. **`src/app/_layout.tsx`** replaces `App.tsx` — carries the providers and renders `<Slot />`.
+4. **`src/app/_layout.tsx`** replaces `App.tsx` — carries the providers and renders `<Slot />`. The tab group (`src/app/(tabs)/_layout.tsx`) uses Expo Router's `Tabs` with TimeSpot's own `tabBar`. ~~A second `<Slot>`~~ — corrected 2026-09-26: a Slot remounts the whole screen on every tab switch.
 5. Delete `src/navigators/`; the file tree is the navigator now.
 6. `ListItem` needs `React.forwardRef()` to work as an Expo Router `<Link asChild>` target. Ignite's `Text` already forwards refs; `ListItem` may not.
 7. The `ignite-cli generate screen` template no longer applies — screens now live under `src/screens/` and are re-exported by route files.
