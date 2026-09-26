@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { ViewStyle } from "react-native"
 import * as Haptics from "expo-haptics"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable"
 import Animated, {
+  Easing,
   SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -13,34 +15,58 @@ import { scheduleOnRN } from "react-native-worklets"
 
 import type { SavedCity, ZonedTime } from "@/domain/types"
 import { useAppTheme } from "@/theme/context"
-import { boxShadow } from "@/theme/shadow"
+import { rgbChannels } from "@/theme/shadow"
 import type { ThemedStyle } from "@/theme/types"
 
 import { CityRow } from "./CityRow"
+import { EntranceView } from "./EntranceView"
 import { Icon } from "./Icon"
 
 /**
  * docs/10-implementation-plan.md task 3.6. Wraps the presentational
  * <CityRow> with the two gestures the row-states/interactions tables specify
- * — long-press-then-drag to reorder, swipe left to delete — so CityRow
- * itself stays a plain memoized row. Both gestures have a documented
- * non-gesture alternative (docs/09-accessibility.md §4, WCAG 2.5.7):
- * CityRow's own accessibilityActions cover delete/moveUp/moveDown.
+ * — long-press-then-drag to reorder, swipe left to delete. Both have a
+ * non-gesture alternative (docs/09-accessibility.md §4, WCAG 2.5.7): the
+ * row's accessibility actions and its "⋯" menu.
+ *
+ * Every row is absolutely positioned at its slot in the list's shared
+ * *visual order* (`order`, owned by ListScreen, lives on the UI thread),
+ * and glides there whenever that slot changes. A drag only rewrites
+ * `order` — neighbours slide out of the way, the dragged row stays glued to
+ * the finger — and on release the new order is committed to the store,
+ * which re-renders nothing visible: positions never came from render order.
+ *
+ * ~~Reorder the data mid-drag and compensate the dragged row's offset~~ —
+ * replaced 2026-09-26. The compensation landed on the UI thread frames
+ * before the list's re-layout (a JS round-trip), so the dragged row jumped a
+ * slot at every crossing; neighbours snapped instead of sliding; the dragged
+ * row passed *under* the rows below it (its zIndex was inside a list cell);
+ * and the lift popped on and off.
  */
 export interface ReorderableCityRowProps {
   city: SavedCity
   time: ZonedTime
   selected: boolean
+  /** Position in the stored order — for "can move up/down" and the initial slot. */
   index: number
   itemCount: number
+  /** The list's visual order (cityIds), shared by every row. */
+  order: SharedValue<string[]>
+  /** The cityId being dragged, if any — shared by every row. */
+  draggingId: SharedValue<string | null>
   onPress: () => void
   onDelete: (city: SavedCity) => void
   onMoveUp: () => void
   onMoveDown: () => void
   onRename: (city: SavedCity) => void
-  /** Called mid-drag whenever the dragged row crosses into a neighbour's slot. */
-  onDragMove: (cityId: string, toIndex: number) => void
-  onDragEnd: () => void
+  onDragStart: () => void
+  /** The final visual order, once the dragged row is released. */
+  onDragEnd: (orderedIds: string[]) => void
+  /** Cold-start entrance (docs/08-motion-spec.md §7), run *inside* the
+   * positioned layer — a wrapper around an absolutely placed row would
+   * collapse to zero height, and Android drops touches outside a parent's
+   * bounds. */
+  entrance?: { play: boolean; delayMs: number; durationMs: number }
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -54,10 +80,11 @@ function clamp(value: number, min: number, max: number) {
 const REORDER_SETTLE_MS = 260
 // Row-states table (docs/04-screen-specs.md): "dragging: scale 1.03, elev.overlay".
 const DRAG_SCALE = 1.03
-// elev.overlay — the same tokens Toast uses.
+// elev.overlay — the same tokens Toast uses; the alpha fades with the lift.
 const DRAG_SHADOW_OPACITY = 0.18
 const DRAG_SHADOW_OFFSET_Y = 8
 const DRAG_SHADOW_BLUR = 24
+const LONG_PRESS_MS = 500
 
 export function ReorderableCityRow(props: ReorderableCityRowProps) {
   const {
@@ -66,79 +93,110 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
     selected,
     index,
     itemCount,
+    order,
+    draggingId,
     onPress,
     onDelete,
     onMoveUp,
     onMoveDown,
     onRename,
-    onDragMove,
+    onDragStart,
     onDragEnd,
+    entrance,
   } = props
   const { theme, themed } = useAppTheme()
+  const id = city.cityId
 
-  // Every row is the same fixed height, so the target index during a drag is
-  // pure arithmetic against the finger's translationY — no per-row onLayout
-  // measurement needed.
-  const ROW_STEP = theme.spacing.rowHeight + theme.spacing.rowGap
+  const step = theme.spacing.rowHeight + theme.spacing.rowGap
+  const settle = useMemo(
+    () => ({ duration: REORDER_SETTLE_MS, easing: Easing.bezier(...theme.timing.ease.standard) }),
+    [theme.timing],
+  )
+  const liftMs = theme.timing.fast
 
-  const translateY = useSharedValue(0)
-  const isDragging = useSharedValue(0)
-  const indexShared = useSharedValue(index)
-  const startIndexShared = useSharedValue(index)
+  // Where the row rests (animated toward its slot), where the finger has it
+  // while dragging, and 0→1 for the lift's scale and shadow.
+  const slotY = useSharedValue(index * step)
+  const dragY = useSharedValue(index * step)
+  const dragStartY = useSharedValue(0)
+  const lift = useSharedValue(0)
 
-  useEffect(() => {
-    indexShared.value = index
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- indexShared is a Reanimated shared value (a stable ref), not reactive state; including it as a dep doesn't apply here.
-  }, [index])
+  useAnimatedReaction(
+    () => order.value.indexOf(id),
+    (slot, previous) => {
+      if (slot < 0 || draggingId.value === id) return
+      // First placement is instant; every later slot change glides.
+      slotY.value = previous === null ? slot * step : withTiming(slot * step, settle)
+    },
+    [id, step, settle],
+  )
 
-  const handleDragStart = useCallback(() => {
+  const handleHaptic = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
   }, [])
 
   const pan = useMemo(
     () =>
       Gesture.Pan()
-        .activateAfterLongPress(500)
+        .activateAfterLongPress(LONG_PRESS_MS)
         .onStart(() => {
-          startIndexShared.value = indexShared.value
-          isDragging.value = 1
-          scheduleOnRN(handleDragStart)
+          dragStartY.value = slotY.value
+          dragY.value = slotY.value
+          // eslint-disable-next-line react-hooks/immutability -- list-level Reanimated shared value, written from the UI-thread gesture by design
+          draggingId.value = id
+          lift.value = withTiming(1, { duration: liftMs })
+          scheduleOnRN(handleHaptic)
+          scheduleOnRN(onDragStart)
         })
         .onUpdate((e) => {
-          const rawIndex = startIndexShared.value + e.translationY / ROW_STEP
-          const nextIndex = clamp(Math.round(rawIndex), 0, itemCount - 1)
-          if (nextIndex !== indexShared.value) {
-            // react-hooks/immutability can't distinguish a Reanimated shared
-            // value (intentionally mutable outside React's render model,
-            // written in an effect elsewhere in this component) from React
-            // state — same false positive as Screen.tsx's react-hooks/refs.
-            // eslint-disable-next-line react-hooks/immutability
-            indexShared.value = nextIndex
-            scheduleOnRN(onDragMove, city.cityId, nextIndex)
+          const maxY = (itemCount - 1) * step
+          const y = clamp(dragStartY.value + e.translationY, 0, maxY)
+          dragY.value = y
+          const hover = clamp(Math.round(y / step), 0, itemCount - 1)
+          const current = order.value.indexOf(id)
+          if (hover !== current && current >= 0) {
+            const next = order.value.slice()
+            next.splice(current, 1)
+            next.splice(hover, 0, id)
+            // eslint-disable-next-line react-hooks/immutability -- list-level Reanimated shared value, written from the UI-thread gesture by design
+            order.value = next
           }
-          translateY.value =
-            e.translationY - (indexShared.value - startIndexShared.value) * ROW_STEP
         })
-        .onEnd(() => {
-          translateY.value = withTiming(0, { duration: REORDER_SETTLE_MS })
-          isDragging.value = 0
-          scheduleOnRN(onDragEnd)
+        .onFinalize(() => {
+          if (draggingId.value !== id) return
+          const slot = order.value.indexOf(id)
+          // Hand over from finger to slot without a jump: start the settle
+          // from exactly where the finger left the row.
+          // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value
+          slotY.value = dragY.value
+          slotY.value = withTiming(slot * step, settle)
+          // eslint-disable-next-line react-hooks/immutability -- list-level Reanimated shared value, written from the UI-thread gesture by design
+          draggingId.value = null
+          lift.value = withTiming(0, { duration: REORDER_SETTLE_MS })
+          scheduleOnRN(onDragEnd, order.value)
         }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- gesture callbacks are workletized; shared values are stable refs and don't need to be deps.
-    [ROW_STEP, itemCount, city.cityId, handleDragStart, onDragMove, onDragEnd],
+    // Shared values are stable refs; the gesture is rebuilt only when the
+    // geometry or the callbacks change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, step, itemCount, settle, liftMs, handleHaptic, onDragStart, onDragEnd],
   )
 
-  const dragShadow = boxShadow(
-    theme.colors.text,
-    DRAG_SHADOW_OPACITY,
-    DRAG_SHADOW_OFFSET_Y,
-    DRAG_SHADOW_BLUR,
-  )
-  const $animatedRowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: isDragging.value ? DRAG_SCALE : 1 }],
-    zIndex: isDragging.value ? 1 : 0,
-    boxShadow: isDragging.value ? dragShadow : "none",
-  }))
+  const shadowRgb = rgbChannels(theme.colors.text)
+  const $position = useAnimatedStyle(() => {
+    const dragging = draggingId.value === id
+    return {
+      transform: [
+        { translateY: dragging ? dragY.value : slotY.value },
+        { scale: 1 + (DRAG_SCALE - 1) * lift.value },
+      ],
+      // Above every sibling row while lifted, including while it settles.
+      zIndex: dragging || lift.value > 0 ? 1 : 0,
+      boxShadow:
+        lift.value > 0
+          ? `0px ${DRAG_SHADOW_OFFSET_Y}px ${DRAG_SHADOW_BLUR}px rgba(${shadowRgb}, ${DRAG_SHADOW_OPACITY * lift.value})`
+          : "none",
+    }
+  })
 
   const handleSwipeOpen = useCallback(() => onDelete(city), [onDelete, city])
 
@@ -150,30 +208,35 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
   )
 
   return (
-    <Swipeable
-      renderRightActions={renderRightActions}
-      rightThreshold={80}
-      overshootFriction={8}
-      onSwipeableOpen={handleSwipeOpen}
-      containerStyle={themed($swipeContainer)}
-    >
-      <GestureDetector gesture={pan}>
-        <Animated.View style={$animatedRowStyle}>
-          <CityRow
-            city={city}
-            time={time}
-            selected={selected}
-            onPress={onPress}
-            onDelete={() => onDelete(city)}
-            onMoveUp={onMoveUp}
-            onMoveDown={onMoveDown}
-            onRename={() => onRename(city)}
-            canMoveUp={index > 0}
-            canMoveDown={index < itemCount - 1}
-          />
-        </Animated.View>
-      </GestureDetector>
-    </Swipeable>
+    <Animated.View style={[themed($slot), $position]}>
+      <Swipeable
+        renderRightActions={renderRightActions}
+        rightThreshold={80}
+        overshootFriction={8}
+        onSwipeableOpen={handleSwipeOpen}
+      >
+        <GestureDetector gesture={pan}>
+          <EntranceView
+            play={entrance?.play ?? false}
+            delayMs={entrance?.delayMs}
+            durationMs={entrance?.durationMs}
+          >
+            <CityRow
+              city={city}
+              time={time}
+              selected={selected}
+              onPress={onPress}
+              onDelete={() => onDelete(city)}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
+              onRename={() => onRename(city)}
+              canMoveUp={index > 0}
+              canMoveDown={index < itemCount - 1}
+            />
+          </EntranceView>
+        </GestureDetector>
+      </Swipeable>
+    </Animated.View>
   )
 }
 
@@ -188,8 +251,15 @@ function DeleteAction(props: { progress: SharedValue<number>; accessibilityLabel
   )
 }
 
-const $swipeContainer: ThemedStyle<ViewStyle> = (theme) => ({
-  marginBottom: theme.spacing.rowGap,
+// Absolutely placed; `translateY` (slot × step) does the positioning. The
+// radius matches the card's own: the drag shadow is drawn from this layer,
+// and a square layer showed hard shadow edges beside the rounded card.
+const $slot: ThemedStyle<ViewStyle> = (theme) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  borderRadius: theme.radius.md,
 })
 
 const $deleteAction: ThemedStyle<ViewStyle> = (theme) => ({

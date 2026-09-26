@@ -212,7 +212,7 @@ function schedule(cb) {
 | Meridian drag | 60 fps | shared value on the UI thread; `scheduleOnRN` throttled to 60 ms |
 | Map first paint | < 120 ms | ~210 KB 50 m topology, decoded once per process; raster fallback below a device tier |
 | Web initial route | < 180 KB gz | map and search chunks lazy; dataset fetched, not bundled |
-| Memory, 40 cities | < 120 MB | FlashList recycling, `expo-image` `recyclingKey` |
+| Memory, 40 cities | < 120 MB | memo'd rows (all mounted — see `04` S1 "Reorder"), `expo-image` `recyclingKey` |
 
 ---
 

@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
-import { FlashList } from "@shopify/flash-list"
+import { ScrollView } from "react-native-gesture-handler"
+import { useSharedValue } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { AvatarStrip, AvatarStripItem } from "@/components/AvatarStrip"
@@ -64,40 +65,30 @@ export function ListScreen() {
 
   const storedOrder = useMemo(() => [...cities].sort((a, b) => a.order - b.order), [cities])
 
-  // Task 3.6: while a row is being dragged, the displayed order is a local
-  // override — committed to the store (and only then persisted) on release,
-  // so a mid-drag crash or reload can't leave a half-reordered list.
-  const [liveOrderIds, setLiveOrderIds] = useState<string[] | null>(null)
-  const orderedCities = useMemo(() => {
-    if (!liveOrderIds) return storedOrder
-    const byId = new Map(storedOrder.map((c) => [c.cityId, c]))
-    return liveOrderIds.map((id) => byId.get(id)).filter((c): c is SavedCity => !!c)
-  }, [storedOrder, liveOrderIds])
+  // The list's *visual* order, on the UI thread — every row positions
+  // itself from it (see ReorderableCityRow). It follows the store whenever
+  // no drag is in flight; a drag rewrites it directly, and on release the
+  // result is committed to the store (and only then persisted, so a mid-drag
+  // crash can't leave a half-reordered list). That commit re-renders nothing
+  // visible — positions never came from render order.
+  const storedIds = useMemo(() => storedOrder.map((c) => c.cityId), [storedOrder])
+  const order = useSharedValue<string[]>(storedIds)
+  const draggingId = useSharedValue<string | null>(null)
+  const [dragging, setDragging] = useState(false)
 
-  const handleDragMove = useCallback(
-    (cityId: string, toIndex: number) => {
-      setLiveOrderIds((prev) => {
-        const base = prev ?? storedOrder.map((c) => c.cityId)
-        const fromIndex = base.indexOf(cityId)
-        if (fromIndex === -1 || fromIndex === toIndex) return prev
-        const next = [...base]
-        next.splice(fromIndex, 1)
-        next.splice(toIndex, 0, cityId)
-        return next
-      })
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value, read on the UI thread
+    if (!dragging) order.value = storedIds
+  }, [storedIds, dragging, order])
+
+  const handleDragStart = useCallback(() => setDragging(true), [])
+  const handleDragEnd = useCallback(
+    (orderedIds: string[]) => {
+      reorderCities(orderedIds)
+      setDragging(false)
     },
-    // storedOrder is intentionally not a dep — it should only seed `base`
-    // the first time a drag starts, not resync mid-drag on every store tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [reorderCities],
   )
-
-  const handleDragEnd = useCallback(() => {
-    setLiveOrderIds((ids) => {
-      if (ids) reorderCities(ids)
-      return null
-    })
-  }, [reorderCities])
 
   const moveCity = useCallback(
     (cityId: string, delta: -1 | 1) => {
@@ -143,41 +134,45 @@ export function ListScreen() {
 
   const avatarItems: AvatarStripItem[] = useMemo(
     () =>
-      orderedCities.map((c) => {
+      storedOrder.map((c) => {
         const city = getCityById(c.cityId)
         return { id: c.cityId, label: c.label ?? city?.name ?? c.cityId }
       }),
-    [orderedCities],
+    [storedOrder],
   )
 
-  const renderItem = ({ item, index }: { item: SavedCity; index: number }) => {
+  const step = theme.spacing.rowHeight + theme.spacing.rowGap
+
+  const renderRow = (item: SavedCity, index: number) => {
     const city = getCityById(item.cityId)
     const time = getZonedTime(now, city?.zone ?? "UTC", prefs)
-    const row = (
+    return (
       <ReorderableCityRow
+        key={item.cityId}
         city={item}
         time={time}
         selected={item.cityId === focusedCityId}
         index={index}
-        itemCount={orderedCities.length}
+        itemCount={storedOrder.length}
+        order={order}
+        draggingId={draggingId}
+        entrance={
+          index < ENTRANCE_ROW_CAP
+            ? {
+                play: shouldPlayEntrance,
+                delayMs: index * ENTRANCE_ROW_STAGGER_MS,
+                durationMs: ENTRANCE_ROW_DURATION_MS,
+              }
+            : undefined
+        }
         onPress={() => setFocusedCityId(item.cityId)}
         onDelete={handleDelete}
         onMoveUp={() => moveCity(item.cityId, -1)}
         onMoveDown={() => moveCity(item.cityId, 1)}
         onRename={setRenaming}
-        onDragMove={handleDragMove}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       />
-    )
-    if (index >= ENTRANCE_ROW_CAP) return row
-    return (
-      <EntranceView
-        play={shouldPlayEntrance}
-        delayMs={index * ENTRANCE_ROW_STAGGER_MS}
-        durationMs={ENTRANCE_ROW_DURATION_MS}
-      >
-        {row}
-      </EntranceView>
     )
   }
 
@@ -215,15 +210,15 @@ export function ListScreen() {
           </EntranceView>
         </View>
 
-        {orderedCities.length === 0 ? (
+        {storedOrder.length === 0 ? (
           <EmptyState onAddFirst={() => setSearchOpen(true)} />
         ) : (
-          <FlashList
-            data={orderedCities}
-            keyExtractor={(item) => item.cityId}
-            renderItem={renderItem}
-            contentContainerStyle={themed($listContent)}
-          />
+          <ScrollView scrollEnabled={!dragging} contentContainerStyle={themed($listContent)}>
+            {/* Rows are absolutely placed at slot × step; this holds their room. */}
+            <View style={{ height: storedOrder.length * step - theme.spacing.rowGap }}>
+              {storedOrder.map(renderRow)}
+            </View>
+          </ScrollView>
         )}
       </Screen>
 

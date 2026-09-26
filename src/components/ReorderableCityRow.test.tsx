@@ -1,9 +1,19 @@
 import { render, screen } from "@testing-library/react-native"
+import { useSharedValue } from "react-native-reanimated"
 
 import type { SavedCity, ZonedTime } from "@/domain/types"
 import { ThemeProvider } from "@/theme/context"
 
-import { ReorderableCityRow } from "./ReorderableCityRow"
+import { ReorderableCityRow, ReorderableCityRowProps } from "./ReorderableCityRow"
+
+type HarnessProps = Omit<ReorderableCityRowProps, "order" | "draggingId">
+
+/** Supplies the list-level shared values ListScreen normally owns. */
+function Harness(props: HarnessProps) {
+  const order = useSharedValue(["a", props.city.cityId, "b"].slice(0, props.itemCount))
+  const draggingId = useSharedValue<string | null>(null)
+  return <ReorderableCityRow {...props} order={order} draggingId={draggingId} />
+}
 
 /**
  * Gesture behaviour itself (drag, swipe) isn't meaningfully testable under
@@ -34,7 +44,7 @@ describe("ReorderableCityRow", () => {
   it("renders the wrapped CityRow", () => {
     render(
       <ThemeProvider>
-        <ReorderableCityRow
+        <Harness
           city={savedCity}
           time={time}
           selected={false}
@@ -45,7 +55,7 @@ describe("ReorderableCityRow", () => {
           onMoveUp={jest.fn()}
           onMoveDown={jest.fn()}
           onRename={jest.fn()}
-          onDragMove={jest.fn()}
+          onDragStart={jest.fn()}
           onDragEnd={jest.fn()}
         />
       </ThemeProvider>,
@@ -59,7 +69,7 @@ describe("ReorderableCityRow", () => {
     const onMoveDown = jest.fn()
     render(
       <ThemeProvider>
-        <ReorderableCityRow
+        <Harness
           city={savedCity}
           time={time}
           selected={false}
@@ -70,7 +80,7 @@ describe("ReorderableCityRow", () => {
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onRename={jest.fn()}
-          onDragMove={jest.fn()}
+          onDragStart={jest.fn()}
           onDragEnd={jest.fn()}
         />
       </ThemeProvider>,
@@ -82,5 +92,33 @@ describe("ReorderableCityRow", () => {
     expect(onMoveUp).toHaveBeenCalledTimes(1)
     expect(onMoveDown).toHaveBeenCalledTimes(1)
     expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it("mounts absolutely placed at its slot — slot × (rowHeight + rowGap)", () => {
+    const { toJSON } = render(
+      <ThemeProvider>
+        <Harness
+          city={savedCity}
+          time={time}
+          selected={false}
+          index={2}
+          itemCount={3}
+          onPress={jest.fn()}
+          onDelete={jest.fn()}
+          onMoveUp={jest.fn()}
+          onMoveDown={jest.fn()}
+          onRename={jest.fn()}
+          onDragStart={jest.fn()}
+          onDragEnd={jest.fn()}
+        />
+      </ThemeProvider>,
+    )
+    const root = toJSON() as unknown as { props: { style: unknown } }
+    const style = Object.assign({}, ...[root.props.style].flat(Infinity)) as {
+      position: string
+      transform: { translateY?: number }[]
+    }
+    expect(style.position).toBe("absolute")
+    expect(style.transform.find((t) => "translateY" in t)?.translateY).toBe(2 * (92 + 12))
   })
 })

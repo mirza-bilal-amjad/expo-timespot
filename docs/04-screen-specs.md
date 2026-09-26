@@ -133,7 +133,13 @@ Centred block, replaces the list:
 ### Overflow states
 
 - **1 city:** list renders normally; the avatar strip hides (a strip of one is noise).
-- **40 cities:** `FlashList`. ~~`estimatedItemSize={104}`~~ — **corrected 2026-09-24**: `@shopify/flash-list@2.0.2` (what's actually installed) dropped manual size estimation entirely; v2's recycler measures automatically and the prop no longer exists on `FlashListProps`. Nothing to pass. The strip caps at 6 + overflow tile.
+- **40 cities:** ~~`FlashList`~~ — **corrected 2026-09-26**: rows are absolutely placed at `slot × (rowHeight + rowGap)` inside a gesture-handler `ScrollView`, all mounted (no virtualisation — fine at realistic list sizes; the 40-city state is tested). Each row positions itself from a shared *visual order* on the UI thread, which is what makes reordering smooth — see "Reorder" below. The strip caps at 6 + overflow tile.
+
+### Reorder
+
+Long-press 500 ms lifts the row (`scale 1.03`, `elev.overlay`, both fading in over `duration.fast` and out over 260 ms, drawn above every other row). While dragging, the row stays glued to the finger; each time it crosses a slot, only the shared visual order changes, and the neighbours glide to their new slots over 260 ms `ease.standard`. On release the row settles into its slot from exactly where the finger left it, and the order is committed to the store — which moves nothing on screen, because positions never came from render order. Deletions, undos and the menu's Move up / Move down glide the same way.
+
+~~Reorder the data mid-drag and compensate the dragged row's offset~~ — replaced 2026-09-26: the compensation landed on the UI thread frames before the list re-laid out, so the row jumped a slot at every crossing, neighbours snapped, and the lifted row passed under the rows below it. Verified after the fix, per animation frame in a browser: the dragged row never moves more than the pointer does, and each neighbour glides over ~16 frames.
 - **Long name:** `"Ho Chi Minh City"` at `title` 20 in a 334-pt row with a 48-pt time — measured to fit at 16 chars; 17+ truncates. Verified in visual tests.
 
 ### Web adaptation

@@ -10,6 +10,12 @@ export function boxShadow(color: string, opacity: number, offsetY: number, blur:
 }
 
 function withAlpha(hex: string, alpha: number): string {
+  return `rgba(${rgbChannels(hex)}, ${alpha})`
+}
+
+/** "r, g, b" for a hex colour — lets a worklet build a `boxShadow` whose
+ * alpha animates, without parsing hex on the UI thread every frame. */
+export function rgbChannels(hex: string): string {
   const digits = hex.replace("#", "")
   const full =
     digits.length === 3
@@ -21,5 +27,5 @@ function withAlpha(hex: string, alpha: number): string {
   const r = parseInt(full.slice(0, 2), 16)
   const g = parseInt(full.slice(2, 4), 16)
   const b = parseInt(full.slice(4, 6), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  return `${r}, ${g}, ${b}`
 }
