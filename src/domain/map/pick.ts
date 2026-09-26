@@ -1,4 +1,4 @@
-import cities from "../../assets/data/cities.min.json"
+import { getAllCities } from "../cities/search"
 import type { City } from "../types"
 import { projectLonLat } from "./projection"
 
@@ -22,7 +22,7 @@ import { projectLonLat } from "./projection"
 
 const POP_WEIGHT_PX = 6
 
-const typed = cities as City[]
+const typed = getAllCities()
 const popScore = Float64Array.from(
   typed,
   (c) => POP_WEIGHT_PX * Math.log10(Math.max(c.population, 1)),

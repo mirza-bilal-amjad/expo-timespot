@@ -3,9 +3,16 @@ import { Href, Slot, usePathname, useRouter } from "expo-router"
 
 import { EntranceView } from "@/components/EntranceView"
 import { TabBar, TabBarItem } from "@/components/TabBar"
+import { assertDatasetLoaded } from "@/domain/cities/search"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
+import { ErrorScreen } from "@/screens/ErrorScreen"
 import { $styles } from "@/theme/styles"
+
+// docs/10-implementation-plan.md task 5.7: any error in the tab layout or a
+// tab screen lands on a real message with a retry (Expo Router wraps each
+// route, this layout included, in its exported ErrorBoundary).
+export { ErrorScreen as ErrorBoundary }
 
 /**
  * docs/04-screen-specs.md route map. A hand-rolled floating tab bar over
@@ -22,6 +29,9 @@ const TAB_BAR_ENTRANCE_DELAY_MS = 160
 const TAB_BAR_ENTRANCE_DISTANCE = 16
 
 export default function TabsLayout() {
+  // Every tab reads the city dataset; unusable data fails here, into the
+  // boundary above, instead of as a crash deep in a screen.
+  assertDatasetLoaded()
   const pathname = usePathname()
   const router = useRouter()
   const shouldPlayEntrance = useShouldPlayEntrance("tabBar")

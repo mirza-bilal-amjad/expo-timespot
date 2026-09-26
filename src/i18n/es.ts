@@ -81,6 +81,31 @@ const es: Translations = {
     mapData: "Datos del mapa",
     typeface: "Tipografía",
     publicDomain: "dominio público",
+    timeData: "Datos de zona horaria",
+    timeDataSystem: "Sistema",
+    timeDataBuiltIn: "Tablas integradas (hasta 2030)",
+  },
+  notices: {
+    citiesReset:
+      "No se pudieron leer tus ciudades guardadas, así que TimeSpot empezó una lista nueva. Se guardó una copia de los datos anteriores.",
+    prefsReset: "No se pudieron leer tus ajustes y se restablecieron los valores predeterminados.",
+    storageReset:
+      "No se pudieron leer algunos datos guardados, así que TimeSpot empezó de cero. Se guardó una copia.",
+    storageRepaired:
+      "No se pudieron leer algunas entradas guardadas y se eliminaron. Todo lo demás está intacto.",
+    timeEngineDegraded:
+      "La compatibilidad de zonas horarias de este dispositivo es limitada, así que TimeSpot usa sus propias tablas. Las horas son exactas hasta 2030.",
+    dismiss: "Aceptar",
+    dismissLabel: "Descartar este mensaje",
+  },
+  errors: {
+    title: "Algo salió mal",
+    body: "TimeSpot encontró un error del que no pudo recuperarse por sí solo. Volver a intentarlo suele solucionarlo.",
+    dataset:
+      "No se pudieron cargar los datos de ciudades. Inténtalo de nuevo; si sigue ocurriendo, reinstala TimeSpot.",
+    retry: "Reintentar",
+    reset: "Restablecer datos guardados",
+    resetHint: "Borra tus ciudades y ajustes y vuelve a intentarlo",
   },
   sun: {
     midnightSun: "Sol de medianoche",

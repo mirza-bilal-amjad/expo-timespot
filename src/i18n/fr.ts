@@ -81,6 +81,31 @@ const fr: Translations = {
     mapData: "Données cartographiques",
     typeface: "Police",
     publicDomain: "domaine public",
+    timeData: "Données de fuseau horaire",
+    timeDataSystem: "Système",
+    timeDataBuiltIn: "Tables intégrées (jusqu’en 2030)",
+  },
+  notices: {
+    citiesReset:
+      "Vos villes enregistrées n’ont pas pu être lues, TimeSpot a donc créé une nouvelle liste. Une copie des anciennes données a été conservée.",
+    prefsReset: "Vos réglages n’ont pas pu être lus et ont été rétablis par défaut.",
+    storageReset:
+      "Certaines données enregistrées n’ont pas pu être lues, TimeSpot est donc reparti de zéro. Une copie a été conservée.",
+    storageRepaired:
+      "Quelques entrées enregistrées n’ont pas pu être lues et ont été supprimées. Tout le reste est intact.",
+    timeEngineDegraded:
+      "La prise en charge des fuseaux horaires de cet appareil est limitée : TimeSpot utilise donc ses propres tables. Les heures sont exactes jusqu’en 2030.",
+    dismiss: "OK",
+    dismissLabel: "Fermer ce message",
+  },
+  errors: {
+    title: "Un problème est survenu",
+    body: "TimeSpot a rencontré une erreur dont il n’a pas pu se remettre seul. Réessayer suffit généralement.",
+    dataset:
+      "Les données des villes n’ont pas pu être chargées. Réessayez ; si le problème persiste, réinstallez TimeSpot.",
+    retry: "Réessayer",
+    reset: "Réinitialiser les données",
+    resetHint: "Efface vos villes et réglages, puis réessaie",
   },
   sun: {
     midnightSun: "Soleil de minuit",

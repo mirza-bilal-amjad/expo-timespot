@@ -81,6 +81,31 @@ const ja: Translations = {
     mapData: "地図データ",
     typeface: "書体",
     publicDomain: "パブリックドメイン",
+    timeData: "タイムゾーンデータ",
+    timeDataSystem: "システム",
+    timeDataBuiltIn: "内蔵テーブル（2030年まで）",
+  },
+  notices: {
+    citiesReset:
+      "保存した都市を読み込めなかったため、新しいリストで始めました。以前のデータのコピーは保存されています。",
+    prefsReset: "設定を読み込めなかったため、初期設定に戻しました。",
+    storageReset:
+      "保存データの一部を読み込めなかったため、最初からやり直しました。コピーは保存されています。",
+    storageRepaired:
+      "保存された項目の一部を読み込めなかったため削除しました。その他のデータは無事です。",
+    timeEngineDegraded:
+      "この端末のタイムゾーン対応が限られているため、TimeSpot 独自のタイムゾーン表を使用しています。時刻は2030年まで正確です。",
+    dismiss: "OK",
+    dismissLabel: "このメッセージを閉じる",
+  },
+  errors: {
+    title: "問題が発生しました",
+    body: "TimeSpot で自動的に回復できないエラーが発生しました。再試行すると通常は解決します。",
+    dataset:
+      "都市データを読み込めませんでした。再試行してください。繰り返し起きる場合は TimeSpot を再インストールしてください。",
+    retry: "再試行",
+    reset: "保存データをリセット",
+    resetHint: "都市と設定を消去してから再試行します",
   },
   sun: {
     midnightSun: "白夜",

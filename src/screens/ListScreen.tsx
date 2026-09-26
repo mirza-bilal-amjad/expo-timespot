@@ -12,6 +12,7 @@ import { RenameSheet } from "@/components/RenameSheet"
 import { ReorderableCityRow } from "@/components/ReorderableCityRow"
 import { Screen } from "@/components/Screen"
 import { SearchSheet } from "@/components/SearchSheet"
+import { SystemNotice } from "@/components/SystemNotice"
 import { useTabBarClearance } from "@/components/TabBar"
 import { Text } from "@/components/Text"
 import { Toast } from "@/components/Toast"
@@ -210,6 +211,10 @@ export function ListScreen() {
           </EntranceView>
         </View>
 
+        <View style={themed($notice)}>
+          <SystemNotice />
+        </View>
+
         {storedOrder.length === 0 ? (
           <EmptyState onAddFirst={() => setSearchOpen(true)} />
         ) : (
@@ -273,6 +278,12 @@ const $headerRow: ViewStyle = {
 }
 
 const $spacer: ViewStyle = { flex: 1 }
+
+// Collapses to nothing when there's no notice (SystemNotice renders null).
+const $notice: ThemedStyle<ViewStyle> = (theme) => ({
+  paddingHorizontal: theme.spacing.gutter,
+  paddingTop: theme.spacing.md,
+})
 
 const $addButton: ThemedStyle<ViewStyle> = (theme) => ({
   width: theme.spacing.avatar,

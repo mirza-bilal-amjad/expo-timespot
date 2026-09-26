@@ -195,7 +195,7 @@ Project skills in `.claude/skills/` load automatically when relevant.
 - The SDK 55 → 57 upgrade is the riskiest step. Do it on the untouched baseline, before any product code. Pin `expo@>=57.0.17`.
 
 **Product-specific**
-- **`Intl` on low-end Android** may ignore `timeZone` *silently*. The boot probe in `domain/time/capability.ts` is not optional (`adr/0004`).
+- **`Intl` on low-end Android** may ignore `timeZone` *silently*. The boot probe in `domain/time/capability.ts` is not optional (`adr/0004`). On `degraded`, `zone.ts` reads offsets from the bundled `tz.offsets.json` instead. So **every display value must be arithmetic from `getOffsetMinutes`**: never add a zone-aware `Intl` formatter to `zone.ts`, because the fallback can't follow it. `@date-fns/tz` is not a fallback (it calls `Intl` too). Re-run `npx tsx scripts/build-tzdata.ts` before 2030 or when tz rules change.
 - **Android `includeFontPadding: false`** on every display preset, or 144 pt numerals sit ~8 % low.
 - **JS calls from a gesture (`scheduleOnRN`) must be throttled to 60 ms.** Per-frame JS destroys the 60 fps budget. `runOnJS` is deprecated in Reanimated 4 — use `scheduleOnRN` from `react-native-worklets`.
 - **Web hydration:** the static clock is stale by definition. `suppressHydrationWarning` + `useLayoutEffect`, never `useEffect`.

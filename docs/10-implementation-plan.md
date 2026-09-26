@@ -40,7 +40,7 @@ This is the highest-value phase and it needs no simulator. Everything here is un
 |---|---|---|
 | 1.1 | `domain/time/capability.ts` — the `Intl` probe (`05-architecture.md` §4.3) | returns `'full'` on a real device; returns `'degraded'` when `Intl` is stubbed |
 | 1.2 | `domain/time/zone.ts` — `getZonedTime`, `getOffsetMinutes`, `formatOffset` | all 17 fixture zones in `06-data-model.md` §5 pass |
-| 1.3 | `@date-fns/tz` fallback path behind the probe | forcing `degraded` produces identical output for all fixtures |
+| 1.3 | ~~`@date-fns/tz` fallback path behind the probe~~ **bundled offset-table fallback behind the probe** (`scripts/build-tzdata.ts`) | forcing `degraded` produces identical output for all fixtures. **Corrected 2026-09-26:** the original was never actually wired up. It also couldn't have worked, because `@date-fns/tz` asks `Intl` itself (ADR-0004). Delivered with 5.7. |
 | 1.4 | DST transition tests | LA, London, Sydney, Chatham, Santiago, Cairo, Tehran — correct on both sides of every 2026–2028 transition |
 | 1.5 | `domain/time/diff.ts` — difference + working-hours overlap | `getDifference('Asia/Kolkata','Europe/London')` = `+5:30` in winter (GMT), `+4:30` in summer (BST) — **corrected 2026-09-24**, the draft numbers here had it backwards; verified against `Intl` directly, not memorized |
 | 1.6 | `domain/sun/sun.ts` via `suncalc` | Tromsø polar night and midnight sun both return the right `kind`; day length matches a reference to ±1 min |
@@ -119,7 +119,7 @@ The hardest phase. Budget the most review time here.
 | 5.4 | Entrance choreography, post-first-paint | does not delay time-to-readable-clock (measured) |
 | 5.5 | Reduced-motion variants for all 15 animations | every value still updates with the setting on |
 | 5.6 | Dark theme audit across every screen and state | `/a11y-sweep` contrast pass in both themes |
-| 5.7 | Error states: dataset load failure, degraded `Intl`, corrupt storage | each shows a real message and a recovery path |
+| 5.7 | Error states: dataset load failure, degraded `Intl`, corrupt storage | each shows a real message and a recovery path. **Done 2026-09-26:** `SystemNotice` (reset / repaired / degraded), `ErrorScreen` as the tabs' `ErrorBoundary` (retry + reset saved data), guarded store reads. See `04` S1 and `06` §2. |
 
 **Gate G3:** `/a11y-sweep` and `/visual-qa` green in both themes.
 

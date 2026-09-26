@@ -121,6 +121,24 @@ Added 2026-09-26. A `⋯` glyph left of the day/night icon, `ink.secondary` (`te
 
 Long-press stays drag-to-reorder. The `⋯` and the day/night icon are laid **over** the row, as a sibling of its pressable — never inside it (a button inside a button is invalid on web). Screen readers reach all four operations through the row's own accessibility actions, since the row is one accessible node.
 
+### System notices
+
+Things the app recovered from on its own, told once, below the title, as a hairline card with the message and an **OK** pill (`<SystemNotice>`, task 5.7). The oldest pending notice shows first; dismissing reveals the next.
+
+| Notice | When | Recovery already done |
+|---|---|---|
+| `citiesReset` / `prefsReset` / `storageReset` | a saved store was unreadable | defaults restored, raw copy kept under `<key>.corrupt` |
+| `storageRepaired` | a saved store had bad entries | bad entries dropped, the rest kept |
+| `timeEngineDegraded` | the boot probe found `Intl` ignoring `timeZone` | running on the bundled offset tables (ADR-0004); this dismissal is remembered |
+
+The card is an `alert`/polite live region, so a screen reader announces it once. It renders nothing when there's no notice.
+
+### Error screen
+
+Anything thrown in the tab layout or a tab screen lands on `ErrorScreen`, which the tabs layout exports as Expo Router's `ErrorBoundary`. It shows a title and one message: a specific one when the bundled city data is unusable (`DatasetError`), a general one otherwise. Two actions: **Try again** (the router's `retry`), and **Reset saved data**, which clears storage and the in-memory stores and then retries. That covers a failure that saved state keeps re-triggering.
+
+The dataset is a static JSON import, so it can't fail to load independently of the bundle. What can go wrong is its content. Malformed rows are dropped at load, since a throw while building the search index would happen before any boundary exists. Zero usable rows raises `DatasetError` at render time.
+
 ### Empty state (zero cities)
 
 Centred block, replaces the list:

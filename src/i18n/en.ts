@@ -78,6 +78,30 @@ const en = {
     mapData: "Map data",
     typeface: "Typeface",
     publicDomain: "public domain",
+    timeData: "Time zone data",
+    timeDataSystem: "System",
+    timeDataBuiltIn: "Built-in tables (to 2030)",
+  },
+  notices: {
+    citiesReset:
+      "Your saved cities couldn't be read, so TimeSpot started a fresh list. A copy of the old data was kept.",
+    prefsReset: "Your settings couldn't be read and were reset to the defaults.",
+    storageReset: "Some saved data couldn't be read, so TimeSpot started fresh. A copy was kept.",
+    storageRepaired:
+      "A few saved entries couldn't be read and were removed. Everything else is intact.",
+    timeEngineDegraded:
+      "This device's time zone support is limited, so TimeSpot is using its own time zone tables. Times are exact through 2030.",
+    dismiss: "OK",
+    dismissLabel: "Dismiss this message",
+  },
+  errors: {
+    title: "Something went wrong",
+    body: "TimeSpot hit an error it couldn't recover from on its own. Trying again usually fixes it.",
+    dataset:
+      "The city data couldn't be loaded. Try again — if it keeps happening, reinstall TimeSpot.",
+    retry: "Try again",
+    reset: "Reset saved data",
+    resetHint: "Clears your cities and settings, then tries again",
   },
   sun: {
     midnightSun: "Midnight sun",

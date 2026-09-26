@@ -76,7 +76,7 @@ timespot/
 │   └─ stories/                 one file per component, all states × both themes
 ├─ design/                      tokens.json + ignite-theme/ (drop-in theme files)
 ├─ docs/                        this documentation set
-├─ scripts/                     build-cities.ts  build-map.ts  og-images.ts
+├─ scripts/                     build-cities.ts  build-map.ts  build-tzdata.ts  og-images.ts
 ├─ .claude/                     skills/  commands/
 ├─ CLAUDE.md  AGENTS.md
 ├─ app.config.ts  eas.json  tsconfig.json
@@ -157,9 +157,9 @@ export function probeIntl(): 'full' | 'degraded' {
 }
 ```
 
-Two distinct zones, one of them mid-DST. If the probe returns `degraded`, the app switches to `@date-fns/tz`'s `TZDate` backed by a **bundled tzdata slice** (only the ~420 canonical zones, current + next 2 years of transitions, ≈ 60 KB) and reports a non-PII telemetry event so the fallback rate is visible.
+Two distinct zones, one of them mid-DST. If the probe returns `degraded`, `configureTimeEngine` switches `zone.ts`'s offset source to the bundled table `tz.offsets.json` (`scripts/build-tzdata.ts`: 432 zones, every transition 2024–2030, 5.6 KB gz). Every display value is arithmetic from the offset, so the engines agree by construction — see ADR-0004. ~~`@date-fns/tz`'s `TZDate` backed by a bundled tzdata slice~~ — corrected 2026-09-26: `@date-fns/tz` bundles no tz data and asks `Intl` itself, so it breaks on the same devices.
 
-The probe result is exposed as `useTimeEngine()` and is asserted in tests on every device tier in the matrix.
+The probe runs at module scope in `src/app/_layout.tsx`, before first render. The engine in use is `getTimeEngine()` (`'intl'` | `'table'`), shown in Settings → About. ~~`useTimeEngine()`~~ — it never changes after boot, so a hook would add nothing.
 
 ### 4.4 Formatting
 

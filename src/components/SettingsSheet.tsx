@@ -1,5 +1,6 @@
 import Constants from "expo-constants"
 
+import { getTimeEngine } from "@/domain/time/zone"
 import { translate } from "@/i18n/translate"
 import { usePrefsStore } from "@/store/prefs"
 import { useAppTheme } from "@/theme/context"
@@ -74,6 +75,14 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
           key: "version",
           label: translate("settings:version"),
           value: Constants.expoConfig?.version ?? "—",
+        },
+        {
+          kind: "info",
+          key: "timeData",
+          label: translate("settings:timeData"),
+          value: translate(
+            getTimeEngine() === "intl" ? "settings:timeDataSystem" : "settings:timeDataBuiltIn",
+          ),
         },
         {
           kind: "info",
