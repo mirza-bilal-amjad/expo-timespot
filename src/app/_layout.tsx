@@ -1,19 +1,19 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { Platform, ViewStyle } from "react-native"
 import { useFonts } from "expo-font"
 import { Slot, SplashScreen } from "expo-router"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
-import { KeyboardProvider } from "react-native-keyboard-controller"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
 
 import { getTimeCapability } from "@/domain/time/capability"
 import { configureTimeEngine } from "@/domain/time/zone"
+import { useIsHydrated } from "@/hooks/useIsHydrated"
 import { useSeedFirstLaunch } from "@/hooks/useSeedFirstLaunch"
 import { initI18n } from "@/i18n"
 import { reportNotice } from "@/store/notices"
 import { ThemeProvider } from "@/theme/context"
 import { customFontsToLoad } from "@/theme/typography"
-import { loadDateFnsLocale } from "@/utils/formatDate"
+import { KeyboardProvider } from "@/utils/keyboardController"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -30,19 +30,22 @@ if (__DEV__) {
   require("@/devtools/ReactotronConfig")
 }
 
+// Synchronous — strings are ready for the very first render, server included.
+initI18n()
+
 export default function Root() {
   const [fontsLoaded, fontError] = useFonts(customFontsToLoad)
-  const [isI18nInitialized, setIsI18nInitialized] = useState(false)
+  // docs/10 task 6.5: the app's routes are per-visitor — saved cities from
+  // local storage, the current time, the browser's language — so none of it
+  // is rendered statically. The server and the hydration render both
+  // produce the same empty, themed page (+html.tsx paints the background);
+  // the real UI mounts from a layout effect, before the first paint. No
+  // mismatch by construction, and never a build-time clock on screen.
+  const hydrated = useIsHydrated()
 
   useSeedFirstLaunch()
 
-  useEffect(() => {
-    initI18n()
-      .then(() => setIsI18nInitialized(true))
-      .then(() => loadDateFnsLocale())
-  }, [])
-
-  const loaded = fontsLoaded && isI18nInitialized
+  const loaded = fontsLoaded && hydrated
 
   useEffect(() => {
     if (fontError) throw fontError

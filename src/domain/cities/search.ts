@@ -1,8 +1,8 @@
 import uFuzzy from "@leeoniya/ufuzzy"
 
-import cities from "../../assets/data/cities.min.json"
 import { getOffsetMinutes } from "../time/zone"
 import type { City } from "../types"
+import { allCities, declaredRowCount } from "./dataset"
 
 /**
  * docs/06-data-model.md §3 "Search index". Ranking, in priority order:
@@ -13,34 +13,21 @@ import type { City } from "../types"
  * final rank = weight * log10(population)
  *
  * The doc describes a separately prebuilt "cities.index.json". At 5,000 rows
- * that's unnecessary complexity — normalizing every city once at module load
- * (below) costs well under a millisecond and needs no extra build artifact or
- * file to keep in sync with cities.min.json.
+ * that's unnecessary complexity — normalizing every city once costs well
+ * under a millisecond.
+ *
+ * The search names (`asciiName`, `altNames` — a third of the dataset) are
+ * not part of the boot data (task 6.1): `loadSearchNames()` fetches them
+ * the first time search is used. Until they arrive, the same tiers run on
+ * the display name, so a query typed in the first instant still finds
+ * "Tokyo"; "Köln" → "Koeln" and alternate names start matching once they're
+ * in.
  */
 
-/** A row the rest of the app can rely on — checked once at load, so one
- * malformed row can't throw while the index below is built (a module-load
- * throw happens before any error boundary exists to catch it). */
-function isCity(row: unknown): row is City {
-  if (typeof row !== "object" || row === null) return false
-  const c = row as Record<string, unknown>
-  return (
-    typeof c.id === "string" &&
-    typeof c.name === "string" &&
-    typeof c.asciiName === "string" &&
-    typeof c.country === "string" &&
-    typeof c.zone === "string" &&
-    typeof c.lat === "number" &&
-    typeof c.lon === "number" &&
-    Array.isArray(c.altNames)
-  )
-}
+const typed = allCities
 
-const rows: unknown[] = Array.isArray(cities) ? (cities as unknown[]) : []
-const typed: City[] = rows.filter(isCity)
-
-/** Every valid dataset row, population-sorted — the one typed view of
- * cities.min.json the rest of the domain should read. */
+/** Every valid dataset row, population-sorted — the one typed view of the
+ * dataset the rest of the domain should read. */
 export function getAllCities(): readonly City[] {
   return typed
 }
@@ -58,32 +45,85 @@ export class DatasetError extends Error {
  * message and a retry. A few malformed rows only shrink the dataset. */
 export function assertDatasetLoaded(): void {
   if (typed.length === 0) {
-    throw new DatasetError(`City dataset unusable: 0 of ${rows.length} rows are valid`)
+    throw new DatasetError(`City dataset unusable: 0 of ${declaredRowCount} rows are valid`)
   }
 }
 
 function normalize(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
 }
 
 interface IndexedCity {
   city: City
-  normAscii: string
+  /** asciiName once the search names are in; the display name until then. */
+  normPrimary: string
   normAlts: string[]
   normCountry: string
 }
 
 const index: IndexedCity[] = typed.map((city) => ({
   city,
-  normAscii: normalize(city.asciiName),
-  normAlts: city.altNames.map(normalize),
+  normPrimary: normalize(city.name),
+  normAlts: [],
   normCountry: normalize(city.country),
 }))
 
 const cityById = new Map(typed.map((c) => [c.id, c]))
 
 const fuzzyMatcher = new uFuzzy({ intraMode: 1 })
-const fuzzyHaystack = index.map((e) => e.normAscii)
+let fuzzyHaystack = index.map((e) => e.normPrimary)
+
+let searchNames: Promise<void> | null = null
+let searchNamesReady = false
+
+interface SearchFile {
+  asciiName: string[]
+  altNames: string[][]
+}
+
+/** Folds the search names into the index. Rows are matched by position in
+ * the packed file, so a file that doesn't line up is ignored (search keeps
+ * working on display names) rather than mismatching names to cities. */
+export function applySearchNames(file: unknown): boolean {
+  const f = file as Partial<SearchFile> | null
+  if (!f || !Array.isArray(f.asciiName) || !Array.isArray(f.altNames)) return false
+  if (f.asciiName.length !== declaredRowCount || typed.length !== declaredRowCount) return false
+  index.forEach((entry, i) => {
+    const ascii = f.asciiName![i]
+    const alts = f.altNames![i]
+    if (typeof ascii === "string") entry.normPrimary = normalize(ascii)
+    if (Array.isArray(alts))
+      entry.normAlts = alts.filter((a) => typeof a === "string").map(normalize)
+  })
+  fuzzyHaystack = index.map((e) => e.normPrimary)
+  searchNamesReady = true
+  return true
+}
+
+/** Loads the search names once (a separate chunk on web). Safe to call on
+ * every search-sheet open. */
+export function loadSearchNames(): Promise<void> {
+  if (!searchNames) {
+    searchNames = import("../../assets/data/cities.search.json").then(
+      (m) => {
+        applySearchNames((m as { default?: unknown }).default ?? m)
+      },
+      () => {
+        // Offline before the chunk was cached: stay on display names, and
+        // let the next open try again.
+        searchNames = null
+      },
+    )
+  }
+  return searchNames
+}
+
+export function hasSearchNames(): boolean {
+  return searchNamesReady
+}
 
 const WEIGHT = { asciiPrefix: 100, altPrefix: 70, fuzzy: 40, country: 20 } as const
 
@@ -97,7 +137,7 @@ export function searchCities(query: string, limit = 20): City[] {
   }
 
   for (const entry of index) {
-    if (entry.normAscii.startsWith(q)) {
+    if (entry.normPrimary.startsWith(q)) {
       setMax(entry.city.id, WEIGHT.asciiPrefix)
     } else if (entry.normAlts.some((a) => a.startsWith(q))) {
       setMax(entry.city.id, WEIGHT.altPrefix)
@@ -121,7 +161,7 @@ export function searchCities(query: string, limit = 20): City[] {
     .map((r) => r.city)
 }
 
-/** Highest-population city on the given zone — cities.min.json is already population-sorted. */
+/** Highest-population city on the given zone — the dataset is already population-sorted. */
 export function getCityByZone(zone: string): City | undefined {
   return typed.find((c) => c.zone === zone)
 }
@@ -130,7 +170,7 @@ export function getCityById(id: string): City | undefined {
   return cityById.get(id)
 }
 
-/** Top `limit` cities by population — cities.min.json is already sorted that
+/** Top `limit` cities by population — the dataset is already sorted that
  * way, so this is a plain slice. docs/04-screen-specs.md S4's empty-query
  * "Popular cities" state. */
 export function getPopularCities(limit = 12): City[] {
@@ -156,7 +196,7 @@ export function getRepresentativeCity(offsetMinutes: number, now: number): City 
  * function can return an exact — distance-0 — match for).
  *
  * `getOffsetMinutes` is memoized per zone rather than called once per city:
- * cities.min.json has 5,000 rows over only ~386 distinct IANA zones, and
+ * the dataset has 5,000 rows over only ~386 distinct IANA zones, and
  * this runs on the JS thread inside a 60ms-throttled callback during an
  * active drag, so avoiding ~4,600 redundant `Intl` computations per call
  * matters.

@@ -4,7 +4,7 @@ import { Href, Tabs, usePathname, useRouter } from "expo-router"
 
 import { EntranceView } from "@/components/EntranceView"
 import { HeaderNav } from "@/components/HeaderNav"
-import { SettingsSheet } from "@/components/SettingsSheet"
+import { LazySettingsSheet as SettingsSheet } from "@/components/LazySheets"
 import { TabBar, TabBarItem, useUsesHeaderNav } from "@/components/TabBar"
 import { assertDatasetLoaded } from "@/domain/cities/search"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"

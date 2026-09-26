@@ -8,8 +8,8 @@ export interface City {
   id: string // stable: geonames id, e.g. 'gn-1850147'
   slug: string // URL-safe, unique: 'tokyo', 'new-york', 'cordoba-ar'
   name: string // display: 'Tokyo'
-  asciiName: string // search: 'Tokyo'
-  altNames: string[] // search: ['東京','Tokio','Tokyo-to']
+  // asciiName / altNames: search-only, not part of City — they live in
+  // cities.search.json, loaded on demand by domain/cities/search.ts.
   admin1?: string // 'California' — omitted where meaningless
   country: string // 'Japan'
   countryCode: string // 'JP' (ISO 3166-1 alpha-2)
@@ -19,6 +19,13 @@ export interface City {
   population: number // search ranking
   photo?: string // asset key; undefined → monogram fallback
   blurhash?: string
+}
+
+/** A city as scripts/build-cities.ts emits it into `cities.min.json`: the
+ * `City` plus its search-only names, which the app loads separately. */
+export interface DatasetCity extends City {
+  asciiName: string // search: 'Tokyo'
+  altNames: string[] // search: ['東京','Tokio','Tokyo-to']
 }
 
 /** A city the user has saved. Persisted. */

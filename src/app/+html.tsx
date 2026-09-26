@@ -1,0 +1,56 @@
+import type { PropsWithChildren } from "react"
+import { ScrollViewStyleReset } from "expo-router/html"
+
+import { colors } from "@/theme/colors"
+import { colors as colorsDark } from "@/theme/colorsDark"
+
+/**
+ * docs/10-implementation-plan.md task 6.5 — the static HTML template (web
+ * only, rendered at build time in Node; never in the browser).
+ *
+ * The app's routes pre-render as an empty page (see the root layout), so
+ * this template is what the visitor sees until JavaScript runs. It must
+ * already be the right colour — a white flash before a dark app is the
+ * "stale frame" 6.5 is about, in paint rather than digits:
+ *  - the page background follows `prefers-color-scheme`;
+ *  - an in-app override (Settings → Theme, stored by the ThemeProvider
+ *    under `ignite.themeScheme`) is applied before first paint by a
+ *    three-line inline script, via `data-theme` on <html>;
+ *  - `theme-color` tints the browser chrome to match.
+ */
+
+const THEME_KEY = "mmkv.default\\ignite.themeScheme"
+
+const themeScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`
+
+const backgroundCss = `
+html,body,#root{background-color:${colors.background}}
+@media (prefers-color-scheme: dark){html:not([data-theme="light"]),html:not([data-theme="light"]) body,html:not([data-theme="light"]) #root{background-color:${colorsDark.background}}}
+html[data-theme="dark"],html[data-theme="dark"] body,html[data-theme="dark"] #root{background-color:${colorsDark.background}}
+`
+
+export default function Root({ children }: PropsWithChildren) {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: light)"
+          content={colors.background}
+        />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: dark)"
+          content={colorsDark.background}
+        />
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <ScrollViewStyleReset />
+        <style dangerouslySetInnerHTML={{ __html: backgroundCss }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}

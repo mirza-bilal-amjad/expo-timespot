@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
 import { useIsFocused } from "expo-router"
 import { ScrollView } from "react-native-gesture-handler"
@@ -9,10 +9,9 @@ import { Button } from "@/components/Button"
 import { CityRow } from "@/components/CityRow"
 import { EntranceView } from "@/components/EntranceView"
 import { Icon, PressableIcon } from "@/components/Icon"
-import { RenameSheet } from "@/components/RenameSheet"
+import { LazyRenameSheet as RenameSheet } from "@/components/LazySheets"
 import { ReorderableCityRow } from "@/components/ReorderableCityRow"
 import { Screen } from "@/components/Screen"
-import { SearchSheet } from "@/components/SearchSheet"
 import { SystemNotice } from "@/components/SystemNotice"
 import { useTabBarClearance, useTopClearance } from "@/components/TabBar"
 import { Text } from "@/components/Text"
@@ -32,6 +31,9 @@ import { cardColumnsFor } from "@/theme/breakpoints"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
+const SearchSheet = lazy(() =>
+  import("@/components/SearchSheet").then((m) => ({ default: m.SearchSheet })),
+)
 /**
  * docs/04-screen-specs.md "S1 · List". Route: src/app/(tabs)/index.tsx.
  * Ticks the app's one clock (CLAUDE.md rule 3) and hands each <CityRow> its
@@ -148,6 +150,9 @@ export function ListScreen() {
   }, [])
 
   const [searchOpen, setSearchOpen] = useState(false)
+  // Once opened, the sheet stays mounted so it can animate closed.
+  const [searchMounted, setSearchMounted] = useState(false)
+  if (searchOpen && !searchMounted) setSearchMounted(true)
   const [renaming, setRenaming] = useState<SavedCity | null>(null)
 
   const avatarItems: AvatarStripItem[] = useMemo(
@@ -282,7 +287,13 @@ export function ListScreen() {
         bottomOffset={tabBarClearance + theme.spacing.md}
       />
 
-      <SearchSheet open={searchOpen} onOpenChange={setSearchOpen} />
+      {/* Loaded on first open — the sheet and its list aren't needed to
+       paint the list (docs/10 task 6.1). */}
+      {searchMounted && (
+        <Suspense fallback={null}>
+          <SearchSheet open={searchOpen} onOpenChange={setSearchOpen} />
+        </Suspense>
+      )}
       <RenameSheet city={renaming} onClose={() => setRenaming(null)} />
     </View>
   )

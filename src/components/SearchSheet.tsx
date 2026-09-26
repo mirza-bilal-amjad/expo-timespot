@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard, TextStyle, View, ViewStyle } from "react-native"
 import { FlashList } from "@shopify/flash-list"
 
@@ -6,6 +6,8 @@ import {
   getCityByZone,
   getPopularCities,
   getRepresentativeCity,
+  hasSearchNames,
+  loadSearchNames,
   searchCities,
 } from "@/domain/cities/search"
 import { getDeviceZone, getZonedTime, parseOffsetQuery } from "@/domain/time/zone"
@@ -69,6 +71,21 @@ export function SearchSheet(props: SearchSheetProps) {
 
   const savedIds = useMemo(() => new Set(savedCities.map((c) => c.cityId)), [savedCities])
 
+  // The search names (alternate spellings, ASCII forms) aren't boot data
+  // (docs/10 task 6.1): fetch them when the sheet opens, and re-rank once
+  // they're in. Until then search matches display names.
+  const [namesReady, setNamesReady] = useState(hasSearchNames)
+  useEffect(() => {
+    if (!open || namesReady) return
+    let live = true
+    loadSearchNames().then(() => {
+      if (live) setNamesReady(hasSearchNames())
+    })
+    return () => {
+      live = false
+    }
+  }, [open, namesReady])
+
   const results = useMemo(() => {
     const q = query.trim()
     if (!q) {
@@ -78,7 +95,9 @@ export function SearchSheet(props: SearchSheetProps) {
       return [deviceCity, ...popular.filter((c) => c.id !== deviceCity.id)]
     }
     return searchCities(q)
-  }, [query])
+    // namesReady: the same query ranks differently once the names are in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, namesReady])
 
   const offsetFallback = useMemo(() => {
     if (results.length > 0 || !query.trim()) return null

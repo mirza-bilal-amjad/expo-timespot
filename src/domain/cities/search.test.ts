@@ -3,9 +3,21 @@ import {
   getNearestRepresentativeCity,
   getPopularCities,
   getRepresentativeCity,
+  hasSearchNames,
+  loadSearchNames,
   searchCities,
 } from "./search"
 import { getOffsetMinutes } from "../time/zone"
+
+// The search names are loaded on demand in the app; the ranking tests below
+// are about the full index.
+beforeAll(() => loadSearchNames())
+
+describe("search names", () => {
+  it("load, and line up with the dataset", () => {
+    expect(hasSearchNames()).toBe(true)
+  })
+})
 
 describe("searchCities", () => {
   it("returns [] for an empty or whitespace-only query", () => {
@@ -49,7 +61,7 @@ describe("searchCities", () => {
     // Both "Berlin" (DE, huge) and any small "Berlin*"-prefixed place should
     // exist; the huge one must outrank it at the same weight tier.
     const results = searchCities("berlin")
-    const berlin = results.find((c) => c.asciiName === "Berlin" && c.countryCode === "DE")
+    const berlin = results.find((c) => c.name === "Berlin" && c.countryCode === "DE")
     expect(berlin).toBeDefined()
     expect(results[0].id).toBe(berlin!.id)
   })
@@ -75,7 +87,7 @@ describe("getCityByZone", () => {
     const city = getCityByZone("Asia/Kolkata")
     expect(city).toBeDefined()
     // Mumbai (Asia/Kolkata's highest-population representative) should win.
-    expect(city!.asciiName).toBe("Mumbai")
+    expect(city!.name).toBe("Mumbai")
   })
 
   it("returns undefined for a zone with no representative", () => {

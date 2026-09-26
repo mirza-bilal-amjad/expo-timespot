@@ -11,13 +11,13 @@ import {
   ViewStyle,
 } from "react-native"
 import { SystemBars, SystemBarsProps, SystemBarStyle } from "react-native-edge-to-edge"
-import {
-  KeyboardAwareScrollView,
-  type KeyboardAwareScrollViewRef,
-} from "react-native-keyboard-controller"
 
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
+import {
+  KeyboardAwareScrollView,
+  type KeyboardAwareScrollViewRef,
+} from "@/utils/keyboardController"
 import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsStyle"
 
 export const DEFAULT_BOTTOM_OFFSET = 50

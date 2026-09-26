@@ -11,7 +11,8 @@ import { existsSync } from "node:fs"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 
-import type { City } from "../src/domain/types"
+import { slugify } from "../src/domain/cities/slugify"
+import type { DatasetCity as City } from "../src/domain/types"
 
 const DATA_DIR = path.join(__dirname, ".data", "geonames")
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "assets", "data", "cities.min.json")
@@ -114,15 +115,6 @@ function isValidZone(zone: string): boolean {
   }
   zoneValidityCache.set(zone, valid)
   return valid
-}
-
-function slugify(name: string): string {
-  return name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip diacritics
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
 }
 
 /** ASCII-only alt names, deduped against name/asciiName, capped — keeps the file small. */

@@ -2,7 +2,7 @@ import { I18nManager } from "react-native"
 import * as Localization from "expo-localization"
 import i18n from "i18next"
 import { initReactI18next } from "react-i18next"
-import "intl-pluralrules"
+import "./polyfills"
 
 // if English isn't your default language, move Translations to the appropriate language file.
 import ar from "./ar"
@@ -43,18 +43,26 @@ if (locale?.languageTag && locale?.textDirection === "rtl") {
   I18nManager.allowRTL(false)
 }
 
-export const initI18n = async () => {
+/**
+ * Synchronous: the resources are bundled, so there is nothing to wait for
+ * (`initImmediate: false`). The root layout calls it at module scope, which
+ * is what lets the static web render and the first client render run with
+ * strings in place — ~~awaited in an effect~~, corrected 2026-09-26 (task
+ * 6.5): the root rendered nothing until it resolved, so every statically
+ * rendered page was an empty shell.
+ */
+export const initI18n = () => {
+  if (i18n.isInitialized) return i18n
   i18n.use(initReactI18next)
-
-  await i18n.init({
+  i18n.init({
     resources,
     lng: locale?.languageTag ?? fallbackLocale,
     fallbackLng: fallbackLocale,
     interpolation: {
       escapeValue: false,
     },
+    initImmediate: false,
   })
-
   return i18n
 }
 

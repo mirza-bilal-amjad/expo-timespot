@@ -58,7 +58,7 @@ Everything that genuinely cannot be shared. This list is **closed** — adding t
 | 7 | Grayscale filter | Skia `ColorMatrix` | CSS `filter` | `ui/Avatar.tsx` / `.web.tsx` |
 | 8 | Map raster fallback | device-tier check | never (browsers cope) | `features/WorldMap.tsx` |
 | 9 | Clock resume | `AppState` | `visibilitychange` | `hooks/useClock.ts` (one file, both branches) |
-| 10 | Dataset delivery | bundled JSON | `fetch` after first paint | `domain/cities/dataset.ts` |
+| 10 | Dataset delivery | bundled | bundled boot data + search names as a lazy chunk (~~`fetch` after first paint~~, see §4) | `domain/cities/dataset.ts`, `search.ts` |
 
 Ten exceptions for a three-platform app is the target. If it grows past fifteen, the abstraction has drifted and it is time to refactor rather than add an eleventh.
 
@@ -98,8 +98,8 @@ All are implemented as a single `useKeyboard` hook registered at the root, with 
 
 ### Performance
 
-- Route-level code splitting: map and search are separate chunks.
-- The city dataset is `fetch`ed, not bundled — it would otherwise be 60 % of the initial payload.
+- Route-level code splitting: map and search are separate chunks. Done via Expo Router async routes (`asyncRoutes.web: "production"`), with the sheets as lazy components.
+- ~~The city dataset is `fetch`ed, not bundled~~. **Corrected 2026-09-26:** every screen needs city names and zones for its very first render, so fetching the whole dataset only moves the wait. Instead `scripts/pack-cities.ts` packs it: the boot data (`cities.core.json`, columns, interned strings, 136 KB gz, from 327) stays in the bundle, and the search-only names (`cities.search.json`, 115 KB gz) are a chunk that search loads on first use, matching display names until it lands.
 - Fonts: one `woff2` subset, preloaded, `font-display: block` on the clock face only.
 - Images: `expo-image` emits `<img>` with `loading="lazy"` and explicit dimensions — zero CLS from avatars.
 

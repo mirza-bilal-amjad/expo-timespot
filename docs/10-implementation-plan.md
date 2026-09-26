@@ -129,11 +129,11 @@ The hardest phase. Budget the most review time here.
 
 | # | Task | Acceptance |
 |---|---|---|
-| 6.1 | `output: 'static'`, route-level code splitting | initial route < 180 KB gz |
+| 6.1 | `output: 'static'`, route-level code splitting | ~~initial route < 180 KB gz~~ **unreachable on this stack, corrected 2026-09-26**. Done: `/` 1,128 → 756 KiB gz, with per-route budgets enforced by `npm run size:web`. See `05` §6 for what was cut and why 180 was impossible. |
 | 6.2 | Breakpoint layouts: card grid, header nav, inline hero | matches the web board at 1440. **Done 2026-09-26:** header nav at `lg`, 1–4-column card grid from `md`, inline hero band, map band with docked card. Verified at 768 / 1024 / 1440 in both themes, and phones unchanged. The search sheet is still a bottom drawer on web; the centred 560 × 640 modal (`07` §2) is open. |
 | 6.3 | `/time/[slug]` for the top 1 000 cities | `generateStaticParams` emits 1 000 HTML files |
 | 6.4 | SEO: title, description, canonical, JSON-LD, sitemap, neighbour links | Lighthouse SEO = 100 |
-| 6.5 | Hydration-safe clock | no mismatch warning, no visible flash of a stale time |
+| 6.5 | Hydration-safe clock | no mismatch warning, no visible flash of a stale time. **Done 2026-09-26:** app routes never pre-render per-visitor content (`useIsHydrated`), `+html.tsx` pre-paints the themed background, i18n init is synchronous. Verified on the production export with real hydration and zero warnings in both themes. The SEO-page clock pattern lands with 6.3. |
 | 6.6 | OG images per city via `satori` | 1 000 PNGs generated at build |
 | 6.7 | PWA: manifest, icons, service worker | installable; works offline |
 | 6.8 | Keyboard shortcuts + `?` overlay | full table from `07` works; disabled inside inputs |

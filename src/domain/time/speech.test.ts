@@ -83,8 +83,6 @@ describe("meridianValueText", () => {
       id: "gn-2507480",
       slug: "algiers",
       name: "Algiers",
-      asciiName: "Algiers",
-      altNames: [],
       country: "Algeria",
       countryCode: "DZ",
       zone: "Africa/Algiers",

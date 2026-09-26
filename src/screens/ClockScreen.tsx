@@ -4,6 +4,7 @@ import { useIsFocused } from "expo-router"
 
 import { EntranceView } from "@/components/EntranceView"
 import { PressableIcon } from "@/components/Icon"
+import { LazySettingsSheet as SettingsSheet } from "@/components/LazySheets"
 import {
   Numeral,
   numeralCellWidth,
@@ -12,7 +13,6 @@ import {
 } from "@/components/Numeral"
 import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
-import { SettingsSheet } from "@/components/SettingsSheet"
 import { SunBlock } from "@/components/SunBlock"
 import { useTabBarClearance, useTopClearance, useUsesHeaderNav } from "@/components/TabBar"
 import { $sizeStyles, Text } from "@/components/Text"

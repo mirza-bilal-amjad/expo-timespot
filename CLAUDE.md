@@ -198,7 +198,8 @@ Project skills in `.claude/skills/` load automatically when relevant.
 - **`Intl` on low-end Android** may ignore `timeZone` *silently*. The boot probe in `domain/time/capability.ts` is not optional (`adr/0004`). On `degraded`, `zone.ts` reads offsets from the bundled `tz.offsets.json` instead. So **every display value must be arithmetic from `getOffsetMinutes`**: never add a zone-aware `Intl` formatter to `zone.ts`, because the fallback can't follow it. `@date-fns/tz` is not a fallback (it calls `Intl` too). Re-run `npx tsx scripts/build-tzdata.ts` before 2030 or when tz rules change.
 - **Android `includeFontPadding: false`** on every display preset, or 144 pt numerals sit ~8 % low.
 - **JS calls from a gesture (`scheduleOnRN`) must be throttled to 60 ms.** Per-frame JS destroys the 60 fps budget. `runOnJS` is deprecated in Reanimated 4 — use `scheduleOnRN` from `react-native-worklets`.
-- **Web hydration:** the static clock is stale by definition. `suppressHydrationWarning` + `useLayoutEffect`, never `useEffect`.
+- **Web hydration:** the static clock is stale by definition. App routes pre-render *nothing*: the root gates on `useIsHydrated()`, and `+html.tsx` paints the themed background. SEO pages that do pre-render a clock use `suppressHydrationWarning` + `useLayoutEffect`, never `useEffect`. Keep i18n init synchronous, since an async gate empties every static page.
+- **Web bundle budget:** `npm run export:web && npm run size:web` fails when a route's initial JS grows past its budget. Sheets and anything not needed for first paint load lazily (`LazySheets.tsx`, search names).
 - **Device clock jumps > 5 s** → cut, never animate a roll through 3 000 values.
 - **45-minute zones are real** — Kathmandu `+5:45`, Chatham `+12:45`, Eucla `+8:45`.
 - **`UTC+14` exists** (Kiritimati). The ruler must reach it.

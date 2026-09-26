@@ -83,3 +83,36 @@ describe("cities.min.json", () => {
     expect(missing).toEqual(["Antarctica/Troll", "Australia/Eucla", "Pacific/Midway"].sort())
   })
 })
+
+describe("cities.core.json (docs/10 task 6.1)", () => {
+  it("decodes to exactly the source records, minus the search names", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { allCities } = require("./dataset") as typeof import("./dataset")
+    const source = cities as {
+      id: string
+      slug: string
+      name: string
+      admin1?: string
+      country: string
+      countryCode: string
+      zone: string
+      lat: number
+      lon: number
+      population: number
+    }[]
+    expect(allCities).toHaveLength(source.length)
+    source.forEach((c, i) => {
+      const d = allCities[i]
+      expect(d.id).toBe(c.id)
+      expect(d.slug).toBe(c.slug)
+      expect(d.name).toBe(c.name)
+      expect(d.admin1).toBe(c.admin1)
+      expect(d.country).toBe(c.country)
+      expect(d.countryCode).toBe(c.countryCode)
+      expect(d.zone).toBe(c.zone)
+      expect(d.lat).toBeCloseTo(c.lat, 4)
+      expect(d.lon).toBeCloseTo(c.lon, 4)
+      expect(d.population).toBe(c.population)
+    })
+  })
+})

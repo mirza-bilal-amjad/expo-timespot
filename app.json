@@ -57,7 +57,15 @@
       }
     ],
     "expo-build-properties",
-    "expo-router"
+    [
+      "expo-router",
+      {
+        "asyncRoutes": {
+          "web": "production",
+          "default": false
+        }
+      }
+    ]
   ],
   "experiments": {
     "tsconfigPaths": true,
