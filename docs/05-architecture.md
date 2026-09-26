@@ -202,7 +202,7 @@ function schedule(cb) {
   - **SEO routes** (`/time/[slug]`, task 6.3) do pre-render real content, deterministically. The root layout hydrates with fixed inputs (the light theme, the fallback language), and the page reads the build time back from a `data-t` stamp in its own HTML. The hydration render therefore equals the static HTML exactly: ~~`suppressHydrationWarning`~~ isn't needed. A layout effect then remounts with the live values before paint. The build-time values render at opacity 0 until then (see `04` S6).
   - Two server-render fixes this needed: storage is an inert stand-in on the server (react-native-mmkv's web build throws without `window`, which had silently turned every static render into a client render), and `<Numeral>`'s calibration store has a server snapshot.
 - Fonts: `woff2` subset, `font-display: block` on the clock face specifically (a swap mid-render on a 320 px numeral is far worse than 100 ms of nothing), `swap` everywhere else. Preload the one clock weight.
-- PWA: `manifest.json`, maskable icons, `theme-color` per scheme, offline shell via a small service worker caching the app shell + city dataset.
+- PWA (task 6.7, done): manifest, maskable icons, `theme-color` per scheme, and a generated service worker. It precaches the app shell and every chunk, dataset included, and serves pages network-first. See `07` §4.
 - Deploy: EAS Hosting (first-party, has an agent skill) or any static host. Both are one command; EAS Hosting also covers Expo Router API routes if they are ever needed.
 
 ---

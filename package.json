@@ -29,7 +29,7 @@
     "build:android:device": "eas build --profile development:device --platform android --local",
     "build:android:preview": "eas build --profile preview --platform android --local",
     "build:android:prod": "eas build --profile production --platform android --local",
-    "export:web": "tsx scripts/build-sitemap.ts && expo export -p web && tsx scripts/finalize-web-export.ts dist",
+    "export:web": "tsx scripts/build-sitemap.ts && expo export -p web && tsx scripts/finalize-web-export.ts dist && tsx scripts/build-og-images.ts dist && tsx scripts/build-pwa.ts dist",
     "size:web": "tsx scripts/web-bundle-size.ts dist"
   },
   "dependencies": {
@@ -77,6 +77,7 @@
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/react-native": "^13.2.0",
     "@types/geojson": "^7946.0.16",
     "@types/jest": "^29.5.14",
@@ -103,6 +104,7 @@
     "reactotron-react-js": "^3.3.11",
     "reactotron-react-native": "^5.0.5",
     "reactotron-react-native-mmkv": "^0.2.6",
+    "satori": "^0.33.5",
     "sharp": "^0.35.4",
     "topojson-client": "^3.1.0",
     "topojson-server": "^3.0.1",

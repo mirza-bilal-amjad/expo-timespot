@@ -141,6 +141,9 @@ const es: Translations = {
     notFoundTitle: "Página no encontrada",
     notFoundBody: "Aquí no hay ninguna página. Puede que la ciudad aún no tenga una.",
     home: "Ir a TimeSpot",
+    ogEyebrow: "Hora local en",
+    ogOffsets: "{{standard}} · {{daylight}} en horario de verano",
+    ogAlt: "Hora local en {{place}}: {{offsets}}",
   },
   sun: {
     midnightSun: "Sol de medianoche",

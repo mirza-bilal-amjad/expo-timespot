@@ -137,6 +137,9 @@ const en = {
     notFoundTitle: "Page not found",
     notFoundBody: "There's no page here. The city may not have one yet.",
     home: "Go to TimeSpot",
+    ogEyebrow: "Local time in",
+    ogOffsets: "{{standard}} · {{daylight}} with DST",
+    ogAlt: "Local time in {{place}}: {{offsets}}",
   },
   sun: {
     midnightSun: "Midnight sun",

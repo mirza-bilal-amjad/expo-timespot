@@ -97,6 +97,15 @@ All are implemented as a single `useKeyboard` hook registered at the root, with 
 
 `manifest.json` with maskable icons, `display: standalone`, `theme_color` per scheme. A minimal service worker caching the app shell and the city dataset — so the installed web app is offline-capable exactly like the native one.
 
+**Implemented (6.7).** `scripts/build-pwa.ts` runs last in `npm run export:web`:
+- **Manifest.** `/manifest.webmanifest`: standalone, starting on the list. ~~`theme_color` per scheme~~ **corrected:** a manifest takes one `theme_color`, so it uses the light canvas. The per-scheme tint comes from the `theme-color` meta tags in `+html.tsx`.
+- **Icons.** 192 and 512 (the dial on transparent), a maskable 512 (the dial inside the 80 % safe circle on the canvas) and `apple-touch-icon`. They are drawn from `scripts/lib/dial.ts`, the same mark as the OG images. This is a placeholder until 7.3 designs the real icon; the favicon is still Ignite's.
+- **Service worker.** `/sw.js` is generated from `scripts/lib/sw.template.js`. It precaches the three app routes and every JS chunk (the city dataset and search names are chunks), plus the fonts, the map raster and the icons: 36 files, 4.1 MB raw. The cache is named by a hash of the list, so a deploy replaces it on activation.
+  - **Pages:** network first. Online, the HTML is never stale. Offline, a page falls back to its cached copy and then to the `/` shell, which renders whatever route the URL names, including a city page never visited.
+  - **Hashed assets:** cache first.
+  - **Registration:** in production only, after `load` (`utils/serviceWorker.web.ts`).
+- **Hosting (6.9).** `sw.js` and `manifest.webmanifest` need `Cache-Control: max-age=0, must-revalidate`, like HTML. A cached worker would pin visitors to an old deploy.
+
 ### Performance
 
 - Route-level code splitting: map and search are separate chunks. Done via Expo Router async routes (`asyncRoutes.web: "production"`), with the sheets as lazy components.

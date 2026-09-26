@@ -140,6 +140,9 @@ const hi: Translations = {
     notFoundTitle: "पेज नहीं मिला",
     notFoundBody: "यहाँ कोई पेज नहीं है। शायद इस शहर का पेज अभी नहीं बना है।",
     home: "TimeSpot पर जाएँ",
+    ogEyebrow: "स्थानीय समय",
+    ogOffsets: "{{standard}} · डेलाइट सेविंग में {{daylight}}",
+    ogAlt: "{{place}} का स्थानीय समय: {{offsets}}",
   },
   sun: {
     midnightSun: "मध्यरात्रि सूर्य",

@@ -93,3 +93,6 @@ app-dependency-graph.png
 
 # scripts/build-cities.ts, scripts/build-map.ts — raw source data, fetched on demand
 scripts/.data/
+
+# Web export (npm run export:web)
+dist/

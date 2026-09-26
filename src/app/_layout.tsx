@@ -16,6 +16,7 @@ import { reportNotice } from "@/store/notices"
 import { ThemeProvider } from "@/theme/context"
 import { customFontsToLoad } from "@/theme/typography"
 import { KeyboardProvider } from "@/utils/keyboardController"
+import { registerServiceWorker } from "@/utils/serviceWorker"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -49,6 +50,11 @@ export default function Root() {
   }, [])
 
   useSeedFirstLaunch()
+
+  // Web: installable and offline (task 6.7). A no-op on native.
+  useEffect(() => {
+    registerServiceWorker()
+  }, [])
 
   // Web: fonts arrive as @font-face in the static HTML (expo-font registers
   // them during the static render), so the page never waits on them.

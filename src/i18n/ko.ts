@@ -138,6 +138,9 @@ const ko: Translations = {
     notFoundTitle: "페이지를 찾을 수 없습니다",
     notFoundBody: "여기에는 페이지가 없습니다. 이 도시의 페이지가 아직 없을 수 있습니다.",
     home: "TimeSpot으로 이동",
+    ogEyebrow: "현지 시간",
+    ogOffsets: "{{standard}} · 서머타임 {{daylight}}",
+    ogAlt: "{{place}} 현지 시간: {{offsets}}",
   },
   sun: {
     midnightSun: "백야",

@@ -138,6 +138,9 @@ const ar: Translations = {
     notFoundTitle: "الصفحة غير موجودة",
     notFoundBody: "لا توجد صفحة هنا. ربما لا توجد صفحة لهذه المدينة بعد.",
     home: "انتقل إلى TimeSpot",
+    ogEyebrow: "التوقيت المحلي في",
+    ogOffsets: "{{standard}} · {{daylight}} في التوقيت الصيفي",
+    ogAlt: "الوقت المحلي في {{place}}: {{offsets}}",
   },
   sun: {
     midnightSun: "شمس منتصف الليل",

@@ -140,6 +140,9 @@ const ja: Translations = {
     notFoundTitle: "ページが見つかりません",
     notFoundBody: "このページはありません。この都市のページはまだないかもしれません。",
     home: "TimeSpotへ",
+    ogEyebrow: "現地時刻",
+    ogOffsets: "{{standard}} · 夏時間は{{daylight}}",
+    ogAlt: "{{place}}の現地時刻: {{offsets}}",
   },
   sun: {
     midnightSun: "白夜",

@@ -134,8 +134,8 @@ The hardest phase. Budget the most review time here.
 | 6.3 | `/time/[slug]` for the top 1 000 cities | `generateStaticParams` emits 1 000 HTML files. **Done 2026-09-26:** 1,000 pages. Hydration is exact (a build stamp) with no stale time visible; an unknown slug gets a real 404. See `04` S6. |
 | 6.4 | SEO: title, description, canonical, JSON-LD, sitemap, neighbour links | Lighthouse SEO = 100. **Done 2026-09-26:** SEO, accessibility and best practices are all 100 on `/` and `/time/tokyo` (production export). Sitemap and robots are generated, with a post-export check. |
 | 6.5 | Hydration-safe clock | no mismatch warning, no visible flash of a stale time. **Done 2026-09-26:** app routes never pre-render per-visitor content (`useIsHydrated`), `+html.tsx` pre-paints the themed background, i18n init is synchronous. Verified on the production export with real hydration and zero warnings in both themes. The SEO-page clock pattern lands with 6.3. |
-| 6.6 | OG images per city via `satori` | 1 000 PNGs generated at build |
-| 6.7 | PWA: manifest, icons, service worker | installable; works offline |
+| 6.6 | OG images per city via `satori` | 1 000 PNGs generated at build. **Done 2026-09-26:** `scripts/build-og-images.ts`, 1,000 PNGs (1200 × 630, ~39 KB each, ~45 s). The city, country, the year's offsets and the zone beside a clock face at 10:10. No time is shown: an image is shared long after it's built. See `04` S6. |
+| 6.7 | PWA: manifest, icons, service worker | installable; works offline. **Done 2026-09-26:** `scripts/build-pwa.ts` writes the manifest, icons and `sw.js`. Chrome reports no installability errors. Offline, `/`, `/clock`, `/map`, a visited city page and an unvisited one all load, and search finds alternate names. See `07` §4. The icon is the placeholder dial until 7.3. |
 | 6.8 | Keyboard shortcuts + `?` overlay | full table from `07` works; disabled inside inputs |
 | 6.9 | Deploy to EAS Hosting with a custom domain | LCP < 1.2 s p75 on a throttled 4G profile |
 

@@ -10,9 +10,9 @@ import { Text } from "@/components/Text"
 import { getNeighbours, getReferenceCities } from "@/domain/cities/seoPages"
 import { formatDayLength, getSunTimes } from "@/domain/sun/sun"
 import { getDifference } from "@/domain/time/diff"
-import { getDstStatus } from "@/domain/time/dst"
+import { getDstStatus, getYearOffsets } from "@/domain/time/dst"
 import { spokenClock } from "@/domain/time/speech"
-import { getNextTransition, getZonedTime } from "@/domain/time/zone"
+import { formatOffset, getNextTransition, getZonedTime } from "@/domain/time/zone"
 import type { City, Prefs } from "@/domain/types"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useClock } from "@/hooks/useClock"
@@ -20,7 +20,7 @@ import { useIsHydrated } from "@/hooks/useIsHydrated"
 import { translate } from "@/i18n/translate"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
-import { cityPagePath, SITE_URL } from "@/utils/site"
+import { cityPagePath, OG_IMAGE_SIZE, ogImagePath, SITE_URL } from "@/utils/site"
 
 /**
  * docs/04-screen-specs.md S6 · the public city page (web only), statically
@@ -49,6 +49,16 @@ function readBuildTime(): number | null {
   return stamp ? Number(stamp) : null
 }
 
+/** "UTC+9", or "UTC−5 · UTC−4 with DST" — what the share image says (6.6). */
+function yearOffsetsLabel(now: number, zone: string): string {
+  const { standard, daylight } = getYearOffsets(now, zone)
+  if (daylight === null) return formatOffset(standard)
+  return translate("cityPage:ogOffsets", {
+    standard: formatOffset(standard),
+    daylight: formatOffset(daylight),
+  })
+}
+
 function formatDuration(minutes: number): string {
   const abs = Math.abs(minutes)
   const h = Math.floor(abs / 60)
@@ -73,6 +83,11 @@ export function CityPageScreen({ city }: { city: City }) {
   const title = translate("cityPage:pageTitle", { place })
   const description = translate("cityPage:description", { place, offset: time.offsetLabel })
   const url = `${SITE_URL}${cityPagePath(city.slug)}`
+  const image = `${SITE_URL}${ogImagePath(city.slug)}`
+  const imageAlt = translate("cityPage:ogAlt", {
+    place,
+    offsets: yearOffsetsLabel(buildNow, city.zone),
+  })
 
   const dst = getDstStatus(now, city.zone)
   const transition = dst === "none" ? null : getNextTransition(city.zone, now)
@@ -90,6 +105,7 @@ export function CityPageScreen({ city }: { city: City }) {
         description,
         "inLanguage": "en",
         "dateModified": new Date(buildNow).toISOString(),
+        "primaryImageOfPage": image,
         "about": { "@id": `${url}#place` },
       },
       {
@@ -119,7 +135,11 @@ export function CityPageScreen({ city }: { city: City }) {
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={url} />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:image" content={image} />
+        <meta property="og:image:width" content={String(OG_IMAGE_SIZE.width)} />
+        <meta property="og:image:height" content={String(OG_IMAGE_SIZE.height)} />
+        <meta property="og:image:alt" content={imageAlt} />
+        <meta name="twitter:card" content="summary_large_image" />
         {/* Helmet takes a script's body as a string child (it ignores
          dangerouslySetInnerHTML). `<` is escaped so no string in the data
          can close the tag. */}
