@@ -52,7 +52,16 @@ export interface CityRowProps {
   canMoveUp?: boolean
   canMoveDown?: boolean
   dragHandleProps?: Record<string, unknown>
+  /** `row` — the phone list's 92 pt row. `card` — docs/04-screen-specs.md
+   * S1 "Web adaptation": the 180-tall city card of the md+ grid, with the
+   * time at `numeral.lg`'s web size and a "Day"/"Night" label. Same
+   * selection cross-fade, menu and accessibility actions — one component,
+   * not two to keep in sync. */
+  variant?: "row" | "card"
 }
+
+// docs/02-design-system.md: `numeral.lg` is 48 on mobile and 80 on web.
+const CARD_TIME_SCALE = 80 / 48
 
 const AnimatedText = Animated.createAnimatedComponent(Text)
 
@@ -85,7 +94,9 @@ export const CityRow = memo(
       onRename,
       canMoveUp = true,
       canMoveDown = true,
+      variant = "row",
     } = props
+    const card = variant === "card"
     const { theme, themed } = useAppTheme()
 
     const cityData = getCityById(city.cityId)
@@ -203,32 +214,67 @@ export const CityRow = memo(
           ]}
           onAccessibilityAction={handleAccessibilityAction}
         >
-          <Animated.View style={[themed($row), $animatedRow]}>
-            <View style={$topLine}>
-              <AnimatedText preset="offset" text={time.offsetLabel} style={$animatedOffset} />
-            </View>
-            <View style={$bottomLine}>
-              <AnimatedText
-                preset="cityTitle"
-                text={name}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                style={[$cityName, $animatedCityName]}
-              />
-              {/* <Numeral>'s colour swap is an instant cut, not part of this
+          {card ? (
+            <Animated.View style={[themed($card), $animatedRow]}>
+              <View style={themed($cardTopLine)}>
+                <AnimatedText
+                  preset="cityTitle"
+                  text={name}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[$cityName, $animatedCityName]}
+                />
+                <AnimatedText preset="offset" text={time.offsetLabel} style={$animatedOffset} />
+              </View>
+              <View style={$bottomLine}>
+                <Numeral
+                  value={time.display}
+                  size="numeralLg"
+                  scale={CARD_TIME_SCALE}
+                  color={selected ? "textOnInverse" : "text"}
+                />
+                <View style={themed($dayNight)}>
+                  <Icon
+                    icon={time.isDay ? "sun" : "moon"}
+                    size="md"
+                    color={time.isDay ? theme.colors.day : theme.colors.night}
+                  />
+                  <AnimatedText
+                    preset="offset"
+                    tx={time.isDay ? "list:day" : "list:night"}
+                    style={$animatedOffset}
+                  />
+                </View>
+              </View>
+            </Animated.View>
+          ) : (
+            <Animated.View style={[themed($row), $animatedRow]}>
+              <View style={$topLine}>
+                <AnimatedText preset="offset" text={time.offsetLabel} style={$animatedOffset} />
+              </View>
+              <View style={$bottomLine}>
+                <AnimatedText
+                  preset="cityTitle"
+                  text={name}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={[$cityName, $animatedCityName]}
+                />
+                {/* <Numeral>'s colour swap is an instant cut, not part of this
              cross-fade — animating per-digit colour would mean threading an
              animated value through every measured digit cell, which rule 4's
              "every digit through Numeral" contract doesn't expose a hook for
              yet. Acceptable: the digits are the last thing the eye settles
              on mid-transition anyway. */}
-              <Numeral
-                value={time.display}
-                size="numeralLg"
-                color={selected ? "textOnInverse" : "text"}
-                style={themed($time)}
-              />
-            </View>
-          </Animated.View>
+                <Numeral
+                  value={time.display}
+                  size="numeralLg"
+                  color={selected ? "textOnInverse" : "text"}
+                  style={themed($time)}
+                />
+              </View>
+            </Animated.View>
+          )}
         </Pressable>
         {/* The top-right cluster is a *sibling* of the row's pressable, laid
        over it — never inside it. On web a button inside a button is invalid
@@ -236,7 +282,7 @@ export const CityRow = memo(
        day/night glyph ignores touches, so tapping it still hits the row
        underneath; it's decorative, since the row's label already says
        "day-time" / "night-time". */}
-        <View style={[themed($topRight), $styles.passThrough]}>
+        <View style={[themed($topRight), card && themed($topRightCard), $styles.passThrough]}>
           {hasMenu && (
             <RowMenu
               items={menuItems}
@@ -245,17 +291,20 @@ export const CityRow = memo(
               color={selected ? theme.colors.textOnInverseDim : theme.colors.textDim}
             />
           )}
-          <View
-            style={$decorative}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            <Icon
-              icon={time.isDay ? "sun" : "moon"}
-              size="md"
-              color={time.isDay ? theme.colors.day : theme.colors.night}
-            />
-          </View>
+          {/* The card shows day/night in its bottom line instead. */}
+          {!card && (
+            <View
+              style={$decorative}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              <Icon
+                icon={time.isDay ? "sun" : "moon"}
+                size="md"
+                color={time.isDay ? theme.colors.day : theme.colors.night}
+              />
+            </View>
+          )}
         </View>
       </View>
     )
@@ -273,7 +322,8 @@ export const CityRow = memo(
     prev.onMoveDown === next.onMoveDown &&
     prev.onRename === next.onRename &&
     prev.canMoveUp === next.canMoveUp &&
-    prev.canMoveDown === next.canMoveDown,
+    prev.canMoveDown === next.canMoveDown &&
+    prev.variant === next.variant,
 )
 
 const $row: ThemedStyle<ViewStyle> = (theme) => ({
@@ -282,6 +332,27 @@ const $row: ThemedStyle<ViewStyle> = (theme) => ({
   paddingHorizontal: theme.spacing.md,
   paddingVertical: theme.spacing.md,
   justifyContent: "space-between",
+})
+
+const $card: ThemedStyle<ViewStyle> = (theme) => ({
+  height: theme.spacing.cardHeight,
+  borderRadius: theme.radius.md,
+  padding: theme.spacing.lg,
+  justifyContent: "space-between",
+})
+
+// Leaves room on the right for the ⋯ menu laid over the card's corner.
+const $cardTopLine: ThemedStyle<ViewStyle> = (theme) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  marginRight: theme.spacing.hitTarget,
+})
+
+const $dayNight: ThemedStyle<ViewStyle> = (theme) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: theme.spacing.xs,
 })
 
 const $topLine: ViewStyle = {
@@ -299,6 +370,11 @@ const $topRight: ThemedStyle<ViewStyle> = (theme) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: theme.spacing.xxs,
+})
+
+const $topRightCard: ThemedStyle<ViewStyle> = (theme) => ({
+  top: theme.spacing.md,
+  right: theme.spacing.sm,
 })
 
 const $decorative: ViewStyle = { pointerEvents: "none" }

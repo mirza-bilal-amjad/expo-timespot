@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { LayoutChangeEvent, TextStyle, View, ViewStyle } from "react-native"
 import { useIsFocused } from "expo-router"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { EntranceView } from "@/components/EntranceView"
 import { PressableIcon } from "@/components/Icon"
@@ -15,10 +14,11 @@ import { Screen } from "@/components/Screen"
 import { SegmentedPill } from "@/components/SegmentedPill"
 import { SettingsSheet } from "@/components/SettingsSheet"
 import { SunBlock } from "@/components/SunBlock"
-import { useTabBarClearance } from "@/components/TabBar"
+import { useTabBarClearance, useTopClearance, useUsesHeaderNav } from "@/components/TabBar"
 import { $sizeStyles, Text } from "@/components/Text"
 import { getCityById, getCityByZone } from "@/domain/cities/search"
 import { getDeviceZone, getZonedTime } from "@/domain/time/zone"
+import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useClock } from "@/hooks/useClock"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
@@ -27,6 +27,8 @@ import { usePrefsStore } from "@/store/prefs"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 import { type CityMetrics, type ClockFit, fitClock, type Size } from "@/utils/fitType"
+
+import { WideClock } from "./WideClock"
 
 const sizeOf = (e: LayoutChangeEvent): Size => ({
   width: e.nativeEvent.layout.width,
@@ -81,8 +83,10 @@ interface Reference {
  */
 export function ClockScreen() {
   const { theme, themed } = useAppTheme()
-  const insets = useSafeAreaInsets()
   const tabBarClearance = useTabBarClearance()
+  const topClearance = useTopClearance()
+  const wide = useBreakpoint().atLeast("md")
+  const headerNav = useUsesHeaderNav()
   const now = useClock({ active: useIsFocused() })
   const shouldPlayEntrance = useShouldPlayEntrance("clock")
 
@@ -179,6 +183,30 @@ export function ClockScreen() {
     )
   }
 
+  if (wide) {
+    // docs/04-screen-specs.md S2 "Web adaptation" — the hero band.
+    return (
+      <View style={$root}>
+        <Screen preset="fixed" contentContainerStyle={themed($screen)}>
+          <WideClock
+            city={city}
+            time={time}
+            isDeviceCity={city.zone === getDeviceZone()}
+            now={now}
+            timeFormat={prefs.timeFormat}
+            onTimeFormat={(timeFormat) => setPrefs({ timeFormat })}
+            onOpenSettings={headerNav ? undefined : () => setSettingsOpen(true)}
+            topClearance={topClearance}
+            bottomClearance={tabBarClearance}
+            playEntrance={shouldPlayEntrance}
+          />
+        </Screen>
+        {/* From lg the header nav owns Settings (tabs layout). */}
+        {!headerNav && <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />}
+      </View>
+    )
+  }
+
   const dateStyle = dateStyleAt(heroScale)
 
   return (
@@ -198,7 +226,7 @@ export function ClockScreen() {
         <View
           style={[
             themed($header),
-            { paddingTop: insets.top + theme.spacing.sm, paddingBottom: theme.spacing.xl },
+            { paddingTop: topClearance + theme.spacing.sm, paddingBottom: theme.spacing.xl },
           ]}
         >
           <PressableIcon

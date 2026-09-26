@@ -1,5 +1,6 @@
 const en = {
   common: {
+    appName: "TimeSpot",
     ok: "OK!",
     cancel: "Cancel",
     back: "Back",
@@ -24,6 +25,8 @@ const en = {
     },
   },
   list: {
+    day: "Day",
+    night: "Night",
     moreOptions: "More options for {{name}}",
     rename: "Rename",
     moveUp: "Move up",
@@ -58,6 +61,7 @@ const en = {
     alreadyAdded: ", already added",
   },
   clock: {
+    current: "Current",
     noCity: "No city selected yet.",
     openSettings: "Open settings",
     formatToggle: "Time format",

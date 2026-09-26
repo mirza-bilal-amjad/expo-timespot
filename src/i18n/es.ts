@@ -2,6 +2,7 @@ import { Translations } from "./en"
 
 const es: Translations = {
   common: {
+    appName: "TimeSpot",
     ok: "OK",
     cancel: "Cancelar",
     back: "Volver",
@@ -27,6 +28,8 @@ const es: Translations = {
     },
   },
   list: {
+    day: "Día",
+    night: "Noche",
     moreOptions: "Más opciones para {{name}}",
     rename: "Cambiar nombre",
     moveUp: "Subir",
@@ -61,6 +64,7 @@ const es: Translations = {
     alreadyAdded: ", ya añadida",
   },
   clock: {
+    current: "Actual",
     noCity: "Ninguna ciudad seleccionada todavía.",
     openSettings: "Abrir ajustes",
     formatToggle: "Formato de hora",

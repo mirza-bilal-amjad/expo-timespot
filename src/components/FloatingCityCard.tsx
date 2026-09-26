@@ -44,6 +44,9 @@ export interface FloatingCityCardProps {
   /** The one clock tick (CLAUDE.md rule 3). */
   now: number
   prefs: Prefs
+  /** `pointer` (default) follows the meridian; `right` — docs/04 S3 web,
+   * from 1200 px — sits still in the map's top-right corner. */
+  dock?: "pointer" | "right"
 }
 
 const LOWER_POSITION = 2 / 3
@@ -51,7 +54,8 @@ const UPPER_POSITION = 0.06
 const FLIP_THRESHOLD = 0.5
 
 export function FloatingCityCard(props: FloatingCityCardProps) {
-  const { width, height, city, anchorX, anchorY, now, prefs } = props
+  const { width, height, city, anchorX, anchorY, now, prefs, dock = "pointer" } = props
+  const docked = dock === "right"
   const { theme, themed } = useAppTheme()
   const gutter = theme.spacing.gutter
   const flipMs = theme.timing.fast
@@ -67,9 +71,13 @@ export function FloatingCityCard(props: FloatingCityCardProps) {
 
   const $animatedPosition = useAnimatedStyle(() => {
     const maxLeft = Math.max(width - gutter - cardWidth.value, gutter)
-    const left = Math.min(Math.max(anchorX.value - cardWidth.value / 2, gutter), maxLeft)
+    const left = docked
+      ? maxLeft
+      : Math.min(Math.max(anchorX.value - cardWidth.value / 2, gutter), maxLeft)
     const top =
-      anchorY.value > height * FLIP_THRESHOLD ? height * UPPER_POSITION : height * LOWER_POSITION
+      docked || anchorY.value > height * FLIP_THRESHOLD
+        ? height * UPPER_POSITION
+        : height * LOWER_POSITION
     return {
       transform: [{ translateX: left }, { translateY: withTiming(top, { duration: flipMs }) }],
     }

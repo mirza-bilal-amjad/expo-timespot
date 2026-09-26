@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
 import { useIsFocused } from "expo-router"
 import { ScrollView } from "react-native-gesture-handler"
 import { useSharedValue } from "react-native-reanimated"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { AvatarStrip, AvatarStripItem } from "@/components/AvatarStrip"
 import { Button } from "@/components/Button"
+import { CityRow } from "@/components/CityRow"
 import { EntranceView } from "@/components/EntranceView"
 import { Icon, PressableIcon } from "@/components/Icon"
 import { RenameSheet } from "@/components/RenameSheet"
@@ -14,18 +14,21 @@ import { ReorderableCityRow } from "@/components/ReorderableCityRow"
 import { Screen } from "@/components/Screen"
 import { SearchSheet } from "@/components/SearchSheet"
 import { SystemNotice } from "@/components/SystemNotice"
-import { useTabBarClearance } from "@/components/TabBar"
+import { useTabBarClearance, useTopClearance } from "@/components/TabBar"
 import { Text } from "@/components/Text"
 import { Toast } from "@/components/Toast"
 import { getCityById } from "@/domain/cities/search"
 import { getZonedTime } from "@/domain/time/zone"
+import type { ZonedTime } from "@/domain/types"
 import type { SavedCity } from "@/domain/types"
+import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useClock } from "@/hooks/useClock"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
 import { useCitiesStore } from "@/store/cities"
 import { useFocusStore } from "@/store/focus"
 import { usePrefsStore } from "@/store/prefs"
+import { cardColumnsFor } from "@/theme/breakpoints"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -52,8 +55,14 @@ const ENTRANCE_ROW_CAP = 6
 
 export function ListScreen() {
   const { theme, themed } = useAppTheme()
-  const insets = useSafeAreaInsets()
   const tabBarClearance = useTabBarClearance()
+  const topClearance = useTopClearance()
+  // docs/04-screen-specs.md S1 "Web adaptation": from md the list is a grid
+  // of city cards inside the 1312 container.
+  const { atLeast, gutter, contentWidth } = useBreakpoint()
+  const grid = atLeast("md")
+  const columns = cardColumnsFor(contentWidth)
+  const cardWidth = (contentWidth - (columns - 1) * theme.spacing.rowGap) / columns
   // The rows show HH:MM, never seconds — re-rendering the list every second
   // redrew ~1,000 components per tick for nothing (measured 2026-09-26).
   const now = useClock({ coalesceToMinute: true, active: useIsFocused() })
@@ -194,44 +203,74 @@ export function ListScreen() {
     // this screen's own flex:1 root, gives it a properly full-height anchor.
     <View style={$root}>
       <Screen preset="fixed" contentContainerStyle={themed($screen)}>
-        <View style={[themed($header), { paddingTop: insets.top + theme.spacing.sm }]}>
-          <View style={$headerRow}>
-            {avatarItems.length > 1 && (
-              <AvatarStrip
-                items={avatarItems}
-                focusedId={focusedCityId ?? undefined}
-                onSelect={setFocusedCityId}
-                accessibilityLabel="Cities"
+        <View style={[$column, { maxWidth: theme.spacing.container + 2 * gutter }]}>
+          <View
+            style={[
+              themed($header),
+              { paddingTop: topClearance + theme.spacing.sm, paddingHorizontal: gutter },
+            ]}
+          >
+            <View style={$headerRow}>
+              {avatarItems.length > 1 && (
+                <AvatarStrip
+                  items={avatarItems}
+                  focusedId={focusedCityId ?? undefined}
+                  onSelect={setFocusedCityId}
+                  accessibilityLabel="Cities"
+                />
+              )}
+              <View style={$spacer} />
+              <PressableIcon
+                icon="plus"
+                size="md"
+                accessibilityLabel="Add a city"
+                containerStyle={themed($addButton)}
+                onPress={() => setSearchOpen(true)}
               />
-            )}
-            <View style={$spacer} />
-            <PressableIcon
-              icon="plus"
-              size="md"
-              accessibilityLabel="Add a city"
-              containerStyle={themed($addButton)}
-              onPress={() => setSearchOpen(true)}
-            />
-          </View>
-          <EntranceView play={shouldPlayEntrance}>
-            <Text preset="screenTitle" tx="list:title" style={themed($title)} />
-          </EntranceView>
-        </View>
-
-        <View style={themed($notice)}>
-          <SystemNotice />
-        </View>
-
-        {storedOrder.length === 0 ? (
-          <EmptyState onAddFirst={() => setSearchOpen(true)} />
-        ) : (
-          <ScrollView scrollEnabled={!dragging} contentContainerStyle={themed($listContent)}>
-            {/* Rows are absolutely placed at slot × step; this holds their room. */}
-            <View style={{ height: storedOrder.length * step - theme.spacing.rowGap }}>
-              {storedOrder.map(renderRow)}
             </View>
-          </ScrollView>
-        )}
+            <EntranceView play={shouldPlayEntrance}>
+              <Text preset="screenTitle" tx="list:title" style={themed($title)} />
+            </EntranceView>
+          </View>
+
+          <View style={[themed($notice), { paddingHorizontal: gutter }]}>
+            <SystemNotice />
+          </View>
+
+          {storedOrder.length === 0 ? (
+            <EmptyState onAddFirst={() => setSearchOpen(true)} />
+          ) : grid ? (
+            <ScrollView
+              contentContainerStyle={[
+                themed($gridContent),
+                { paddingHorizontal: gutter, paddingBottom: tabBarClearance + theme.spacing.lg },
+              ]}
+            >
+              {storedOrder.map((item, index) => (
+                <CityGridCell
+                  key={item.cityId}
+                  city={item}
+                  time={getZonedTime(now, getCityById(item.cityId)?.zone ?? "UTC", prefs)}
+                  width={cardWidth}
+                  selected={item.cityId === focusedCityId}
+                  index={index}
+                  itemCount={storedOrder.length}
+                  onFocus={setFocusedCityId}
+                  onDelete={handleDelete}
+                  onMove={moveCity}
+                  onRename={setRenaming}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <ScrollView scrollEnabled={!dragging} contentContainerStyle={themed($listContent)}>
+              {/* Rows are absolutely placed at slot × step; this holds their room. */}
+              <View style={{ height: storedOrder.length * step - theme.spacing.rowGap }}>
+                {storedOrder.map(renderRow)}
+              </View>
+            </ScrollView>
+          )}
+        </View>
       </Screen>
 
       <Toast
@@ -248,6 +287,68 @@ export function ListScreen() {
     </View>
   )
 }
+
+interface CityGridCellProps {
+  city: SavedCity
+  time: ZonedTime
+  width: number
+  selected: boolean
+  index: number
+  itemCount: number
+  onFocus: (cityId: string) => void
+  onDelete: (city: SavedCity) => void
+  onMove: (cityId: string, delta: -1 | 1) => void
+  onRename: (city: SavedCity) => void
+}
+
+/**
+ * One card of the md+ grid: binds the list's id-taking callbacks to this
+ * city (so they're stable) and re-renders only when what it shows changes —
+ * the grid's counterpart to <ReorderableCityRow>. No drag or swipe: those
+ * are phone gestures; the card's ⋯ menu moves and removes it.
+ */
+const CityGridCell = memo(
+  function CityGridCell(props: CityGridCellProps) {
+    const { city, time, width, selected, index, itemCount } = props
+    const { onFocus, onDelete, onMove, onRename } = props
+    const id = city.cityId
+    const handlePress = useCallback(() => onFocus(id), [onFocus, id])
+    const handleDelete = useCallback(() => onDelete(city), [onDelete, city])
+    const handleMoveUp = useCallback(() => onMove(id, -1), [onMove, id])
+    const handleMoveDown = useCallback(() => onMove(id, 1), [onMove, id])
+    const handleRename = useCallback(() => onRename(city), [onRename, city])
+    return (
+      <View style={{ width }}>
+        <CityRow
+          variant="card"
+          city={city}
+          time={time}
+          selected={selected}
+          onPress={handlePress}
+          onDelete={handleDelete}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+          onRename={handleRename}
+          canMoveUp={index > 0}
+          canMoveDown={index < itemCount - 1}
+        />
+      </View>
+    )
+  },
+  (prev, next) =>
+    prev.city === next.city &&
+    prev.time.display === next.time.display &&
+    prev.time.offsetLabel === next.time.offsetLabel &&
+    prev.time.isDay === next.time.isDay &&
+    prev.width === next.width &&
+    prev.selected === next.selected &&
+    prev.index === next.index &&
+    prev.itemCount === next.itemCount &&
+    prev.onFocus === next.onFocus &&
+    prev.onDelete === next.onDelete &&
+    prev.onMove === next.onMove &&
+    prev.onRename === next.onRename,
+)
 
 function EmptyState({ onAddFirst }: { onAddFirst: () => void }) {
   const { theme, themed } = useAppTheme()
@@ -268,6 +369,17 @@ function EmptyState({ onAddFirst }: { onAddFirst: () => void }) {
 }
 
 const $root: ViewStyle = { flex: 1 }
+
+// The content column: full width on a phone, the centred 1312 container
+// (plus gutters) from md up.
+const $column: ViewStyle = { flex: 1, width: "100%", alignSelf: "center" }
+
+const $gridContent: ThemedStyle<ViewStyle> = (theme) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: theme.spacing.rowGap,
+  paddingTop: theme.spacing.lg,
+})
 
 const $screen: ThemedStyle<ViewStyle> = (theme) => ({
   flex: 1,

@@ -2,6 +2,7 @@ import { Translations } from "./en"
 
 const ja: Translations = {
   common: {
+    appName: "TimeSpot",
     ok: "OK",
     cancel: "キャンセル",
     back: "戻る",
@@ -27,6 +28,8 @@ const ja: Translations = {
     },
   },
   list: {
+    day: "昼",
+    night: "夜",
     moreOptions: "{{name}} のその他のオプション",
     rename: "名前を変更",
     moveUp: "上へ移動",
@@ -61,6 +64,7 @@ const ja: Translations = {
     alreadyAdded: "（追加済み）",
   },
   clock: {
+    current: "現在地",
     noCity: "都市がまだ選択されていません。",
     openSettings: "設定を開く",
     formatToggle: "時刻表示形式",

@@ -8,7 +8,7 @@ One route tree, one component tree, three renderings. The layout adapts by **bre
 
 | Token | Min width | Typical device | Layout |
 |---|---|---|---|
-| `xs` | 0 | small phones (320–389) | single column, gutter 20 |
+| `xs` | 0 | small phones (320–389) | single column, gutter ~~20~~ **28** |
 | `sm` | 390 | phones | single column, gutter 28 ← **mobile reference** |
 | `md` | 768 | tablets, small windows | 2-up card grid, gutter 32 |
 | `lg` | 1024 | tablets landscape, laptops | 3-up, gutter 48, header nav replaces tab bar |
@@ -21,6 +21,8 @@ const { width } = useWindowDimensions()   // works identically on native and web
 ```
 
 `useWindowDimensions`, not `Dimensions.get()` — it updates on rotation, on iPad multitasking, and on browser resize. Never read the breakpoint at module scope.
+
+Implemented as the pure `src/theme/breakpoints.ts` (`breakpointFor`, `gutterFor`, `contentWidthFor`, `cardColumnsFor`, unit-tested) plus `useBreakpoint()`. **Correction 2026-09-26:** `xs` keeps the 28 gutter. Every phone row, sheet and header already carries 28 internally, so a 20 pt page gutter misaligned the screen against its own sheets. Gutters are 28 / 28 / 32 / 48 / 64 from `xs` to `xl`.
 
 ---
 
@@ -37,7 +39,7 @@ const { width } = useWindowDimensions()   // works identically on native and web
 | Settings | sheet | sheet | sheet |
 | Gutter | 20 / 28 | 32 / 48 | 64 |
 
-The **tab bar → header nav** switch at `lg` is the only structural change. It is implemented once, in `app/(tabs)/_layout.tsx`, by swapping the `tabBar` renderer — the screens themselves do not know which one is mounted.
+The **tab bar → header nav** switch at `lg` is the only structural change. It is implemented once, in `app/(tabs)/_layout.tsx`, by swapping the `tabBar` renderer — the screens themselves do not know which one is mounted. Done (task 6.2): `useUsesHeaderNav()` picks the renderer, and `tabBarPosition` moves to `top` with the header nav. The table's column breakpoints hold, with one deviation: at `md` the floating tab bar stays (the header nav starts at `lg`, as the Navigation row says), and the Clock keeps a Settings mark in its band until the header nav takes it over.
 
 ---
 

@@ -65,6 +65,8 @@ export interface MeridianMapProps {
   /** The one clock tick (CLAUDE.md rule 3). */
   now: number
   prefs: Prefs
+  /** Where the floating city card sits — see FloatingCityCard's `dock`. */
+  cardDock?: "pointer" | "right"
 }
 
 const PREVIEW_THROTTLE_MS = 60
@@ -349,6 +351,7 @@ export function MeridianMap(props: MeridianMapProps) {
           anchorY={anchorY}
           now={now}
           prefs={prefs}
+          dock={props.cardDock}
         />
       </View>
     </GestureDetector>

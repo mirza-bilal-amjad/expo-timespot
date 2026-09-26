@@ -130,7 +130,7 @@ The hardest phase. Budget the most review time here.
 | # | Task | Acceptance |
 |---|---|---|
 | 6.1 | `output: 'static'`, route-level code splitting | initial route < 180 KB gz |
-| 6.2 | Breakpoint layouts: card grid, header nav, inline hero | matches the web board at 1440 |
+| 6.2 | Breakpoint layouts: card grid, header nav, inline hero | matches the web board at 1440. **Done 2026-09-26:** header nav at `lg`, 1–4-column card grid from `md`, inline hero band, map band with docked card. Verified at 768 / 1024 / 1440 in both themes, and phones unchanged. The search sheet is still a bottom drawer on web; the centred 560 × 640 modal (`07` §2) is open. |
 | 6.3 | `/time/[slug]` for the top 1 000 cities | `generateStaticParams` emits 1 000 HTML files |
 | 6.4 | SEO: title, description, canonical, JSON-LD, sitemap, neighbour links | Lighthouse SEO = 100 |
 | 6.5 | Hydration-safe clock | no mismatch warning, no visible flash of a stale time |

@@ -22,6 +22,9 @@ export interface SunBlockProps {
   lon: number
   zone: string
   now: number
+  /** `end` (default) — the phone clock's right-aligned block; `start` — the
+   * wide clock's meta row, where it heads a left-aligned column. */
+  align?: "start" | "end"
 }
 
 // Sunrise/sunset are always shown in 24h form (matches the doc's own
@@ -54,14 +57,15 @@ function SunLine({
 }
 
 export function SunBlock(props: SunBlockProps) {
-  const { lat, lon, zone, now } = props
+  const { lat, lon, zone, now, align = "end" } = props
   const { themed } = useAppTheme()
+  const $aligned = [themed($block), align === "start" && $blockStart]
 
   const sun = getSunTimes(lat, lon, new Date(now), zone)
 
   if (sun.kind === "midnight-sun") {
     return (
-      <View style={themed($block)}>
+      <View style={$aligned}>
         <SunLine icon="sun" tx="sun:midnightSun" />
       </View>
     )
@@ -71,7 +75,7 @@ export function SunBlock(props: SunBlockProps) {
     const nextSunrise = getNextSunrise(lat, lon, now, zone)
     const nextDate = nextSunrise ? getZonedTime(nextSunrise.getTime(), zone, SUN_BLOCK_PREFS) : null
     return (
-      <View style={themed($block)}>
+      <View style={$aligned}>
         <SunLine icon="moon" tx="sun:polarNight" />
         {nextDate && (
           <Text
@@ -89,7 +93,7 @@ export function SunBlock(props: SunBlockProps) {
   const sunset = getZonedTime(sun.sunset!.getTime(), zone, SUN_BLOCK_PREFS)
 
   return (
-    <View style={themed($block)}>
+    <View style={$aligned}>
       <SunLine
         icon="sun"
         tx="sun:dayLength"
@@ -103,6 +107,8 @@ export function SunBlock(props: SunBlockProps) {
     </View>
   )
 }
+
+const $blockStart: ViewStyle = { alignItems: "flex-start" }
 
 const $block: ThemedStyle<ViewStyle> = (theme) => ({
   alignItems: "flex-end",

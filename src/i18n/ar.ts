@@ -2,6 +2,7 @@ import { Translations } from "./en"
 
 const ar: Translations = {
   common: {
+    appName: "TimeSpot",
     ok: "نعم",
     cancel: "حذف",
     back: "خلف",
@@ -26,6 +27,8 @@ const ar: Translations = {
     },
   },
   list: {
+    day: "نهار",
+    night: "ليل",
     moreOptions: "خيارات إضافية لـ {{name}}",
     rename: "إعادة التسمية",
     moveUp: "نقل لأعلى",
@@ -60,6 +63,7 @@ const ar: Translations = {
     alreadyAdded: "، أُضيفت بالفعل",
   },
   clock: {
+    current: "الحالية",
     noCity: "لم يتم اختيار مدينة بعد.",
     openSettings: "فتح الإعدادات",
     formatToggle: "تنسيق الوقت",

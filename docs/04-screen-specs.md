@@ -173,7 +173,7 @@ At `≥ 768 px` the list becomes a responsive grid of **city cards** (the web bo
    320 wide · radius 16
 ```
 
-Columns: `1 / 2 / 3 / 4` at `<560 / <900 / <1200 / ≥1200`, `gap 12`, container `1312`.
+Columns: `1 / 2 / 3 / 4` at `<560 / <900 / <1200 / ≥1200`, `gap 12`, container `1312`. Measured on the *content* width (inside the gutters), so 1440 gives exactly four 320 cards: `4 × 320 + 3 × 12 ≈ 1312`. The card is `<CityRow variant="card">` (see `03`).
 Selected card = `bg.inverse` (matches the board).
 
 ---
@@ -263,6 +263,7 @@ Current        Sun ☀ : 07:12 – 17:17 (10h 05m)     [12h|24h]
 - Hero is a single line `HH:MM:SS` with colons at `ink.primary`; on `< 560 px` it wraps to `HH:MM` over `SS`.
 - Three-column meta row: `Current` label left, sun + date centre, toggle right. Collapses to stacked at `< 900 px`.
 - `Current` is replaced by the city name when the focused city is not the device zone.
+- **Implemented (`src/screens/WideClock.tsx`, from `md`).** The hero's width at scale 1 comes from a hidden `00:00:00`, measured once (every digit has the same cell). The scale is then `min(clamp(96, 22vw, 320) / 144, contentWidth / thatWidth)`: one division, no resize loop. The date line is `ZonedTime.dateLabel` ("Sat, Sep 26"). ~~"Monday, Mar 24 2025"~~ — a long-form date would need a second, zone-aware formatter, which the degraded time engine can't follow (ADR-0004). The sun block is left-aligned here (`SunBlock align="start"`).
 
 ---
 
@@ -324,7 +325,7 @@ If the meridian's offset matches **no saved city**, the card shows the represent
 
 ### Web adaptation
 
-Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Pointing works with the mouse; **← / →** step to the adjacent real zone's city. The ruler is always visible; the floating card docks to the right at `≥ 1200 px`.
+Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Pointing works with the mouse; **← / →** step to the adjacent real zone's city. The ruler is always visible; the floating card docks to the right at `≥ 1200 px`. **Implemented (from `md`).** The band is the largest box of that aspect that fits the space with the ruler directly under it, so the map and ruler are centred together. The card docks top-right via `FloatingCityCard dock="right"`. **← / →** stepping is task 6.8 (keyboard) and not done yet.
 
 ---
 

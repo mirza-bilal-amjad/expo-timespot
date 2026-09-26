@@ -2,6 +2,7 @@ import { Translations } from "./en"
 
 const hi: Translations = {
   common: {
+    appName: "TimeSpot",
     ok: "ठीक है!",
     cancel: "रद्द करें",
     back: "वापस",
@@ -26,6 +27,8 @@ const hi: Translations = {
     },
   },
   list: {
+    day: "दिन",
+    night: "रात",
     moreOptions: "{{name}} के लिए और विकल्प",
     rename: "नाम बदलें",
     moveUp: "ऊपर ले जाएँ",
@@ -60,6 +63,7 @@ const hi: Translations = {
     alreadyAdded: ", पहले से जोड़ा गया",
   },
   clock: {
+    current: "वर्तमान",
     noCity: "अभी तक कोई शहर चुना नहीं गया।",
     openSettings: "सेटिंग्स खोलें",
     formatToggle: "समय प्रारूप",

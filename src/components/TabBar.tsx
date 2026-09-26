@@ -1,6 +1,7 @@
 import { Platform, View, ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useAppTheme } from "@/theme/context"
 import { boxShadow } from "@/theme/shadow"
 import type { ThemedStyle } from "@/theme/types"
@@ -47,11 +48,28 @@ const BUTTON_SIZE = 56
  * truth for that number lives here, next to the bar's own layout constants,
  * rather than duplicated per caller.
  */
+/** docs/07-responsive-strategy.md §2: at `lg` and wider the header nav
+ * replaces this bar. The one place that decision is made. */
+export function useUsesHeaderNav(): boolean {
+  return useBreakpoint().atLeast("lg")
+}
+
+/** Room a screen leaves at its bottom for the floating bar — just the safe
+ * area once the header nav has replaced it. */
 export function useTabBarClearance(): number {
   const { theme } = useAppTheme()
   const insets = useSafeAreaInsets()
+  const headerNav = useUsesHeaderNav()
+  if (headerNav) return insets.bottom
   const barHeight = BUTTON_SIZE + theme.spacing.xxs * 2
   return insets.bottom + theme.spacing.md + barHeight
+}
+
+/** Room a screen leaves at its top: the status bar — unless the header nav
+ * is mounted, which already sits under it. */
+export function useTopClearance(): number {
+  const insets = useSafeAreaInsets()
+  return useUsesHeaderNav() ? 0 : insets.top
 }
 
 export function TabBar(props: TabBarProps) {

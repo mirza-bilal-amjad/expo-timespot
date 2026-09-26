@@ -2,6 +2,7 @@ import { Translations } from "./en"
 
 const ko: Translations = {
   common: {
+    appName: "TimeSpot",
     ok: "확인!",
     cancel: "취소",
     back: "뒤로",
@@ -26,6 +27,8 @@ const ko: Translations = {
     },
   },
   list: {
+    day: "낮",
+    night: "밤",
     moreOptions: "{{name}} 추가 옵션",
     rename: "이름 변경",
     moveUp: "위로 이동",
@@ -60,6 +63,7 @@ const ko: Translations = {
     alreadyAdded: ", 이미 추가됨",
   },
   clock: {
+    current: "현재",
     noCity: "아직 선택된 도시가 없습니다.",
     openSettings: "설정 열기",
     formatToggle: "시간 형식",

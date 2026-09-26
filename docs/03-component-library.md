@@ -162,7 +162,10 @@ type CityRowProps = {
 - a11y: one node, not four. `accessibilityRole="button"`, `accessibilityLabel="Tokyo, 1 40 AM, night, UTC plus 9"`, `accessibilityState={{selected}}`, `accessibilityHint="Double tap to focus"`.
 
 ### `<CityCard>` — web grid card
-Same data, 320 × 180 layout from `04-screen-specs.md`. Shares the row's view-model; only the layout differs. `Platform`-free: chosen by the parent at the breakpoint.
+Same data, 320 × 180 layout from `04-screen-specs.md`. Shares the row's view-model; only the layout differs. `Platform`-free: chosen by the parent at the breakpoint. **Implemented as `<CityRow variant="card">`** (2026-09-26): one component rather than two, so the selection cross-fade, the ⋯ menu and the accessibility actions can't drift apart. The card shows the time at `numeral.lg`'s web size (80, i.e. `scale` 80/48 on the 48 pt token) and a Day/Night label. The md+ grid in `ListScreen` places it through a memoised `CityGridCell`, the grid's counterpart to `ReorderableCityRow`. It has no drag or swipe; the ⋯ menu moves and removes cards.
+
+### `<HeaderNav>` — lg+ navigation
+The header nav that replaces the floating tab bar from `lg` (1024). It takes the same `TabBarItem`s and uses the same `tablist`/`tab` roles as `<TabBar>`. Left: the app mark (opens Settings) and the name. Right: the destinations as pills, the active one inverted. The tabs layout swaps `tabBar` renderers via `useUsesHeaderNav()`, and screens read `useTopClearance()` / `useTabBarClearance()` rather than insets directly, so they never know which bar is mounted.
 
 ### `<HeroClock>`
 

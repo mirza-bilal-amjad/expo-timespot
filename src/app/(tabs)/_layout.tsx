@@ -1,8 +1,11 @@
+import { useState } from "react"
 import { Platform, ViewStyle } from "react-native"
 import { Href, Tabs, usePathname, useRouter } from "expo-router"
 
 import { EntranceView } from "@/components/EntranceView"
-import { TabBar, TabBarItem } from "@/components/TabBar"
+import { HeaderNav } from "@/components/HeaderNav"
+import { SettingsSheet } from "@/components/SettingsSheet"
+import { TabBar, TabBarItem, useUsesHeaderNav } from "@/components/TabBar"
 import { assertDatasetLoaded } from "@/domain/cities/search"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
@@ -42,36 +45,48 @@ export default function TabsLayout() {
   // boundary above, instead of as a crash deep in a screen.
   assertDatasetLoaded()
   const { theme } = useAppTheme()
+  const headerNav = useUsesHeaderNav()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
-    <Tabs
-      tabBar={() => <FloatingTabBar />}
-      screenOptions={{
-        headerShown: false,
-        lazy: true,
-        freezeOnBlur: true,
-        animation: "none",
-        sceneStyle: { backgroundColor: theme.colors.background },
-      }}
-    >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="clock" />
-      <Tabs.Screen name="map" />
-    </Tabs>
+    <>
+      <Tabs
+        tabBar={() =>
+          headerNav ? (
+            <WideHeaderNav onOpenSettings={() => setSettingsOpen(true)} />
+          ) : (
+            <FloatingTabBar />
+          )
+        }
+        screenOptions={{
+          headerShown: false,
+          lazy: true,
+          freezeOnBlur: true,
+          animation: "none",
+          // docs/07 §2: the header nav sits above the screens, in flow.
+          tabBarPosition: headerNav ? "top" : "bottom",
+          sceneStyle: { backgroundColor: theme.colors.background },
+        }}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="clock" />
+        <Tabs.Screen name="map" />
+      </Tabs>
+      {/* The header nav's mark opens Settings (the phone clock screen's mark
+       does the same from inside that screen). */}
+      {headerNav && <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />}
+    </>
   )
 }
 
-function FloatingTabBar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const shouldPlayEntrance = useShouldPlayEntrance("tabBar")
-
+/** The three destinations — built at render time, never at module scope. */
+function useTabItems(): TabBarItem[] {
   // Built inside the component, not at module scope: this module is
   // imported (and evaluated) well before i18next.init() resolves in the
   // root layout, so a module-level `translate()` call permanently freezes
   // in whatever i18next returns pre-init (the raw key, unhelpfully) — this
   // component only ever renders after that gate passes.
-  const tabs: TabBarItem[] = [
+  return [
     {
       key: "/",
       icon: "search",
@@ -91,6 +106,13 @@ function FloatingTabBar() {
       accessibilityLabel: translate("tabBar:map"),
     },
   ]
+}
+
+function FloatingTabBar() {
+  const pathname = usePathname()
+  const router = useRouter()
+  const shouldPlayEntrance = useShouldPlayEntrance("tabBar")
+  const tabs = useTabItems()
 
   return (
     <EntranceView
@@ -101,6 +123,19 @@ function FloatingTabBar() {
     >
       <TabBar items={tabs} activeKey={pathname} onSelect={(key) => router.navigate(key as Href)} />
     </EntranceView>
+  )
+}
+
+function WideHeaderNav({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  return (
+    <HeaderNav
+      items={useTabItems()}
+      activeKey={pathname}
+      onSelect={(key) => router.navigate(key as Href)}
+      onOpenSettings={onOpenSettings}
+    />
   )
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { LayoutChangeEvent, StyleSheet, TextStyle, View, ViewStyle } from "react-native"
 import { useIsFocused } from "expo-router"
 import { useSharedValue, withTiming } from "react-native-reanimated"
@@ -12,6 +12,7 @@ import { getCityById, getCityByZone, getNearestRepresentativeCity } from "@/doma
 import { snapToNearestOffset } from "@/domain/map/snap"
 import { getDeviceZone, getOffsetMinutes } from "@/domain/time/zone"
 import type { City } from "@/domain/types"
+import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useClock } from "@/hooks/useClock"
 import { useFocusStore } from "@/store/focus"
 import { usePrefsStore } from "@/store/prefs"
@@ -38,7 +39,8 @@ export function MapScreen() {
   const { prefs } = usePrefsStore()
   const focusedCityId = useFocusStore((s) => s.focusedCityId)
 
-  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
+  const [area, setArea] = useState({ width: 0, height: 0 })
+  const [rulerHeight, setRulerHeight] = useState(0)
   const [selected, setSelected] = useState<City>(
     () =>
       (focusedCityId ? getCityById(focusedCityId) : undefined) ??
@@ -66,33 +68,96 @@ export function MapScreen() {
     [now],
   )
 
+  // docs/04-screen-specs.md S3 "Web adaptation": from md the map is a band
+  // inside the container — the largest 16:9 (4:3 under 900 px) box the space
+  // allows — and from 1200 px the floating card docks to its right.
+  const { atLeast, gutter, width: windowWidth } = useBreakpoint()
+  const band = atLeast("md")
+  const aspect = windowWidth >= BAND_WIDE_MIN_WIDTH ? BAND_ASPECT.wide : BAND_ASPECT.narrow
+  const cardDock = windowWidth >= CARD_DOCK_MIN_WIDTH ? "right" : "pointer"
+
   const handleMapAreaLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout
-    setMapSize({ width, height })
+    setArea({ width, height })
   }
+
+  // Phone: the map fills the area. Band: the largest box of the band's
+  // aspect that leaves room for the ruler right under it.
+  const rulerGap = theme.spacing.md
+  const mapSize = useMemo(() => {
+    if (!band) return area
+    const room = Math.max(0, area.height - rulerHeight - rulerGap)
+    const width = Math.min(area.width, room * aspect)
+    return { width, height: width / aspect }
+  }, [band, area, rulerHeight, rulerGap, aspect])
+
+  const ruler = <UtcRuler offsetMinutes={rulerOffset} onSettle={handleRulerSettle} />
 
   return (
     <Screen preset="fixed" contentContainerStyle={themed($screen)}>
-      <Text preset="screenTitle" tx="list:title" style={themed($title)} />
-      <View style={themed($mapArea)} onLayout={handleMapAreaLayout}>
-        {mapSize.width > 0 && (
-          <MeridianMap
-            width={mapSize.width}
-            height={mapSize.height}
-            city={selected}
-            onSelectCity={setSelected}
-            onPreviewCity={setPreview}
-            now={now}
-            prefs={prefs}
-          />
-        )}
-      </View>
-      <View style={{ marginBottom: tabBarClearance }}>
-        <UtcRuler offsetMinutes={rulerOffset} onSettle={handleRulerSettle} />
+      <View
+        style={[
+          $column,
+          band && { maxWidth: theme.spacing.container + 2 * gutter, paddingHorizontal: gutter },
+        ]}
+      >
+        <Text preset="screenTitle" tx="list:title" style={[themed($title), band && $titleInBand]} />
+        <View
+          style={[themed($mapArea), band && themed($mapAreaBand)]}
+          onLayout={handleMapAreaLayout}
+        >
+          {mapSize.width > 0 && (
+            <View style={band && themed($bandFrame)}>
+              <MeridianMap
+                width={mapSize.width}
+                height={mapSize.height}
+                city={selected}
+                onSelectCity={setSelected}
+                onPreviewCity={setPreview}
+                now={now}
+                prefs={prefs}
+                cardDock={band ? cardDock : "pointer"}
+              />
+            </View>
+          )}
+          {band && (
+            <View
+              style={{ width: mapSize.width, marginTop: rulerGap }}
+              onLayout={(e) => setRulerHeight(e.nativeEvent.layout.height)}
+            >
+              {ruler}
+            </View>
+          )}
+        </View>
+        {!band && <View style={{ marginBottom: tabBarClearance }}>{ruler}</View>}
+        {band && <View style={{ height: tabBarClearance }} />}
       </View>
     </Screen>
   )
 }
+
+const BAND_ASPECT = { wide: 16 / 9, narrow: 4 / 3 }
+const BAND_WIDE_MIN_WIDTH = 900
+const CARD_DOCK_MIN_WIDTH = 1200
+
+const $column: ViewStyle = { flex: 1, width: "100%", alignSelf: "center" }
+
+const $titleInBand: TextStyle = { paddingHorizontal: 0 }
+
+// The band: the map sits centred in the space, framed with the card radius.
+const $mapAreaBand: ThemedStyle<ViewStyle> = () => ({
+  borderTopWidth: 0,
+  borderBottomWidth: 0,
+  alignItems: "center",
+  justifyContent: "center",
+})
+
+const $bandFrame: ThemedStyle<ViewStyle> = (theme) => ({
+  borderRadius: theme.radius.md,
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: theme.colors.separator,
+})
 
 const $screen: ThemedStyle<ViewStyle> = (theme) => ({
   flex: 1,
