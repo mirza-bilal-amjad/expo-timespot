@@ -79,6 +79,10 @@ function subscribeCalibration(listener: () => void) {
   }
 }
 
+// The static web render measures nothing, so a size is never calibrated
+// there — and the hydration render must agree (task 6.3).
+const notCalibrated = () => false
+
 const halfPoint = (n: number) => Math.round(n * 2) / 2
 
 /** The font size a <Numeral> of `size` renders at `scale` — half-point rounded. */
@@ -99,8 +103,10 @@ export function numeralCellWidth(
 
 /** True once every listed size has a calibrated cell width. */
 export function useNumeralCalibrated(fontFamily: string, sizes: NumeralSize[]): boolean {
-  return useSyncExternalStore(subscribeCalibration, () =>
-    sizes.every((size) => cellRatioCache.has(ratioKey(fontFamily, size))),
+  return useSyncExternalStore(
+    subscribeCalibration,
+    () => sizes.every((size) => cellRatioCache.has(ratioKey(fontFamily, size))),
+    notCalibrated,
   )
 }
 
@@ -279,7 +285,11 @@ export const Numeral = memo(function Numeral(props: NumeralProps) {
   const letterSpacing = ((base.letterSpacing as number) * fontSize) / (base.fontSize as number)
   const key = ratioKey(fontFamily, size)
 
-  const calibrated = useSyncExternalStore(subscribeCalibration, () => cellRatioCache.has(key))
+  const calibrated = useSyncExternalStore(
+    subscribeCalibration,
+    () => cellRatioCache.has(key),
+    notCalibrated,
+  )
   const cellWidth =
     numeralCellWidth(fontFamily, size, scale) ?? Math.round(fontSize * UNCALIBRATED_CELL_RATIO)
 

@@ -6,6 +6,11 @@ import { ThemeProvider } from "@/theme/context"
 
 import { ReorderableCityRow, ReorderableCityRowProps } from "./ReorderableCityRow"
 
+// Visible text inside a labelled row is aria-hidden (the row's label says
+// it all — WCAG 2.5.3), so text queries opt in to hidden elements: these
+// tests are about what's drawn; the label tests cover what's announced.
+const VISIBLE = { includeHiddenElements: true }
+
 type HarnessProps = Omit<ReorderableCityRowProps, "order" | "draggingId">
 
 /** Supplies the list-level shared values ListScreen normally owns. */
@@ -59,7 +64,7 @@ describe("ReorderableCityRow", () => {
         />
       </ThemeProvider>,
     )
-    expect(screen.getByText("Tokyo")).toBeTruthy()
+    expect(screen.getByText("Tokyo", VISIBLE)).toBeTruthy()
   })
 
   it("wires accessibility delete/moveUp/moveDown to the row's own actions, with its identity", () => {

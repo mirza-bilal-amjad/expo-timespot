@@ -1,5 +1,8 @@
 const en = {
   common: {
+    appTitle: "TimeSpot — world clock",
+    appDescription:
+      "The time in every city you care about: live clocks, day and night, time differences and a world map.",
     appName: "TimeSpot",
     ok: "OK!",
     cancel: "Cancel",
@@ -106,6 +109,34 @@ const en = {
     retry: "Try again",
     reset: "Reset saved data",
     resetHint: "Clears your cities and settings, then tries again",
+  },
+  cityPage: {
+    pageTitle: "Time in {{place}} — current local time",
+    description:
+      "Current local time in {{place}} ({{offset}}): date, sunrise and sunset, daylight saving time and the time difference to major cities.",
+    heroLabel: "Current time in {{city}} is {{time}}",
+    timeZone: "Time zone",
+    dst: "Daylight saving time",
+    dstNone: "Not observed",
+    dstDaylight: "In effect",
+    dstStandard: "Not in effect",
+    nextChange: "Next clock change",
+    clocksForward: "{{date}} — clocks go forward {{amount}}",
+    clocksBack: "{{date}} — clocks go back {{amount}}",
+    noChange: "None scheduled",
+    sun: "Sunrise – sunset",
+    polarNight: "Polar night",
+    midnightSun: "Midnight sun",
+    differences: "Time difference",
+    ahead: "{{amount}} ahead",
+    behind: "{{amount}} behind",
+    same: "Same time",
+    nearby: "Cities in nearby time zones",
+    openApp: "Open TimeSpot",
+    openAppHint: "Your world clock, with every city you follow",
+    notFoundTitle: "Page not found",
+    notFoundBody: "There's no page here. The city may not have one yet.",
+    home: "Go to TimeSpot",
   },
   sun: {
     midnightSun: "Midnight sun",

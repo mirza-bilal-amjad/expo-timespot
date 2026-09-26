@@ -2,6 +2,8 @@ import { Translations } from "./en"
 
 const ja: Translations = {
   common: {
+    appTitle: "TimeSpot — 世界時計",
+    appDescription: "気になるすべての都市の時刻を。ライブ時計、昼と夜、時差、世界地図。",
     appName: "TimeSpot",
     ok: "OK",
     cancel: "キャンセル",
@@ -110,6 +112,34 @@ const ja: Translations = {
     retry: "再試行",
     reset: "保存データをリセット",
     resetHint: "都市と設定を消去してから再試行します",
+  },
+  cityPage: {
+    pageTitle: "{{place}}の現在時刻",
+    description:
+      "{{place}}の現在時刻（{{offset}}）：日付、日の出・日の入り、夏時間、主要都市との時差。",
+    heroLabel: "{{city}}の現在時刻は{{time}}です",
+    timeZone: "タイムゾーン",
+    dst: "夏時間",
+    dstNone: "実施なし",
+    dstDaylight: "実施中",
+    dstStandard: "実施期間外",
+    nextChange: "次の時刻変更",
+    clocksForward: "{{date}} — 時計を{{amount}}進めます",
+    clocksBack: "{{date}} — 時計を{{amount}}戻します",
+    noChange: "予定なし",
+    sun: "日の出 – 日の入り",
+    polarNight: "極夜",
+    midnightSun: "白夜",
+    differences: "時差",
+    ahead: "{{amount}}進んでいる",
+    behind: "{{amount}}遅れている",
+    same: "同じ時刻",
+    nearby: "近いタイムゾーンの都市",
+    openApp: "TimeSpotを開く",
+    openAppHint: "フォロー中の都市がそろう世界時計",
+    notFoundTitle: "ページが見つかりません",
+    notFoundBody: "このページはありません。この都市のページはまだないかもしれません。",
+    home: "TimeSpotへ",
   },
   sun: {
     midnightSun: "白夜",

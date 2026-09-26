@@ -367,6 +367,15 @@ Statically generated at build time for the top 1 000 cities. `/time/tokyo`, `/ti
 - OG image generated at build per city (`satori` → PNG) showing the city name and a representative clock face.
 - CTA to the app stores, below the fold.
 
+**Implemented (tasks 6.3 / 6.4, 2026-09-26)** — `src/app/time/[slug].tsx` + `src/screens/CityPageScreen.tsx`.
+- **Pages.** 1,000 pages, from `getSeoCities()` (population-sorted). Slugs are the dataset's: `/time/new-york-city`, not `/time/new-york`.
+- **Hydration.** ~~`suppressHydrationWarning`~~ is replaced by a build stamp. The static render leaves its build time in a `data-t` attribute, and the hydration render reads it back, so it reproduces the HTML exactly: no warning to suppress. The root layout then remounts, in the layout effect before paint, with the live clock, the visitor's language and theme. The build-time values (clock, date, table times) stay in the HTML for crawlers but render at opacity 0 until then, so a visitor waiting on JavaScript never reads a stale time. Verified with the browser clock 3 h after the build: the static value is invisible, then the live value appears.
+- **Content.** Offset, DST status (`domain/time/dst.ts`), the next change (`getNextTransition`), sun times, a 6-zone difference table (`REFERENCE_ZONES`, minus the page's own zone), and 8 neighbour links, one per zone (`getNeighbours`).
+- **Head.** Title, description, canonical, Open Graph, `twitter:card`, JSON-LD (`WebPage` + `Place`, `dateModified` = build time).
+- **Not yet.** `hreflang` is n/a: the static pages are English only and switch language client-side. The OG image is task 6.6. Store links join the CTA with 7.4; today the CTA opens the web app.
+- **Unknown slug.** It returns a real 404: `finalize-web-export.ts` deletes the dynamic `[slug].html` fallback a host would serve with a 200, and `+not-found` carries `noindex`.
+- **Lighthouse** (production export): accessibility, best practices and SEO are all 100.
+
 ## S7 · Settings (sheet)
 
 Native controls (`@expo/ui` `Picker`, `Switch`) in TimeSpot-drawn groups — hairline cards, `caption` section titles, dividers. ~~`@expo/ui` `FieldGroup`~~ — **corrected 2026-09-26**: on Android `FieldGroup` is a Compose `LazyColumn`, and inside the Compose bottom sheet it could be measured before it had a bounded height, which Compose treats as fatal — opening Settings crashed the app. The groups are now React Native layout; only the leaf controls are native, each in its own small `Host`.

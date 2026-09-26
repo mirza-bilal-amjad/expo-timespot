@@ -6,6 +6,11 @@ import { useCitiesStore } from "@/store/cities"
 import { useFocusStore } from "@/store/focus"
 import { ThemeProvider } from "@/theme/context"
 
+// Visible text inside a labelled row is aria-hidden (the row's label says
+// it all — WCAG 2.5.3), so text queries opt in to hidden elements: these
+// tests are about what's drawn; the label tests cover what's announced.
+const VISIBLE = { includeHiddenElements: true }
+
 // Rendered on its own, outside a navigator: it's the focused screen.
 jest.mock("expo-router", () => ({
   ...jest.requireActual("expo-router"),
@@ -53,18 +58,18 @@ beforeEach(() => {
 describe("ListScreen states (task 3.10)", () => {
   it("empty state: zero cities shows the empty block, not the list", () => {
     renderList()
-    expect(screen.getByText("list:emptyTitle")).toBeTruthy()
-    expect(screen.getByText("list:emptyBody")).toBeTruthy()
-    expect(screen.getByText("list:emptyCta")).toBeTruthy()
+    expect(screen.getByText("list:emptyTitle", VISIBLE)).toBeTruthy()
+    expect(screen.getByText("list:emptyBody", VISIBLE)).toBeTruthy()
+    expect(screen.getByText("list:emptyCta", VISIBLE)).toBeTruthy()
     expect(screen.queryByLabelText("Cities")).toBeNull()
   })
 
   it("1 city: list renders normally and the avatar strip hides (a strip of one is noise)", () => {
     useCitiesStore.setState({ cities: makeCities(1), hasSeeded: true })
     renderList()
-    expect(screen.getByText("City 0")).toBeTruthy()
+    expect(screen.getByText("City 0", VISIBLE)).toBeTruthy()
     expect(screen.queryByLabelText("Cities")).toBeNull()
-    expect(screen.queryByText("list:emptyTitle")).toBeNull()
+    expect(screen.queryByText("list:emptyTitle", VISIBLE)).toBeNull()
   })
 
   it("2 cities: the avatar strip appears once there's more than one", () => {
@@ -77,7 +82,7 @@ describe("ListScreen states (task 3.10)", () => {
     useCitiesStore.setState({ cities: makeCities(40), hasSeeded: true })
     renderList()
 
-    expect(screen.getByText("+34")).toBeTruthy()
+    expect(screen.getByText("+34", VISIBLE)).toBeTruthy()
     // Six visible avatar tabs, not forty — docs/03-component-library.md's
     // AvatarStrip caps at 6 and folds the rest into the overflow tile.
     // (Each tab carries the same accessibilityLabel on both the pressable
@@ -86,8 +91,8 @@ describe("ListScreen states (task 3.10)", () => {
 
     // Every row is still in the underlying FlashList data, overflow tile
     // or not — only the strip caps, the list itself doesn't.
-    expect(screen.getByText("City 0")).toBeTruthy()
-    expect(screen.getByText("City 39")).toBeTruthy()
+    expect(screen.getByText("City 0", VISIBLE)).toBeTruthy()
+    expect(screen.getByText("City 39", VISIBLE)).toBeTruthy()
   })
 
   it("long name: truncates to a single line instead of wrapping or overflowing the row", () => {
@@ -98,7 +103,7 @@ describe("ListScreen states (task 3.10)", () => {
     })
     renderList()
 
-    const nameNode = screen.getByText(longName)
+    const nameNode = screen.getByText(longName, VISIBLE)
     expect(nameNode.props.numberOfLines).toBe(1)
     expect(nameNode.props.ellipsizeMode).toBe("tail")
   })

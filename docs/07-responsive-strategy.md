@@ -91,6 +91,7 @@ All are implemented as a single `useKeyboard` hook registered at the root, with 
 - `robots.txt` allowing everything; no soft-404s (unknown slug → real 404 status via the route's `+not-found`).
 - Structured data: `Place` + `WebPage` with `dateModified`. No `SpeakableSpecification` — it is not a speakable page.
 - Internal linking: every city page links to its 8 nearest-by-offset neighbours. This is what gets the long tail indexed.
+- **Implemented (6.4).** `scripts/build-sitemap.ts` writes `public/sitemap.xml` (1,001 URLs) and `robots.txt`. `scripts/finalize-web-export.ts` removes the soft-404 fallback, puts `<meta charset>` first in every page (Expo Router injects head tags ahead of it), and fails if any sitemap URL has no page. Both run in `npm run export:web`. Expo Router's own dev `_sitemap` route is off (`sitemap: false`). Neighbours are one per zone, so Tokyo doesn't link to eight Japanese cities.
 
 ### PWA
 

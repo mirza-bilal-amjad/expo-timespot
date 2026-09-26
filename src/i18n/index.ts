@@ -1,4 +1,4 @@
-import { I18nManager } from "react-native"
+import { I18nManager, Platform } from "react-native"
 import * as Localization from "expo-localization"
 import i18n from "i18next"
 import { initReactI18next } from "react-i18next"
@@ -56,7 +56,9 @@ export const initI18n = () => {
   i18n.use(initReactI18next)
   i18n.init({
     resources,
-    lng: locale?.languageTag ?? fallbackLocale,
+    // Web starts in the fallback language — what the static render used —
+    // so hydration matches; applyDeviceLanguage() switches after it.
+    lng: Platform.OS === "web" ? fallbackLocale : (locale?.languageTag ?? fallbackLocale),
     fallbackLng: fallbackLocale,
     interpolation: {
       escapeValue: false,
@@ -64,6 +66,13 @@ export const initI18n = () => {
     initImmediate: false,
   })
   return i18n
+}
+
+/** Web only: after hydration, switch to the visitor's language (the static
+ * pages are rendered, and hydrated, in the fallback). No-op on native. */
+export const applyDeviceLanguage = () => {
+  const target = locale?.languageTag ?? fallbackLocale
+  if (Platform.OS === "web" && i18n.language !== target) i18n.changeLanguage(target)
 }
 
 /**

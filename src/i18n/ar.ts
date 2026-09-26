@@ -2,6 +2,9 @@ import { Translations } from "./en"
 
 const ar: Translations = {
   common: {
+    appTitle: "TimeSpot — ساعة عالمية",
+    appDescription:
+      "الوقت في كل مدينة تهمّك: ساعات مباشرة، الليل والنهار، فروق التوقيت وخريطة للعالم.",
     appName: "TimeSpot",
     ok: "نعم",
     cancel: "حذف",
@@ -107,6 +110,34 @@ const ar: Translations = {
     retry: "إعادة المحاولة",
     reset: "إعادة تعيين البيانات المحفوظة",
     resetHint: "يمسح مدنك وإعداداتك ثم يعيد المحاولة",
+  },
+  cityPage: {
+    pageTitle: "الوقت في {{place}} — التوقيت المحلي الآن",
+    description:
+      "التوقيت المحلي الآن في {{place}} ({{offset}}): التاريخ، والشروق والغروب، والتوقيت الصيفي، وفارق التوقيت مع المدن الكبرى.",
+    heroLabel: "الوقت الآن في {{city}} هو {{time}}",
+    timeZone: "المنطقة الزمنية",
+    dst: "التوقيت الصيفي",
+    dstNone: "غير مطبّق",
+    dstDaylight: "سارٍ",
+    dstStandard: "غير سارٍ",
+    nextChange: "تغيير الساعة التالي",
+    clocksForward: "{{date}} — تتقدّم الساعة {{amount}}",
+    clocksBack: "{{date}} — تتأخّر الساعة {{amount}}",
+    noChange: "لا يوجد",
+    sun: "الشروق – الغروب",
+    polarNight: "ليل قطبي",
+    midnightSun: "شمس منتصف الليل",
+    differences: "فارق التوقيت",
+    ahead: "متقدّم {{amount}}",
+    behind: "متأخّر {{amount}}",
+    same: "نفس الوقت",
+    nearby: "مدن في مناطق زمنية قريبة",
+    openApp: "افتح TimeSpot",
+    openAppHint: "ساعتك العالمية، مع كل المدن التي تتابعها",
+    notFoundTitle: "الصفحة غير موجودة",
+    notFoundBody: "لا توجد صفحة هنا. ربما لا توجد صفحة لهذه المدينة بعد.",
+    home: "انتقل إلى TimeSpot",
   },
   sun: {
     midnightSun: "شمس منتصف الليل",

@@ -2,6 +2,9 @@ import { Translations } from "./en"
 
 const hi: Translations = {
   common: {
+    appTitle: "TimeSpot — विश्व घड़ी",
+    appDescription:
+      "हर उस शहर का समय जो आपके लिए मायने रखता है: लाइव घड़ियाँ, दिन और रात, समय का अंतर और विश्व मानचित्र।",
     appName: "TimeSpot",
     ok: "ठीक है!",
     cancel: "रद्द करें",
@@ -109,6 +112,34 @@ const hi: Translations = {
     retry: "फिर से कोशिश करें",
     reset: "सहेजा गया डेटा रीसेट करें",
     resetHint: "आपके शहर और सेटिंग्स मिटाकर फिर से कोशिश करता है",
+  },
+  cityPage: {
+    pageTitle: "{{place}} में समय — वर्तमान स्थानीय समय",
+    description:
+      "{{place}} में वर्तमान स्थानीय समय ({{offset}}): तारीख, सूर्योदय और सूर्यास्त, डेलाइट सेविंग टाइम और प्रमुख शहरों से समय का अंतर।",
+    heroLabel: "{{city}} में अभी {{time}} बजे हैं",
+    timeZone: "समय क्षेत्र",
+    dst: "डेलाइट सेविंग टाइम",
+    dstNone: "लागू नहीं",
+    dstDaylight: "लागू है",
+    dstStandard: "अभी लागू नहीं",
+    nextChange: "अगला समय परिवर्तन",
+    clocksForward: "{{date}} — घड़ियाँ {{amount}} आगे होंगी",
+    clocksBack: "{{date}} — घड़ियाँ {{amount}} पीछे होंगी",
+    noChange: "कोई निर्धारित नहीं",
+    sun: "सूर्योदय – सूर्यास्त",
+    polarNight: "ध्रुवीय रात",
+    midnightSun: "मध्यरात्रि सूर्य",
+    differences: "समय का अंतर",
+    ahead: "{{amount}} आगे",
+    behind: "{{amount}} पीछे",
+    same: "समान समय",
+    nearby: "निकट समय क्षेत्रों के शहर",
+    openApp: "TimeSpot खोलें",
+    openAppHint: "आपकी विश्व घड़ी, आपके सभी शहरों के साथ",
+    notFoundTitle: "पेज नहीं मिला",
+    notFoundBody: "यहाँ कोई पेज नहीं है। शायद इस शहर का पेज अभी नहीं बना है।",
+    home: "TimeSpot पर जाएँ",
   },
   sun: {
     midnightSun: "मध्यरात्रि सूर्य",

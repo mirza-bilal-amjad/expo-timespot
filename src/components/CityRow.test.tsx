@@ -5,6 +5,11 @@ import { ThemeProvider } from "@/theme/context"
 
 import { CityRow } from "./CityRow"
 
+// Visible text inside a labelled row is aria-hidden (the row's label says
+// it all — WCAG 2.5.3), so text queries opt in to hidden elements: these
+// tests are about what's drawn; the label tests cover what's announced.
+const VISIBLE = { includeHiddenElements: true }
+
 /**
  * docs/10-implementation-plan.md task 3.3 acceptance: "React DevTools profiler
  * shows 1 render per tick, not N." That needs a profiler harness this repo
@@ -39,8 +44,8 @@ function renderRow(ui: React.ReactElement) {
 describe("CityRow", () => {
   it("renders the city name, time and offset", () => {
     renderRow(<CityRow city={savedCity} time={makeTime()} selected={false} onPress={jest.fn()} />)
-    expect(screen.getByText("Tokyo")).toBeTruthy()
-    expect(screen.getByText("UTC+9")).toBeTruthy()
+    expect(screen.getByText("Tokyo", VISIBLE)).toBeTruthy()
+    expect(screen.getByText("UTC+9", VISIBLE)).toBeTruthy()
   })
 
   it("falls back to a manual label over the dataset name", () => {
@@ -52,7 +57,7 @@ describe("CityRow", () => {
         onPress={jest.fn()}
       />,
     )
-    expect(screen.getByText("Home")).toBeTruthy()
+    expect(screen.getByText("Home", VISIBLE)).toBeTruthy()
   })
 
   it("carries a single-node accessibility label matching docs/09-accessibility.md's worked example", () => {
@@ -119,7 +124,7 @@ describe("CityRow", () => {
     const { rerender } = renderRow(
       <CityRow city={savedCity} time={time} selected={false} onPress={onPress} />,
     )
-    const before = screen.getByText("Tokyo")
+    const before = screen.getByText("Tokyo", VISIBLE)
 
     // A new `time` object with identical `display` must compare equal under
     // the row's memo comparator (docs/03-component-library.md: "React.memo
@@ -134,6 +139,6 @@ describe("CityRow", () => {
         />
       </ThemeProvider>,
     )
-    expect(screen.getByText("Tokyo")).toBe(before)
+    expect(screen.getByText("Tokyo", VISIBLE)).toBe(before)
   })
 })

@@ -83,7 +83,8 @@ export function Avatar(props: AvatarProps) {
           <Animated.View style={[dimensions, themed($grayscaleOverlay), $overlayStyle]} />
         </>
       ) : (
-        <Text text={monogram(label)} style={themed($monogramText)} />
+        // The monogram ("NY") is decoration; the tile's label is the name.
+        <Text text={monogram(label)} style={themed($monogramText)} aria-hidden />
       )}
     </View>
   )

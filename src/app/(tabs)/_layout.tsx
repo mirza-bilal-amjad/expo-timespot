@@ -7,6 +7,7 @@ import { HeaderNav } from "@/components/HeaderNav"
 import { LazySettingsSheet as SettingsSheet } from "@/components/LazySheets"
 import { TabBar, TabBarItem, useUsesHeaderNav } from "@/components/TabBar"
 import { assertDatasetLoaded } from "@/domain/cities/search"
+import { useIsHydrated } from "@/hooks/useIsHydrated"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
 import { ErrorScreen } from "@/screens/ErrorScreen"
@@ -47,6 +48,11 @@ export default function TabsLayout() {
   const { theme } = useAppTheme()
   const headerNav = useUsesHeaderNav()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // docs/10 task 6.5: the app's routes are per-visitor (saved cities, the
+  // current time), so nothing of them is pre-rendered — the static HTML is
+  // the themed empty page, and they mount before the first paint.
+  const hydrated = useIsHydrated()
+  if (!hydrated) return null
 
   return (
     <>

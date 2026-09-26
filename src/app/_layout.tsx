@@ -1,7 +1,8 @@
-import { useEffect } from "react"
+import { useEffect, useLayoutEffect } from "react"
 import { Platform, ViewStyle } from "react-native"
 import { useFonts } from "expo-font"
 import { Slot, SplashScreen } from "expo-router"
+import Head from "expo-router/head"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
 
@@ -9,7 +10,8 @@ import { getTimeCapability } from "@/domain/time/capability"
 import { configureTimeEngine } from "@/domain/time/zone"
 import { useIsHydrated } from "@/hooks/useIsHydrated"
 import { useSeedFirstLaunch } from "@/hooks/useSeedFirstLaunch"
-import { initI18n } from "@/i18n"
+import { applyDeviceLanguage, initI18n } from "@/i18n"
+import { translate } from "@/i18n/translate"
 import { reportNotice } from "@/store/notices"
 import { ThemeProvider } from "@/theme/context"
 import { customFontsToLoad } from "@/theme/typography"
@@ -35,17 +37,22 @@ initI18n()
 
 export default function Root() {
   const [fontsLoaded, fontError] = useFonts(customFontsToLoad)
-  // docs/10 task 6.5: the app's routes are per-visitor — saved cities from
-  // local storage, the current time, the browser's language — so none of it
-  // is rendered statically. The server and the hydration render both
-  // produce the same empty, themed page (+html.tsx paints the background);
-  // the real UI mounts from a layout effect, before the first paint. No
-  // mismatch by construction, and never a build-time clock on screen.
+  // docs/10 task 6.5. The static render and the hydration render must be
+  // identical, so both use the same fixed inputs: the fallback language and
+  // the light theme. From the layout effect after hydration (before paint)
+  // the tree remounts with the visitor's language and theme. The public
+  // city pages pre-render real content this way; the per-visitor app
+  // routes additionally render nothing until hydrated (tabs layout).
   const hydrated = useIsHydrated()
+  useLayoutEffect(() => {
+    applyDeviceLanguage()
+  }, [])
 
   useSeedFirstLaunch()
 
-  const loaded = fontsLoaded && hydrated
+  // Web: fonts arrive as @font-face in the static HTML (expo-font registers
+  // them during the static render), so the page never waits on them.
+  const loaded = Platform.OS === "web" || fontsLoaded
 
   useEffect(() => {
     if (fontError) throw fontError
@@ -62,7 +69,15 @@ export default function Root() {
   }
 
   const content = (
-    <ThemeProvider>
+    <ThemeProvider
+      key={hydrated ? "live" : "static"}
+      initialContext={hydrated ? undefined : STATIC_THEME}
+    >
+      {/* Defaults for every page; a city page's own tags replace these. */}
+      <Head>
+        <title>{translate("common:appTitle")}</title>
+        <meta name="description" content={translate("common:appDescription")} />
+      </Head>
       <Slot />
     </ThemeProvider>
   )
@@ -75,5 +90,9 @@ export default function Root() {
     </GestureHandlerRootView>
   )
 }
+
+// What the static render (and so the hydration render) uses; +html.tsx
+// paints the right background underneath until the live theme mounts.
+const STATIC_THEME = "light"
 
 const $gestureRoot: ViewStyle = { flex: 1 }

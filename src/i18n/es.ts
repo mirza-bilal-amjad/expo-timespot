@@ -2,6 +2,9 @@ import { Translations } from "./en"
 
 const es: Translations = {
   common: {
+    appTitle: "TimeSpot — reloj mundial",
+    appDescription:
+      "La hora en todas las ciudades que te importan: relojes en vivo, día y noche, diferencias horarias y un mapa del mundo.",
     appName: "TimeSpot",
     ok: "OK",
     cancel: "Cancelar",
@@ -110,6 +113,34 @@ const es: Translations = {
     retry: "Reintentar",
     reset: "Restablecer datos guardados",
     resetHint: "Borra tus ciudades y ajustes y vuelve a intentarlo",
+  },
+  cityPage: {
+    pageTitle: "Hora en {{place}} — hora local actual",
+    description:
+      "Hora local actual en {{place}} ({{offset}}): fecha, amanecer y atardecer, horario de verano y diferencia horaria con las principales ciudades.",
+    heroLabel: "La hora actual en {{city}} es {{time}}",
+    timeZone: "Zona horaria",
+    dst: "Horario de verano",
+    dstNone: "No se aplica",
+    dstDaylight: "En vigor",
+    dstStandard: "No está en vigor",
+    nextChange: "Próximo cambio de hora",
+    clocksForward: "{{date}}: los relojes se adelantan {{amount}}",
+    clocksBack: "{{date}}: los relojes se atrasan {{amount}}",
+    noChange: "Ninguno previsto",
+    sun: "Amanecer – atardecer",
+    polarNight: "Noche polar",
+    midnightSun: "Sol de medianoche",
+    differences: "Diferencia horaria",
+    ahead: "{{amount}} más",
+    behind: "{{amount}} menos",
+    same: "Misma hora",
+    nearby: "Ciudades en zonas horarias cercanas",
+    openApp: "Abrir TimeSpot",
+    openAppHint: "Tu reloj mundial, con todas las ciudades que sigues",
+    notFoundTitle: "Página no encontrada",
+    notFoundBody: "Aquí no hay ninguna página. Puede que la ciudad aún no tenga una.",
+    home: "Ir a TimeSpot",
   },
   sun: {
     midnightSun: "Sol de medianoche",

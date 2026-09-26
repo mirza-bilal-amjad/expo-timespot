@@ -63,7 +63,8 @@
         "asyncRoutes": {
           "web": "production",
           "default": false
-        }
+        },
+        "sitemap": false
       }
     ]
   ],

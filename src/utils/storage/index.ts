@@ -1,6 +1,35 @@
+import { Platform } from "react-native"
 import { MMKV } from "react-native-mmkv"
 
-export const storage = new MMKV()
+/**
+ * The web static render (Node, no `window`) has no localStorage, and
+ * react-native-mmkv's web build throws on any access there — which made
+ * every statically rendered page (the ThemeProvider reads the stored theme)
+ * silently fall back to client rendering (docs/10 tasks 6.3, 6.5). On the
+ * server, storage is an empty, inert stand-in: nothing is persisted at
+ * build time, and nothing should be.
+ */
+function createServerStorage(): MMKV {
+  const noop = () => {}
+  return {
+    getString: () => undefined,
+    getNumber: () => undefined,
+    getBoolean: () => undefined,
+    getBuffer: () => undefined,
+    contains: () => false,
+    getAllKeys: () => [],
+    set: noop,
+    delete: noop,
+    clearAll: noop,
+    recrypt: noop,
+    trim: noop,
+    addOnValueChangedListener: () => ({ remove: noop }),
+  } as unknown as MMKV
+}
+
+const isServer = Platform.OS === "web" && typeof window === "undefined"
+
+export const storage = isServer ? createServerStorage() : new MMKV()
 
 /**
  * Loads a string from storage.

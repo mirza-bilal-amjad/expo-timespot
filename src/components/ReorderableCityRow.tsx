@@ -207,10 +207,8 @@ export const ReorderableCityRow = memo(function ReorderableCityRow(props: Reorde
   const handleRename = useCallback(() => onRename(city), [onRename, city])
 
   const renderRightActions = useCallback(
-    (progress: SharedValue<number>) => (
-      <DeleteAction progress={progress} accessibilityLabel={`Remove ${city.cityId}`} />
-    ),
-    [city.cityId],
+    (progress: SharedValue<number>) => <DeleteAction progress={progress} />,
+    [],
   )
 
   return (
@@ -277,13 +275,21 @@ function sameRow(prev: ReorderableCityRowProps, next: ReorderableCityRowProps): 
   )
 }
 
-function DeleteAction(props: { progress: SharedValue<number>; accessibilityLabel: string }) {
-  const { progress, accessibilityLabel } = props
+/** The swipe's reveal. Hidden from assistive tech: removing a city is the
+ * row's own `delete` accessibility action and its ⋯ menu — this glyph is
+ * only what a swipe uncovers. (It was labelled with the internal city id,
+ * on an element with no role.) */
+function DeleteAction(props: { progress: SharedValue<number> }) {
+  const { progress } = props
   const { theme, themed } = useAppTheme()
   const $animatedOpacity = useAnimatedStyle(() => ({ opacity: progress.value }))
   return (
-    <Animated.View style={[themed($deleteAction), $animatedOpacity]}>
-      <Icon icon="trash" color={theme.colors.textAccent} accessibilityLabel={accessibilityLabel} />
+    <Animated.View
+      style={[themed($deleteAction), $animatedOpacity]}
+      aria-hidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Icon icon="trash" color={theme.colors.textAccent} />
     </Animated.View>
   )
 }

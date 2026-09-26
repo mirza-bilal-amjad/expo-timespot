@@ -2,6 +2,9 @@ import { Translations } from "./en"
 
 const fr: Translations = {
   common: {
+    appTitle: "TimeSpot — horloge mondiale",
+    appDescription:
+      "L’heure dans toutes les villes qui comptent pour vous : horloges en direct, jour et nuit, décalages horaires et carte du monde.",
     appName: "TimeSpot",
     ok: "OK !",
     cancel: "Annuler",
@@ -110,6 +113,34 @@ const fr: Translations = {
     retry: "Réessayer",
     reset: "Réinitialiser les données",
     resetHint: "Efface vos villes et réglages, puis réessaie",
+  },
+  cityPage: {
+    pageTitle: "Heure à {{place}} — heure locale actuelle",
+    description:
+      "Heure locale actuelle à {{place}} ({{offset}}) : date, lever et coucher du soleil, heure d’été et décalage horaire avec les grandes villes.",
+    heroLabel: "Il est {{time}} à {{city}}",
+    timeZone: "Fuseau horaire",
+    dst: "Heure d’été",
+    dstNone: "Non appliquée",
+    dstDaylight: "En vigueur",
+    dstStandard: "Pas en vigueur",
+    nextChange: "Prochain changement d’heure",
+    clocksForward: "{{date}} — on avance de {{amount}}",
+    clocksBack: "{{date}} — on recule de {{amount}}",
+    noChange: "Aucun prévu",
+    sun: "Lever – coucher du soleil",
+    polarNight: "Nuit polaire",
+    midnightSun: "Soleil de minuit",
+    differences: "Décalage horaire",
+    ahead: "{{amount}} d’avance",
+    behind: "{{amount}} de retard",
+    same: "Même heure",
+    nearby: "Villes des fuseaux voisins",
+    openApp: "Ouvrir TimeSpot",
+    openAppHint: "Votre horloge mondiale, avec toutes vos villes",
+    notFoundTitle: "Page introuvable",
+    notFoundBody: "Il n’y a pas de page ici. Cette ville n’en a peut-être pas encore.",
+    home: "Aller sur TimeSpot",
   },
   sun: {
     midnightSun: "Soleil de minuit",

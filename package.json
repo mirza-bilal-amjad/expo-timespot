@@ -29,7 +29,7 @@
     "build:android:device": "eas build --profile development:device --platform android --local",
     "build:android:preview": "eas build --profile preview --platform android --local",
     "build:android:prod": "eas build --profile production --platform android --local",
-    "export:web": "expo export -p web",
+    "export:web": "tsx scripts/build-sitemap.ts && expo export -p web && tsx scripts/finalize-web-export.ts dist",
     "size:web": "tsx scripts/web-bundle-size.ts dist"
   },
   "dependencies": {

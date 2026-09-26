@@ -64,6 +64,10 @@ export interface CityRowProps {
 const CARD_TIME_SCALE = 80 / 48
 
 const AnimatedText = Animated.createAnimatedComponent(Text)
+// Every text inside the row's pressable is aria-hidden: the row's
+// accessibility label already says all of it, in speakable form, and
+// exposing both made the visible text disagree with the accessible name
+// (WCAG 2.5.3, Lighthouse "label-content-name-mismatch").
 
 // docs/08-motion-spec.md §4: the incoming row's fade-in starts 40ms after
 // the outgoing row's fade-out — simultaneous fades read as "both half
@@ -218,13 +222,19 @@ export const CityRow = memo(
             <Animated.View style={[themed($card), $animatedRow]}>
               <View style={themed($cardTopLine)}>
                 <AnimatedText
+                  aria-hidden
                   preset="cityTitle"
                   text={name}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   style={[$cityName, $animatedCityName]}
                 />
-                <AnimatedText preset="offset" text={time.offsetLabel} style={$animatedOffset} />
+                <AnimatedText
+                  aria-hidden
+                  preset="offset"
+                  text={time.offsetLabel}
+                  style={$animatedOffset}
+                />
               </View>
               <View style={$bottomLine}>
                 <Numeral
@@ -240,6 +250,7 @@ export const CityRow = memo(
                     color={time.isDay ? theme.colors.day : theme.colors.night}
                   />
                   <AnimatedText
+                    aria-hidden
                     preset="offset"
                     tx={time.isDay ? "list:day" : "list:night"}
                     style={$animatedOffset}
@@ -250,10 +261,16 @@ export const CityRow = memo(
           ) : (
             <Animated.View style={[themed($row), $animatedRow]}>
               <View style={$topLine}>
-                <AnimatedText preset="offset" text={time.offsetLabel} style={$animatedOffset} />
+                <AnimatedText
+                  aria-hidden
+                  preset="offset"
+                  text={time.offsetLabel}
+                  style={$animatedOffset}
+                />
               </View>
               <View style={$bottomLine}>
                 <AnimatedText
+                  aria-hidden
                   preset="cityTitle"
                   text={name}
                   numberOfLines={1}

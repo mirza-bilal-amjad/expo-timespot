@@ -2,6 +2,8 @@ import { Translations } from "./en"
 
 const ko: Translations = {
   common: {
+    appTitle: "TimeSpot — 세계 시계",
+    appDescription: "관심 있는 모든 도시의 시각: 실시간 시계, 낮과 밤, 시차, 세계 지도.",
     appName: "TimeSpot",
     ok: "확인!",
     cancel: "취소",
@@ -108,6 +110,34 @@ const ko: Translations = {
     retry: "다시 시도",
     reset: "저장된 데이터 초기화",
     resetHint: "도시와 설정을 지운 뒤 다시 시도합니다",
+  },
+  cityPage: {
+    pageTitle: "{{place}} 현재 시각",
+    description:
+      "{{place}} 현재 현지 시각({{offset}}): 날짜, 일출·일몰, 서머타임, 주요 도시와의 시차.",
+    heroLabel: "{{city}}의 현재 시각은 {{time}}입니다",
+    timeZone: "시간대",
+    dst: "서머타임",
+    dstNone: "시행 안 함",
+    dstDaylight: "시행 중",
+    dstStandard: "시행 기간 아님",
+    nextChange: "다음 시간 변경",
+    clocksForward: "{{date}} — 시계를 {{amount}} 앞당깁니다",
+    clocksBack: "{{date}} — 시계를 {{amount}} 늦춥니다",
+    noChange: "예정 없음",
+    sun: "일출 – 일몰",
+    polarNight: "극야",
+    midnightSun: "백야",
+    differences: "시차",
+    ahead: "{{amount}} 빠름",
+    behind: "{{amount}} 느림",
+    same: "같은 시각",
+    nearby: "가까운 시간대의 도시",
+    openApp: "TimeSpot 열기",
+    openAppHint: "팔로우하는 모든 도시가 담긴 세계 시계",
+    notFoundTitle: "페이지를 찾을 수 없습니다",
+    notFoundBody: "여기에는 페이지가 없습니다. 이 도시의 페이지가 아직 없을 수 있습니다.",
+    home: "TimeSpot으로 이동",
   },
   sun: {
     midnightSun: "백야",
