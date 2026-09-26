@@ -4,13 +4,20 @@ import { Href, Tabs, usePathname, useRouter } from "expo-router"
 
 import { EntranceView } from "@/components/EntranceView"
 import { HeaderNav } from "@/components/HeaderNav"
-import { LazySettingsSheet as SettingsSheet } from "@/components/LazySheets"
+import {
+  LazySettingsSheet as SettingsSheet,
+  LazyShortcutsSheet as ShortcutsSheet,
+} from "@/components/LazySheets"
 import { TabBar, TabBarItem, useUsesHeaderNav } from "@/components/TabBar"
 import { assertDatasetLoaded } from "@/domain/cities/search"
 import { useIsHydrated } from "@/hooks/useIsHydrated"
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts"
+import { useShortcut } from "@/hooks/useShortcut"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
 import { ErrorScreen } from "@/screens/ErrorScreen"
+import { usePrefsStore } from "@/store/prefs"
+import { useShortcutRequests } from "@/store/shortcuts"
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
 
@@ -33,8 +40,8 @@ export { ErrorScreen as ErrorBoundary }
  * mounted, and `freezeOnBlur` stops a hidden one rendering at all — the
  * clock ticks every second, and a hidden screen must not pay for it.
  *
- * docs/07-responsive-strategy.md's swap to a header nav at the `lg`
- * breakpoint isn't implemented yet (Phase 6).
+ * Web keyboard shortcuts (task 6.8) are wired here: the one listener, and
+ * the shortcuts that work from any tab. Screens add their own while focused.
  */
 
 // docs/08-motion-spec.md §7: "Tab bar | 160ms | opacity + translateY 16→0, 320ms."
@@ -48,6 +55,8 @@ export default function TabsLayout() {
   const { theme } = useAppTheme()
   const headerNav = useUsesHeaderNav()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  useGlobalShortcuts(() => setShortcutsOpen(true))
   // docs/10 task 6.5: the app's routes are per-visitor (saved cities, the
   // current time), so nothing of them is pre-rendered — the static HTML is
   // the themed empty page, and they mount before the first paint.
@@ -81,8 +90,33 @@ export default function TabsLayout() {
       {/* The header nav's mark opens Settings (the phone clock screen's mark
        does the same from inside that screen). */}
       {headerNav && <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />}
+      <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </>
   )
+}
+
+/** docs/07 §4: the shortcuts that mean the same on every tab. */
+function useGlobalShortcuts(openHelp: () => void) {
+  useKeyboardShortcuts()
+  const router = useRouter()
+  const { themeContext, setThemeContextOverride } = useAppTheme()
+  const setPrefs = usePrefsStore((s) => s.setPrefs)
+  const requestSearch = useShortcutRequests((s) => s.requestSearch)
+
+  useShortcut("tabList", () => router.navigate("/"))
+  useShortcut("tabClock", () => router.navigate("/clock"))
+  useShortcut("tabMap", () => router.navigate("/map"))
+  // Search lives on the list; the list opens it once it's focused.
+  useShortcut("search", () => {
+    requestSearch()
+    router.navigate("/")
+  })
+  useShortcut("theme", () => setThemeContextOverride(themeContext === "dark" ? "light" : "dark"))
+  useShortcut("timeFormat", () => {
+    const { timeFormat } = usePrefsStore.getState().prefs
+    setPrefs({ timeFormat: timeFormat === "24h" ? "12h" : "24h" })
+  })
+  useShortcut("help", openHelp)
 }
 
 /** The three destinations — built at render time, never at module scope. */

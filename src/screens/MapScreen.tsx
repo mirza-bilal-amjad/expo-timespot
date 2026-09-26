@@ -9,11 +9,12 @@ import { useTabBarClearance } from "@/components/TabBar"
 import { Text } from "@/components/Text"
 import { UtcRuler } from "@/components/UtcRuler"
 import { getCityById, getCityByZone, getNearestRepresentativeCity } from "@/domain/cities/search"
-import { snapToNearestOffset } from "@/domain/map/snap"
+import { snapToNearestOffset, stepByHour, stepToAdjacentOffset } from "@/domain/map/snap"
 import { getDeviceZone, getOffsetMinutes } from "@/domain/time/zone"
 import type { City } from "@/domain/types"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useClock } from "@/hooks/useClock"
+import { useShortcut } from "@/hooks/useShortcut"
 import { useFocusStore } from "@/store/focus"
 import { usePrefsStore } from "@/store/prefs"
 import { useAppTheme } from "@/theme/context"
@@ -34,7 +35,8 @@ import type { ThemedStyle } from "@/theme/types"
  */
 export function MapScreen() {
   const { theme, themed } = useAppTheme()
-  const now = useClock({ active: useIsFocused() })
+  const focused = useIsFocused()
+  const now = useClock({ active: focused })
   const tabBarClearance = useTabBarClearance()
   const { prefs } = usePrefsStore()
   const focusedCityId = useFocusStore((s) => s.focusedCityId)
@@ -67,6 +69,20 @@ export function MapScreen() {
     },
     [now],
   )
+
+  // docs/07 §4 keyboard (task 6.8, web): ← → an hour, Shift for the next
+  // real zone — the same stop a screen reader's increment makes.
+  const step = (next: (offset: number) => number) =>
+    setSelected((current) => {
+      const target = next(getOffsetMinutes(now, current.zone))
+      return getOffsetMinutes(now, current.zone) === target
+        ? current
+        : getNearestRepresentativeCity(target, now)
+    })
+  useShortcut("west", () => step((o) => stepByHour(o, -1)), focused)
+  useShortcut("east", () => step((o) => stepByHour(o, 1)), focused)
+  useShortcut("westZone", () => step((o) => stepToAdjacentOffset(o, -1)), focused)
+  useShortcut("eastZone", () => step((o) => stepToAdjacentOffset(o, 1)), focused)
 
   // docs/04-screen-specs.md S3 "Web adaptation": from md the map is a band
   // inside the container — the largest 16:9 (4:3 under 900 px) box the space

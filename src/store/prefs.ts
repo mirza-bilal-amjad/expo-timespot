@@ -15,6 +15,7 @@ const defaultPrefs: Prefs = {
   theme: "system",
   showSecondsOnList: false,
   dayNightStyle: "icon",
+  keyboardShortcuts: true,
 }
 
 export const usePrefsStore = create<PrefsState>()(
@@ -37,6 +38,7 @@ const ALLOWED: { [K in keyof Prefs]: readonly Prefs[K][] } = {
   theme: ["system", "light", "dark"],
   showSecondsOnList: [true, false],
   dayNightStyle: ["icon", "tint"],
+  keyboardShortcuts: [true, false],
 }
 
 /** Field by field: an unknown value falls back to its default (and counts as

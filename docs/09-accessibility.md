@@ -92,7 +92,7 @@ Full shortcut table in `07-responsive-strategy.md` §4. The requirements:
 - **Focus trap in modals**, with focus returned to the trigger on close (2.4.3).
 - **`Esc` closes** every overlay (2.1.2 — no keyboard trap).
 - **Skip link** to main content as the first focusable element.
-- Shortcuts are single-key, so per 2.1.4 they are disabled while a text input has focus and can be turned off in Settings.
+- Shortcuts are single-key, so per 2.1.4 they are disabled while a text input has focus and can be turned off in Settings. **Done (6.8):** Settings → Keyboard shortcuts (web). Known gap: on web, the Settings switches have no accessible name (the row label isn't tied to @expo/ui's input), which predates 6.8 and is filed separately.
 
 ---
 

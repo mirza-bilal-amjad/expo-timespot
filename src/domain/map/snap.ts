@@ -70,13 +70,36 @@ function nearestSnapTargetIndex(offsetMinutes: number): number {
  * `SNAP_TARGETS_MINUTES`, not a raw ±60 minutes (unevenly spaced zones mean
  * those aren't the same thing: from `+5:45` a raw +60 would land on `+6:45`,
  * which isn't a real zone, where the adjacent *real* zone is `+6:00`).
- * Deliberately distinct from the web keyboard's own ±1h/±15min raw steps
- * (docs/08-motion-spec.md §5.6) — those are a fine-grained continuous
- * control, this is "next stop."
+ * The web keyboard's Shift+← / → uses it too (task 6.8).
  */
 export function stepToAdjacentOffset(offsetMinutes: number, direction: 1 | -1): number {
   "worklet"
   const currentIndex = nearestSnapTargetIndex(offsetMinutes)
   const nextIndex = Math.min(Math.max(currentIndex + direction, 0), SNAP_TARGETS_MINUTES.length - 1)
   return SNAP_TARGETS_MINUTES[nextIndex]
+}
+
+/**
+ * docs/07-responsive-strategy.md §4, task 6.8: ← / → move the meridian by
+ * an hour. The raw target (`offset ± 60`) isn't always a real zone (from
+ * +5:45 it's +6:45), so it lands on the real offset nearest it, strictly in
+ * the direction of travel, so a press always moves. A tie prefers the
+ * whole-hour offset, then the shorter move. At either end of the ruler it stays put.
+ */
+export function stepByHour(offsetMinutes: number, direction: 1 | -1): number {
+  const target = offsetMinutes + direction * 60
+  let best: number | null = null
+  for (const candidate of SNAP_TARGETS_MINUTES) {
+    if ((candidate - offsetMinutes) * direction <= 0) continue
+    if (best === null) {
+      best = candidate
+      continue
+    }
+    const d = Math.abs(candidate - target)
+    const bestD = Math.abs(best - target)
+    const rounder = (candidate % 60 === 0 ? 1 : 0) - (best % 60 === 0 ? 1 : 0)
+    const shorter = Math.abs(candidate - offsetMinutes) < Math.abs(best - offsetMinutes)
+    if (d < bestD || (d === bestD && (rounder > 0 || (rounder === 0 && shorter)))) best = candidate
+  }
+  return best ?? offsetMinutes
 }

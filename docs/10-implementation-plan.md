@@ -136,7 +136,7 @@ The hardest phase. Budget the most review time here.
 | 6.5 | Hydration-safe clock | no mismatch warning, no visible flash of a stale time. **Done 2026-09-26:** app routes never pre-render per-visitor content (`useIsHydrated`), `+html.tsx` pre-paints the themed background, i18n init is synchronous. Verified on the production export with real hydration and zero warnings in both themes. The SEO-page clock pattern lands with 6.3. |
 | 6.6 | OG images per city via `satori` | 1 000 PNGs generated at build. **Done 2026-09-26:** `scripts/build-og-images.ts`, 1,000 PNGs (1200 × 630, ~39 KB each, ~45 s). The city, country, the year's offsets and the zone beside a clock face at 10:10. No time is shown: an image is shared long after it's built. See `04` S6. |
 | 6.7 | PWA: manifest, icons, service worker | installable; works offline. **Done 2026-09-26:** `scripts/build-pwa.ts` writes the manifest, icons and `sw.js`. Chrome reports no installability errors. Offline, `/`, `/clock`, `/map`, a visited city page and an unvisited one all load, and search finds alternate names. See `07` §4. The icon is the placeholder dial until 7.3. |
-| 6.8 | Keyboard shortcuts + `?` overlay | full table from `07` works; disabled inside inputs |
+| 6.8 | Keyboard shortcuts + `?` overlay | full table from `07` works; disabled inside inputs. **Done 2026-09-26:** every key verified in Chromium on phone and desktop widths, in both themes. Keys are ignored in the search field and behind an open sheet, and a Settings switch turns them off. ← → were corrected to land on real zones. See `07` §4. |
 | 6.9 | Deploy to EAS Hosting with a custom domain | LCP < 1.2 s p75 on a throttled 4G profile |
 
 **Gate G4:** Lighthouse 100 on accessibility, SEO and best practices; LCP under budget.

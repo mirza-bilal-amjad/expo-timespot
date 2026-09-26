@@ -1,4 +1,4 @@
-import { SNAP_TARGETS_MINUTES, snapToNearestOffset, stepToAdjacentOffset } from "./snap"
+import { SNAP_TARGETS_MINUTES, snapToNearestOffset, stepByHour, stepToAdjacentOffset } from "./snap"
 
 describe("snapToNearestOffset", () => {
   it("snaps to the nearest whole-hour target with no velocity", () => {
@@ -60,5 +60,35 @@ describe("stepToAdjacentOffset", () => {
     // 20 min past UTC+0 is nearest to 0 — stepping forward should land on
     // the next target after 0 (60), not after 20.
     expect(stepToAdjacentOffset(20, 1)).toBe(60)
+  })
+})
+
+describe("stepByHour (web ← / →, task 6.8)", () => {
+  it("moves a whole hour between whole-hour zones", () => {
+    expect(stepByHour(540, 1)).toBe(600)
+    expect(stepByHour(540, -1)).toBe(480)
+    expect(stepByHour(0, -1)).toBe(-60)
+  })
+
+  it("lands on a real zone when the raw hour isn't one", () => {
+    // +5:45 + 1h = +6:45 isn't real; +6:30 and +7 tie, the whole hour wins.
+    expect(stepByHour(345, 1)).toBe(420)
+    // −3:30 − 1h = −4:30 isn't real; −4 and −5 tie, the shorter move wins.
+    expect(stepByHour(-210, -1)).toBe(-240)
+  })
+
+  it("always moves in the direction pressed", () => {
+    for (const offset of SNAP_TARGETS_MINUTES.slice(0, -1)) {
+      expect(stepByHour(offset, 1)).toBeGreaterThan(offset)
+    }
+    for (const offset of SNAP_TARGETS_MINUTES.slice(1)) {
+      expect(stepByHour(offset, -1)).toBeLessThan(offset)
+    }
+  })
+
+  it("stops at the ends of the ruler, UTC+14 included", () => {
+    expect(stepByHour(840, 1)).toBe(840)
+    expect(stepByHour(780, 1)).toBe(840)
+    expect(stepByHour(-720, -1)).toBe(-720)
   })
 })

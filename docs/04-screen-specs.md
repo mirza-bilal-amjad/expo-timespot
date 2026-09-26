@@ -325,7 +325,7 @@ If the meridian's offset matches **no saved city**, the card shows the represent
 
 ### Web adaptation
 
-Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Pointing works with the mouse; **← / →** step to the adjacent real zone's city. The ruler is always visible; the floating card docks to the right at `≥ 1200 px`. **Implemented (from `md`).** The band is the largest box of that aspect that fits the space with the ruler directly under it, so the map and ruler are centred together. The card docks top-right via `FloatingCityCard dock="right"`. **← / →** stepping is task 6.8 (keyboard) and not done yet.
+Map becomes a full-width band inside the container, `16 : 9` at `≥ 900 px`, `4 : 3` below. Pointing works with the mouse; **← / →** step to the adjacent real zone's city. The ruler is always visible; the floating card docks to the right at `≥ 1200 px`. **Implemented (from `md`).** The band is the largest box of that aspect that fits the space with the ruler directly under it, so the map and ruler are centred together. The card docks top-right via `FloatingCityCard dock="right"`. **← / →** stepping (task 6.8, done): an hour to the nearest real zone, `Shift` for the adjacent zone. See `07` §4.
 
 ---
 

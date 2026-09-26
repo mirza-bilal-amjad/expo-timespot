@@ -84,6 +84,22 @@ Ten exceptions for a three-platform app is the target. If it grows past fifteen,
 
 All are implemented as a single `useKeyboard` hook registered at the root, with an `input`/`textarea` guard so typing in search never triggers a shortcut.
 
+**Implemented (6.8).**
+- **The table and its guards.** `utils/shortcuts.ts` holds both, tested without a DOM.
+- **One listener.** `hooks/useKeyboardShortcuts.web.ts`, mounted in the tabs layout (native gets a no-op). ~~a single hook~~ **refined:** the listener dispatches to handlers registered with `useShortcut(id, handler, enabled)`. The layout registers the keys that work on every tab (`/ 1 2 3 T H ?`). The list registers `↑ ↓ Enter` and the map `← →` only while focused: tabs stay mounted, so a hidden map must not take the arrows.
+- **Guards.** A key is ignored when:
+  - it comes with Ctrl, ⌘ or Alt (those belong to the browser);
+  - a text field has focus;
+  - a sheet or dialog is open, where keys belong to the sheet, which closes itself on Esc;
+  - the focused control uses the key: Enter on a button, arrows on the ruler.
+- **Off switch.** Settings → Keyboard shortcuts (web only) turns them all off, per WCAG 2.1.4 (`09` §3). It is `prefs.keyboardShortcuts`, optional and on by default.
+- **`/`** works from any tab: it goes to the list and opens search there (`store/shortcuts.ts` holds the request until the list is focused).
+- **`↑ ↓`** move the selected city (the focused one, drawn selected) and stop at the ends. **Enter** shows its clock.
+- ~~`← →` by 1 h (`Shift` → 15 min)~~ **corrected:** a raw step lands between zones (+5:45 + 1 h = +6:45 isn't one) and 15 minutes from +9 lands nowhere. `← →` now step an hour to the nearest real zone in that direction (`stepByHour`), and `Shift` steps to the adjacent real zone (`stepToAdjacentOffset`, the screen-reader increment).
+- **`T`** flips the theme override, and **`H`** the time format.
+- **`?`** opens `ShortcutsSheet`, a lazy chunk.
+- **Not done.** `09` §3's skip link. A selected row isn't scrolled into view on a long list.
+
 ### SEO
 
 - Per-city static routes — see `04-screen-specs.md` S6.

@@ -64,4 +64,6 @@ export interface Prefs {
   theme: "system" | "light" | "dark"
   showSecondsOnList: boolean
   dayNightStyle: "icon" | "tint"
+  /** Web single-key shortcuts (task 6.8); off per WCAG 2.1.4 if they get in the way. */
+  keyboardShortcuts?: boolean
 }

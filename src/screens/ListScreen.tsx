@@ -1,6 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { TextStyle, View, ViewStyle } from "react-native"
-import { useIsFocused } from "expo-router"
+import { useIsFocused, useRouter } from "expo-router"
 import { ScrollView } from "react-native-gesture-handler"
 import { useSharedValue } from "react-native-reanimated"
 
@@ -22,11 +22,13 @@ import type { ZonedTime } from "@/domain/types"
 import type { SavedCity } from "@/domain/types"
 import { useBreakpoint } from "@/hooks/useBreakpoint"
 import { useClock } from "@/hooks/useClock"
+import { useShortcut } from "@/hooks/useShortcut"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
 import { useCitiesStore } from "@/store/cities"
 import { useFocusStore } from "@/store/focus"
 import { usePrefsStore } from "@/store/prefs"
+import { useShortcutRequests } from "@/store/shortcuts"
 import { cardColumnsFor } from "@/theme/breakpoints"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
@@ -67,7 +69,8 @@ export function ListScreen() {
   const cardWidth = (contentWidth - (columns - 1) * theme.spacing.rowGap) / columns
   // The rows show HH:MM, never seconds — re-rendering the list every second
   // redrew ~1,000 components per tick for nothing (measured 2026-09-26).
-  const now = useClock({ coalesceToMinute: true, active: useIsFocused() })
+  const focused = useIsFocused()
+  const now = useClock({ coalesceToMinute: true, active: focused })
   const shouldPlayEntrance = useShouldPlayEntrance("list")
 
   const cities = useCitiesStore((s) => s.cities)
@@ -154,6 +157,34 @@ export function ListScreen() {
   const [searchMounted, setSearchMounted] = useState(false)
   if (searchOpen && !searchMounted) setSearchMounted(true)
   const [renaming, setRenaming] = useState<SavedCity | null>(null)
+
+  // docs/07 §4 keyboard (task 6.8, web): `/` from any tab lands here. Opened
+  // during render (the "adjust state on a prop change" pattern, as in
+  // SearchSheet), and the request is cleared once the sheet is open.
+  const searchRequested = useShortcutRequests((s) => s.searchRequested)
+  if (focused && searchRequested && !searchOpen) setSearchOpen(true)
+  useEffect(() => {
+    if (searchOpen) useShortcutRequests.getState().takeSearchRequest()
+  }, [searchOpen])
+
+  // ↑ ↓ move the selection (the focused city, the row drawn selected) and
+  // Enter shows its clock.
+  const router = useRouter()
+  const keysActive = focused && !searchOpen && renaming === null
+  const moveSelection = (delta: -1 | 1) => {
+    if (storedIds.length === 0) return
+    const at = focusedCityId ? storedIds.indexOf(focusedCityId) : -1
+    const next =
+      at === -1
+        ? delta === 1
+          ? 0
+          : storedIds.length - 1
+        : Math.min(Math.max(at + delta, 0), storedIds.length - 1)
+    setFocusedCityId(storedIds[next])
+  }
+  useShortcut("previous", () => moveSelection(-1), keysActive)
+  useShortcut("next", () => moveSelection(1), keysActive)
+  useShortcut("open", () => router.navigate("/clock"), keysActive && focusedCityId !== null)
 
   const avatarItems: AvatarStripItem[] = useMemo(
     () =>

@@ -1,6 +1,7 @@
 import Constants from "expo-constants"
 
 import { getTimeEngine } from "@/domain/time/zone"
+import { KEYBOARD_SHORTCUTS_SUPPORTED } from "@/hooks/useKeyboardShortcuts"
 import { translate } from "@/i18n/translate"
 import { usePrefsStore } from "@/store/prefs"
 import { useAppTheme } from "@/theme/context"
@@ -15,6 +16,8 @@ import { Sheet } from "./Sheet"
  * - Theme writes Ignite's own `ignite.themeScheme` override (the one the
  *   ThemeProvider actually reads) — `prefs.theme` was never wired to it.
  * - 24-hour time writes `prefs.timeFormat`, the same value the S2 pill does.
+ * - Keyboard shortcuts (web only, task 6.8): WCAG 2.1.4 wants single-key
+ *   shortcuts to be switchable off (docs/09 §3).
  *
  * "Show seconds on the list" and "day/night style" from the spec are left
  * out until the list can render them; a switch that does nothing is worse
@@ -64,6 +67,17 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
           value: prefs.timeFormat === "24h",
           onChange: (on) => setPrefs({ timeFormat: on ? "24h" : "12h" }),
         },
+        ...(KEYBOARD_SHORTCUTS_SUPPORTED
+          ? [
+              {
+                kind: "switch" as const,
+                key: "shortcuts",
+                label: translate("settings:keyboardShortcuts"),
+                value: prefs.keyboardShortcuts !== false,
+                onChange: (on: boolean) => setPrefs({ keyboardShortcuts: on }),
+              },
+            ]
+          : []),
       ],
     },
     {

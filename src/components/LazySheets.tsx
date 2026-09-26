@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from "react"
 
 import type { RenameSheetProps } from "./RenameSheet"
 import type { SettingsSheetProps } from "./SettingsSheet"
+import type { ShortcutsSheetProps } from "./ShortcutsSheet"
 
 /**
  * docs/10-implementation-plan.md task 6.1. Sheets are never part of a
@@ -15,6 +16,10 @@ const SettingsSheetImpl = lazy(() =>
 )
 const RenameSheetImpl = lazy(() =>
   import("./RenameSheet").then((m) => ({ default: m.RenameSheet })),
+)
+
+const ShortcutsSheetImpl = lazy(() =>
+  import("./ShortcutsSheet").then((m) => ({ default: m.ShortcutsSheet })),
 )
 
 function useMountedOnce(open: boolean): boolean {
@@ -37,6 +42,15 @@ export function LazyRenameSheet(props: RenameSheetProps) {
   return (
     <Suspense fallback={null}>
       <RenameSheetImpl {...props} />
+    </Suspense>
+  )
+}
+
+export function LazyShortcutsSheet(props: ShortcutsSheetProps) {
+  if (!useMountedOnce(props.open)) return null
+  return (
+    <Suspense fallback={null}>
+      <ShortcutsSheetImpl {...props} />
     </Suspense>
   )
 }
