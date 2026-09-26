@@ -194,7 +194,7 @@ The line, decided once (`ADR-0003`) and enforced in review:
 | `TextInput` — keyboard, autofill, dictation, IME | `HeroClock`, `Numeral` |
 | `Picker` — theme, format selectors in Settings | `SegmentedPill` (brand-critical) |
 | `Switch` — Settings toggles | `TabBar` (brand-critical shape language) |
-| `List` / `FieldGroup` — Settings groups | `MeridianMap` |
+| `Picker` / `Switch` — Settings controls (~~`FieldGroup`~~, see `04` S7) | `MeridianMap` |
 | `ContextMenu` — long-press menus | `AvatarStrip` |
 
 Everything from `@expo/ui` is wrapped in a local adapter in `src/components/` so that a future swap touches one file. All `@expo/ui` content must sit inside a `<Host>` — wrap once at the adapter, never at the call site. The adapter is also the theme bridge: `@expo/ui` components do not read Ignite's theme, so read `useAppTheme()` there and pass explicit values down. See `14-ignite-integration.md` §6.

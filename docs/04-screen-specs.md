@@ -330,7 +330,7 @@ Statically generated at build time for the top 1 000 cities. `/time/tokyo`, `/ti
 
 ## S7 · Settings (sheet)
 
-`@expo/ui` `FieldGroup` — this is exactly the case where native-feeling system controls beat custom ones.
+Native controls (`@expo/ui` `Picker`, `Switch`) in TimeSpot-drawn groups — hairline cards, `caption` section titles, dividers. ~~`@expo/ui` `FieldGroup`~~ — **corrected 2026-09-26**: on Android `FieldGroup` is a Compose `LazyColumn`, and inside the Compose bottom sheet it could be measured before it had a bounded height, which Compose treats as fatal — opening Settings crashed the app. The groups are now React Native layout; only the leaf controls are native, each in its own small `Host`.
 
 Built 2026-09-25 — opened from the S2 app mark; `SettingsForm` is the @expo/ui adapter, `SettingsSheet` the feature component.
 

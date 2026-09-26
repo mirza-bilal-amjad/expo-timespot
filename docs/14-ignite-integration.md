@@ -421,7 +421,7 @@ BottomSheet   → Sheet          (search, settings)
 TextInput     → InlineField    (search + rename; keyboard, autofill, dictation, IME)
 Picker        → SettingsForm (theme; day/night style later)
 Switch        → SettingsForm (24-hour time; show seconds later)
-FieldGroup    → SettingsForm groups
+~~FieldGroup~~   (removed 2026-09-26 — a lazy Compose list inside a sheet crashed on Android; SettingsForm draws its own groups)
 MenuView      → RowMenu        (the "⋯" city-row menu — @expo/ui/community/menu; SwiftUI Menu on iOS, Compose DropdownMenu on Android, own popover on web)
 ```
 
