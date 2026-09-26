@@ -2,6 +2,7 @@ import { ReactNode } from "react"
 import { AccessibilityRole, Platform, View, ViewStyle } from "react-native"
 
 import { InvertedTheme, useAppTheme } from "@/theme/context"
+import { boxShadow } from "@/theme/shadow"
 import type { ThemedStyle } from "@/theme/types"
 
 import { Pressable } from "./Pressable"
@@ -77,7 +78,6 @@ export function Card(props: CardProps) {
 const FLOAT_SHADOW_OPACITY = 0.08
 const FLOAT_SHADOW_RADIUS = 8
 const FLOAT_SHADOW_OFFSET_Y = 2
-const FLOAT_ANDROID_ELEVATION = 3
 
 const $card: ThemedStyle<ViewStyle> = (theme) => ({
   backgroundColor: theme.colors.cardBackground,
@@ -98,11 +98,12 @@ const $card: ThemedStyle<ViewStyle> = (theme) => ({
 
 const $float: ThemedStyle<ViewStyle> = (theme) => ({
   borderWidth: 0,
-  shadowColor: theme.colors.text,
-  shadowOpacity: FLOAT_SHADOW_OPACITY,
-  shadowRadius: FLOAT_SHADOW_RADIUS,
-  shadowOffset: { width: 0, height: FLOAT_SHADOW_OFFSET_Y },
-  elevation: FLOAT_ANDROID_ELEVATION,
+  boxShadow: boxShadow(
+    theme.colors.text,
+    FLOAT_SHADOW_OPACITY,
+    FLOAT_SHADOW_OFFSET_Y,
+    FLOAT_SHADOW_RADIUS,
+  ),
 })
 
 const $selected: ThemedStyle<ViewStyle> = (theme) => ({

@@ -1,10 +1,11 @@
-import { StyleSheet, View, ViewStyle } from "react-native"
+import { Platform, View, ViewStyle } from "react-native"
 import { Href, Slot, usePathname, useRouter } from "expo-router"
 
 import { EntranceView } from "@/components/EntranceView"
 import { TabBar, TabBarItem } from "@/components/TabBar"
 import { useShouldPlayEntrance } from "@/hooks/useShouldPlayEntrance"
 import { translate } from "@/i18n/translate"
+import { $styles } from "@/theme/styles"
 
 /**
  * docs/04-screen-specs.md route map. A hand-rolled floating tab bar over
@@ -54,17 +55,11 @@ export default function TabsLayout() {
   return (
     <View style={$container}>
       <Slot />
-      {/* The wrapper needs to fill the same bounds <TabBar> would size
-       against directly (RN resolves `position: absolute` against the
-       immediate parent regardless of that parent's own position value) —
-       an unstyled EntranceView wrapper would collapse to 0×0 and TabBar's
-       own `bottom` offset would resolve against that instead of the real
-       screen. */}
       <EntranceView
         play={shouldPlayEntrance}
         delayMs={TAB_BAR_ENTRANCE_DELAY_MS}
         distance={TAB_BAR_ENTRANCE_DISTANCE}
-        style={StyleSheet.absoluteFill}
+        style={$tabBarLayer}
       >
         <TabBar
           items={tabs}
@@ -77,3 +72,16 @@ export default function TabsLayout() {
 }
 
 const $container: ViewStyle = { flex: 1 }
+
+// The layer <TabBar> positions itself against.
+// Native: the whole screen (RN resolves `position: absolute` against the
+// immediate parent, so a collapsed wrapper would misplace the bar), made
+// touch-transparent with `box-none`, which native honours.
+// Web: TabBar is `position: fixed` to the viewport, so the layer needs no
+// size at all — and must have none. Reanimated's web Animated.View flattens
+// its styles to inline CSS, which drops react-native-web's `box-none`
+// emulation; a full-screen layer then swallowed every click above the bar.
+const $tabBarLayer: ViewStyle =
+  Platform.OS === "web"
+    ? { position: "absolute", left: 0, right: 0, bottom: 0, height: 0 }
+    : { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, ...$styles.passThrough }

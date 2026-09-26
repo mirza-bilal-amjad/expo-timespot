@@ -313,7 +313,6 @@ export function MeridianMap(props: MeridianMapProps) {
         </Animated.View>
 
         <Animated.View
-          pointerEvents="none"
           style={[$line, { height }, $lineStyle]}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -338,10 +337,7 @@ export function MeridianMap(props: MeridianMapProps) {
           </Svg>
         </Animated.View>
 
-        <Animated.View
-          pointerEvents="none"
-          style={[$ring, { borderColor: theme.colors.meridian }, $ringStyle]}
-        >
+        <Animated.View style={[$ring, { borderColor: theme.colors.meridian }, $ringStyle]}>
           <View style={[$dot, { backgroundColor: theme.colors.meridian }]} />
         </Animated.View>
 
@@ -363,7 +359,13 @@ const $viewport: ViewStyle = { overflow: "hidden" }
 
 const $content: ViewStyle = { position: "absolute", left: 0, top: 0 }
 
-const $line: ViewStyle = { position: "absolute", left: 0, top: 0, width: CAP_WIDTH }
+const $line: ViewStyle = {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  width: CAP_WIDTH,
+  pointerEvents: "none",
+}
 
 const $ring: ViewStyle = {
   position: "absolute",
@@ -373,6 +375,7 @@ const $ring: ViewStyle = {
   height: RING_SIZE,
   borderRadius: RING_SIZE / 2,
   borderWidth: RING_STROKE,
+  pointerEvents: "none",
   alignItems: "center",
   justifyContent: "center",
 }

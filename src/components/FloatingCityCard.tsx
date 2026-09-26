@@ -78,7 +78,7 @@ export function FloatingCityCard(props: FloatingCityCardProps) {
   if (width <= 0 || height <= 0) return null
 
   return (
-    <View style={$layer} pointerEvents="none">
+    <View style={$layer}>
       <Animated.View
         onLayout={handleLayout}
         style={[$positioned, $animatedPosition]}
@@ -116,7 +116,7 @@ export function FloatingCityCard(props: FloatingCityCardProps) {
   )
 }
 
-const $layer: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0 }
+const $layer: ViewStyle = { position: "absolute", top: 0, left: 0, right: 0, pointerEvents: "none" }
 
 const $positioned: ViewStyle = { position: "absolute", left: 0 }
 

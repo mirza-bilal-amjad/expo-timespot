@@ -98,7 +98,7 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
   ]
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={translate("settings:title")}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={translate("settings:title")} fill>
       <SettingsForm sections={sections} />
     </Sheet>
   )

@@ -4,6 +4,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { useAppTheme } from "@/theme/context"
+import { boxShadow } from "@/theme/shadow"
+import { $styles } from "@/theme/styles"
 import type { ThemedStyle } from "@/theme/types"
 
 import { Pressable } from "./Pressable"
@@ -66,8 +68,7 @@ export function Toast(props: ToastProps) {
 
   return (
     <Animated.View
-      pointerEvents="box-none"
-      style={[themed($container), { bottom: bottomOffset }, $animatedStyle]}
+      style={[themed($container), $styles.passThrough, { bottom: bottomOffset }, $animatedStyle]}
     >
       <View style={themed($card)} accessibilityLiveRegion="polite" accessible>
         <Text text={message} style={themed($message)} />
@@ -86,7 +87,6 @@ export function Toast(props: ToastProps) {
 const OVERLAY_SHADOW_OPACITY = 0.18
 const OVERLAY_SHADOW_RADIUS = 24
 const OVERLAY_SHADOW_OFFSET_Y = 8
-const OVERLAY_ANDROID_ELEVATION = 8
 const CARD_MIN_WIDTH = 220
 const ENTER_TRANSLATE_Y = 12
 
@@ -107,11 +107,12 @@ const $card: ThemedStyle<ViewStyle> = (theme) => ({
   paddingVertical: theme.spacing.sm,
   paddingHorizontal: theme.spacing.md,
   minWidth: CARD_MIN_WIDTH,
-  shadowColor: theme.colors.text,
-  shadowOpacity: OVERLAY_SHADOW_OPACITY,
-  shadowRadius: OVERLAY_SHADOW_RADIUS,
-  shadowOffset: { width: 0, height: OVERLAY_SHADOW_OFFSET_Y },
-  elevation: OVERLAY_ANDROID_ELEVATION,
+  boxShadow: boxShadow(
+    theme.colors.text,
+    OVERLAY_SHADOW_OPACITY,
+    OVERLAY_SHADOW_OFFSET_Y,
+    OVERLAY_SHADOW_RADIUS,
+  ),
 })
 
 const $message: ThemedStyle<{ color: string }> = (theme) => ({ color: theme.colors.textOnInverse })
