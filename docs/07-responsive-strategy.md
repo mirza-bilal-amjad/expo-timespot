@@ -120,7 +120,7 @@ All are implemented as a single `useKeyboard` hook registered at the root, with 
   - **Pages:** network first. Online, the HTML is never stale. Offline, a page falls back to its cached copy and then to the `/` shell, which renders whatever route the URL names, including a city page never visited.
   - **Hashed assets:** cache first.
   - **Registration:** in production only, after `load` (`utils/serviceWorker.web.ts`).
-- **Hosting (6.9).** `sw.js` and `manifest.webmanifest` need `Cache-Control: max-age=0, must-revalidate`, like HTML. A cached worker would pin visitors to an old deploy.
+- **Hosting (6.9).** ~~`sw.js` needs `max-age=0` or a cached worker pins visitors to an old deploy~~ **corrected:** the worker registers with `updateViaCache: "none"`, so update checks skip the HTTP cache, and it fetches pages with `cache: "no-cache"`. Host headers can't pin anyone to an old deploy.
 
 ### Performance
 

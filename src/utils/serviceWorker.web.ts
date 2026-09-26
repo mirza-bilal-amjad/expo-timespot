@@ -10,7 +10,9 @@
 export function registerServiceWorker(): void {
   if (__DEV__ || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return
   const register = () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
+    // updateViaCache "none": the update check always reaches the host, so
+    // a long cache header on sw.js can't pin visitors to an old deploy.
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {
       // No worker (a preview host without sw.js, a privacy mode that blocks
       // it): the site works exactly as before, just not offline.
     })

@@ -119,6 +119,19 @@ npx expo export -p web        # → dist/, static, ~1 000 city pages
 eas deploy --prod             # EAS Hosting
 ```
 
+**As built (task 6.9).** The pipeline is more than `expo export`, so use the scripts:
+
+```bash
+EXPO_PUBLIC_SITE_URL=https://timespot.app npm run deploy:web   # export + OG + PWA, budget check, eas deploy --prod
+npm run check:deploy -- https://timespot.app                   # verify the live site
+```
+
+- **`deploy:web`** = `export:web` (sitemap, export, finalize, 1,000 OG images, PWA) + `size:web` (bundle budget) + `npx eas-cli deploy --prod`. `EXPO_PUBLIC_SITE_URL` must be the final origin: canonical URLs, `og:image`, the sitemap and JSON-LD are built from it.
+- **One-time setup, by a person with the Expo account:** `npx eas-cli login`, then `npx eas-cli init` to link the project (it writes `extra.eas.projectId`). The first `deploy` picks the hosting subdomain; the custom domain and its TLS are added in the EAS dashboard (Hosting → Custom domain).
+- **`check:deploy`** (`scripts/check-deploy.ts`) fails on what breaks the site or its SEO: a non-200 page, a soft 404 for an unknown city, missing head tags, an unreachable OG image, uncompressed JS. It warns on cache headers.
+- **Not deployed from the build container.** Its network policy blocks `expo.dev`, and there is no Expo token. The scripts and checker were verified against a local static server with production-like headers (brotli, immutable hashed assets, HTML `max-age=0`).
+- **Cache headers matter less than written below.** The service worker revalidates pages past the HTTP cache (`cache: "no-cache"`) and registers with `updateViaCache: "none"`, so a returning visitor is never pinned to an old deploy whatever the host sends. The header rules still apply to a first visit.
+
 - Custom domain with automatic TLS.
 - Cache: HTML `max-age=0, must-revalidate` (the clock must never be stale-cached); hashed assets `max-age=31536000, immutable`.
 - `sitemap.xml` and `robots.txt` emitted at build.

@@ -83,7 +83,7 @@ Alarms · timers · stopwatch · weather · currency · a second accent colour.
 | Time-to-first-glance (cold start → readable clock) | **< 900 ms** p75 | custom trace, `expo-insights` |
 | Crash-free sessions | > 99.7 % | EAS/Sentry |
 | D7 retention (installs with ≥ 2 cities) | > 35 % | analytics |
-| Web LCP on `/time/:slug` | **< 1.2 s** p75 | CrUX / Lighthouse CI |
+| Web LCP on `/time/:slug` | **< 1.2 s** p75 (repeat visits); cold visits measured at 1.8 s on fast 4G, 5.2 s on slow 4G — see `10` task 6.9 | CrUX / Lighthouse CI |
 | Web → install conversion | > 4 % | attributed deep links |
 | **Zero DST-boundary defects** | 0 | automated test matrix (`11-testing-strategy.md` §4) |
 

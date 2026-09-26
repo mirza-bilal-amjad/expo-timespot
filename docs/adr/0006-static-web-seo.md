@@ -27,11 +27,11 @@ Resolution:
 
 1. The static HTML carries the **build-time** value, so crawlers and no-JS visitors see a sensible page with a `dateModified` in the structured data.
 2. ~~The clock node renders with `suppressHydrationWarning`~~. **Implemented differently (2026-09-26):** the page embeds its build time (`data-t`) and the hydration render reads it back, so it matches the HTML exactly. The live value is written from a `useLayoutEffect`, before paint, so there is no flash. Until then the build-time value is invisible, not merely replaced.
-3. `Cache-Control: max-age=0, must-revalidate` on HTML, `sw.js` and `manifest.webmanifest`; hashed assets get a year.
+3. `Cache-Control: max-age=0, must-revalidate` on HTML, `sw.js` and `manifest.webmanifest`; hashed assets get a year. (Task 6.9: the service worker no longer depends on these. It revalidates pages itself and checks for updates past the HTTP cache. `npm run check:deploy` warns when the host differs.)
 
 ## Consequences
 
-**Good:** near-zero hosting cost, excellent LCP, an acquisition channel that compounds, and one codebase.
+**Good:** near-zero hosting cost, an acquisition channel that compounds, and one codebase. ~~excellent LCP~~ **corrected (task 6.9):** LCP is excellent on repeat visits (~0.5 s, served by the service worker) and not on a cold visit. See `10` task 6.9 for the numbers and why.
 
 **Costs:**
 - Build time grows with the city count. 1 000 pages plus 1 000 OG images is about two minutes (export ~55 s, OG images ~45 s, 39 MB); capped deliberately rather than generating all 5 000.
