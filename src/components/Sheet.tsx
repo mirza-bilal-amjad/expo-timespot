@@ -1,6 +1,6 @@
-import { ReactNode, useEffect, useRef } from "react"
+import { ReactNode } from "react"
 import { Platform, TextStyle, useWindowDimensions, View, ViewStyle } from "react-native"
-import { BottomSheet, type SnapPoint } from "@expo/ui"
+import { BottomSheet, RNHostView, type SnapPoint } from "@expo/ui"
 
 import { Text } from "@/components/Text"
 import { useAppTheme } from "@/theme/context"
@@ -14,10 +14,6 @@ export interface SheetProps {
   /** Give the content a definite height (most of the screen), so a list or
    * scroll view inside it has bounds to scroll within. */
   fill?: boolean
-  /** Called once per close, after the sheet has finished animating away and
-   * its content is gone. Work that changes the app behind the sheet belongs
-   * here, not in the handler that closes it. */
-  onClosed?: () => void
   children: ReactNode
 }
 
@@ -25,25 +21,29 @@ export interface SheetProps {
 // status bar, the drag handle and the sheet's own top inset.
 const FILL_FRACTION = 0.88
 
-// `onClosed` normally fires when the content unmounts; this is only the
-// backstop, well past every platform's dismiss animation.
-const CLOSED_FALLBACK_MS = 1000
-
 /**
  * The only file that imports @expo/ui for sheets (docs/14-ignite-integration.md §6).
  * Feature code imports this, never @expo/ui directly — a future swap touches one file.
  *
- * Native hosts our React Native children inside a SwiftUI `Group` / Compose
- * `Column`, which measure a React Native view at its *intrinsic* size: on
- * Android the search results laid out only as wide as their widest row, not
- * the sheet (reported 2026-09-26). So on native the content gets an explicit
- * window-sized frame and @expo/ui's own horizontal inset is zeroed — every
- * sheet's rows already carry `spacing.gutter`. Web's drawer is a normal DOM
- * box, where filling the container is enough.
+ * The content is React Native, so it goes through `RNHostView` — @expo/ui's
+ * bridge for React Native views inside a native tree. On Android the sheet
+ * is a Compose dialog in its own window, with no React root above it;
+ * RNHostView supplies one, dispatching the content's touches and acting as
+ * the root a scroll view looks up when it starts a gesture. ~~React Native
+ * children placed straight into the sheet~~ — corrected 2026-09-26: the
+ * first drag on the search results (any tap that moved a little) made
+ * ReactScrollView assert on a missing root view, and the app crashed
+ * (`RootViewUtil.getRootView` ← `NativeGestureUtil.notifyNativeGestureStarted`).
  *
- * ~~Wrapped in our own `<Host>`~~ — removed 2026-09-26. The universal
+ * The frame has an explicit window width (a native host measures a React
+ * Native view at its intrinsic size — on Android the search results laid out
+ * only as wide as their widest row), so the host matches its contents.
+ * @expo/ui's own horizontal inset is zeroed: every sheet's rows already
+ * carry `spacing.gutter`.
+ *
+ * ~~Wrapped in our own `<Host>`~~ — removed 2026-09-26: the universal
  * BottomSheet mounts its own Host on iOS and Android, so ours nested one
- * native host inside another for no benefit.
+ * native host inside another.
  */
 export function Sheet({
   open,
@@ -51,44 +51,25 @@ export function Sheet({
   title,
   snapPoints = ["half", "full"],
   fill = false,
-  onClosed,
   children,
 }: SheetProps) {
   const { theme, themed } = useAppTheme()
   const window = useWindowDimensions()
-  const closedPending = useRef(false)
-  const onClosedRef = useRef(onClosed)
-
-  useEffect(() => {
-    onClosedRef.current = onClosed
-  }, [onClosed])
-
-  const fireClosed = () => {
-    if (!closedPending.current) return
-    closedPending.current = false
-    onClosedRef.current?.()
-  }
-
-  // Every platform's BottomSheet unmounts its content once dismissed — the
-  // <ClosedSignal> below reports that. Opening is what makes a close owed
-  // (marked then, because the content may unmount in the same commit that
-  // closes it, before this effect would run again); the timer covers a
-  // platform that keeps the content mounted.
-  useEffect(() => {
-    if (open) {
-      closedPending.current = true
-      return
-    }
-    const timer = setTimeout(fireClosed, CLOSED_FALLBACK_MS)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fireClosed only reads refs
-  }, [open])
 
   const $frame: ViewStyle =
     Platform.OS === "web"
       ? { width: "100%", height: fill ? window.height * FILL_FRACTION : undefined }
       : { width: window.width, height: fill ? window.height * FILL_FRACTION : undefined }
 
+  const content = (
+    <View style={$frame}>
+      {title ? <Text preset="cityTitle" text={title} style={themed($title)} /> : null}
+      {children}
+    </View>
+  )
+
+  // Web's drawer is a plain DOM box — no bridge needed, and RNHostView's
+  // `fit-content` wrapper there would collapse the full-width frame.
   return (
     <BottomSheet
       isPresented={open}
@@ -97,23 +78,9 @@ export function Sheet({
       containerColor={theme.colors.cardBackground}
       contentPadding={{ top: Platform.OS === "ios" ? theme.spacing.md : 0 }}
     >
-      <View style={$frame}>
-        <ClosedSignal onUnmount={fireClosed} />
-        {title ? <Text preset="cityTitle" text={title} style={themed($title)} /> : null}
-        {children}
-      </View>
+      {Platform.OS === "web" ? content : <RNHostView matchContents>{content}</RNHostView>}
     </BottomSheet>
   )
-}
-
-/** Renders nothing; reports when the sheet's content is torn down. */
-function ClosedSignal({ onUnmount }: { onUnmount: () => void }) {
-  const onUnmountRef = useRef(onUnmount)
-  useEffect(() => {
-    onUnmountRef.current = onUnmount
-  }, [onUnmount])
-  useEffect(() => () => onUnmountRef.current(), [])
-  return null
 }
 
 const $title: ThemedStyle<TextStyle> = (theme) => ({

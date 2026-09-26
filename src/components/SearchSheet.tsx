@@ -87,27 +87,13 @@ export function SearchSheet(props: SearchSheetProps) {
     return getRepresentativeCity(offsetMinutes, now)
   }, [results, query, now])
 
-  // Picking a city closes the sheet first and changes the app only once the
-  // sheet is gone. ~~Add, focus and close in one handler~~ — corrected
-  // 2026-09-26: on Android that re-rendered the tapped row, the list behind
-  // the sheet and every mounted tab while the Compose sheet was still
-  // animating out with the text field focused, and the app crashed. The
-  // keyboard is dismissed first so the hosted field is blurred before its
-  // native view is removed.
-  const pendingCity = useRef<City | null>(null)
-
+  // The keyboard is dismissed first, so the hosted text field is blurred
+  // before the sheet closes around it.
   const selectCity = (city: City) => {
     Keyboard.dismiss()
-    pendingCity.current = city
-    onOpenChange(false)
-  }
-
-  const commitSelection = () => {
-    const city = pendingCity.current
-    pendingCity.current = null
-    if (!city) return
-    if (!useCitiesStore.getState().cities.some((c) => c.cityId === city.id)) addCity(city.id)
+    if (!savedIds.has(city.id)) addCity(city.id)
     setFocusedCityId(city.id)
+    onOpenChange(false)
   }
 
   const renderRow = (city: City) => {
@@ -142,13 +128,7 @@ export function SearchSheet(props: SearchSheetProps) {
   }
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={onOpenChange}
-      onClosed={commitSelection}
-      title={translate("search:title")}
-      fill
-    >
+    <Sheet open={open} onOpenChange={onOpenChange} title={translate("search:title")} fill>
       <InlineField
         value={query}
         onChangeText={setQuery}

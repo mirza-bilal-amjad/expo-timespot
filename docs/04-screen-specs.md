@@ -324,7 +324,7 @@ Native: `@expo/ui` `BottomSheet` at 92 % height. Web: centred modal, 560 × 640,
 | No results | "No city called '{q}'." + "Search by UTC offset instead" → filters the dataset by zone |
 | Already added | row is dimmed with a `check`; tapping focuses it and dismisses |
 
-Selecting a row dismisses the keyboard and closes the sheet; the city is added and focused only once the sheet has finished closing (`Sheet`'s `onClosed`). ~~Add, focus and close in one handler~~ — corrected 2026-09-26: that re-rendered the tapped row, the list and every mounted tab while Android's Compose sheet was still animating out with its text field focused, and the app crashed.
+Selecting a row dismisses the keyboard, adds/focuses the city and closes the sheet. ~~Commit the selection only after the sheet has closed~~ — withdrawn 2026-09-26: that was a wrong diagnosis of the Android crash. The real cause was the results list's scroll view finding no React root inside the Compose sheet's window; see `Sheet` and `14-ignite-integration.md` §6 rule 1.
 | a11y | `role="searchbox"`, `aria-controls` the listbox, `aria-activedescendant` follows arrow keys; ↑/↓/Enter/Escape all work on web |
 
 ---

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import { ViewStyle } from "react-native"
+import { View, ViewStyle } from "react-native"
 import * as Haptics from "expo-haptics"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable"
@@ -215,25 +215,29 @@ export function ReorderableCityRow(props: ReorderableCityRowProps) {
         overshootFriction={8}
         onSwipeableOpen={handleSwipeOpen}
       >
+        {/* The detector attaches to its child's native view, so that view
+         must never be flattened away (Android flattens layout-only views). */}
         <GestureDetector gesture={pan}>
-          <EntranceView
-            play={entrance?.play ?? false}
-            delayMs={entrance?.delayMs}
-            durationMs={entrance?.durationMs}
-          >
-            <CityRow
-              city={city}
-              time={time}
-              selected={selected}
-              onPress={onPress}
-              onDelete={() => onDelete(city)}
-              onMoveUp={onMoveUp}
-              onMoveDown={onMoveDown}
-              onRename={() => onRename(city)}
-              canMoveUp={index > 0}
-              canMoveDown={index < itemCount - 1}
-            />
-          </EntranceView>
+          <View collapsable={false}>
+            <EntranceView
+              play={entrance?.play ?? false}
+              delayMs={entrance?.delayMs}
+              durationMs={entrance?.durationMs}
+            >
+              <CityRow
+                city={city}
+                time={time}
+                selected={selected}
+                onPress={onPress}
+                onDelete={() => onDelete(city)}
+                onMoveUp={onMoveUp}
+                onMoveDown={onMoveDown}
+                onRename={() => onRename(city)}
+                canMoveUp={index > 0}
+                canMoveDown={index < itemCount - 1}
+              />
+            </EntranceView>
+          </View>
         </GestureDetector>
       </Swipeable>
     </Animated.View>

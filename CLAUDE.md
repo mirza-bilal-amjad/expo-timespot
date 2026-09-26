@@ -190,7 +190,7 @@ Project skills in `.claude/skills/` load automatically when relevant.
 - **`typography.primary` needs `light` and `bold` keys** even as aliases — Ignite's presets reference them, and a missing key silently falls back to the system font.
 - `react-native-keyboard-controller` is native-only — guard its provider with `Platform.OS !== 'web'`.
 - **No lazy `@expo/ui` list inside a sheet.** On Android `FieldGroup` / `List` are Compose `LazyColumn`s; inside the Compose bottom sheet one can be measured with unbounded height, which is a fatal crash (it crashed Settings, 2026-09-26). Lay groups out in React Native; use `@expo/ui` for leaf controls, each in a small `Host`.
-- **Don't change the app behind a closing sheet.** Close it, then do the work in `Sheet`'s `onClosed` (and `Keyboard.dismiss()` first if it holds a field). Adding a city while Android's Compose sheet was still animating out crashed the app (2026-09-26).
+- **React Native content inside an `@expo/ui` sheet goes through `RNHostView`** (`Sheet` does it). The Android sheet is a Compose dialog in its own window with no React root; without `RNHostView` any `ScrollView`/`FlashList` in it crashes on the first drag (`AssertionError` in `RootViewUtil.getRootView`).
 - **`pointerEvents` is a style, not a prop** (the prop is deprecated). On web `"box-none"` only works through `StyleSheet.create` (`$styles.passThrough`) — an inline object, or any Reanimated `Animated.View` (it flattens styles inline), silently becomes `auto` and swallows clicks beneath it.
 - The SDK 55 → 57 upgrade is the riskiest step. Do it on the untouched baseline, before any product code. Pin `expo@>=57.0.17`.
 

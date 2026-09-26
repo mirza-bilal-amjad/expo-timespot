@@ -383,13 +383,12 @@ The boundary is unchanged from `ADR-0003` — `@expo/ui` owns system affordances
 
 ```tsx
 // src/components/Sheet.tsx — the ONLY file that imports @expo/ui for sheets
-import { BottomSheet } from "@expo/ui"
+import { BottomSheet, RNHostView } from "@expo/ui"
 import { useAppTheme } from "@/theme/context"
 
 export interface SheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onClosed?: () => void                  // after the dismiss animation; see below
   children: React.ReactNode
 }
 
@@ -402,7 +401,9 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
       onDismiss={() => onOpenChange(false)}
       containerColor={theme.colors.cardBackground}
     >
-      {children}
+      <RNHostView matchContents>{/* React Native content → a native tree */}
+        <View style={$frame}>{children}</View>
+      </RNHostView>
     </BottomSheet>
   )
 }
@@ -411,7 +412,7 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
 Four rules:
 
 1. **One `<Host>` per adapter**, mounted inside the adapter. Never nest `Host`, never put one in a screen. The universal presenting components (`BottomSheet`) mount their own `Host` — don't wrap them in another. ~~`Sheet` wraps `BottomSheet` in a `Host`~~ — corrected 2026-09-26: that nested two native hosts.
-   - **Don't change the app behind a closing sheet.** A sheet whose action changes what's behind it (search adds a city) closes first and does the work in `Sheet`'s `onClosed`, which fires once the content has unmounted. Changing the list and the tabs while Android's Compose sheet was still animating out crashed the app (2026-09-26).
+   - **React Native content inside an `@expo/ui` container goes through `RNHostView`.** On Android the sheet is a Compose dialog in its own window with no React root above it; `RNHostView` supplies the root that dispatches touches and that a scroll view looks up when a drag starts. Without it, the first drag on the search results crashed the app (`AssertionError` in `RootViewUtil.getRootView`, 2026-09-26). ~~Commit a sheet's action only after it has closed~~ — withdrawn the same day: a wrong diagnosis of that crash.
 2. **Feature code never imports `@expo/ui`.** It imports `@/components/Sheet`. A future swap touches one file.
 3. **`@expo/ui` components do not read Ignite's theme.** They take their own style props. The adapter is the bridge: read `useAppTheme()` there and pass explicit values down. This is the one place where two styling models meet, and it is contained on purpose.
 4. **Do not put `@expo/ui` content inside Ignite's `Screen`'s scroll view.** On iOS a SwiftUI host inside a RN `ScrollView` fights for gestures. Sheets and overlays are siblings of `Screen`, not children.
